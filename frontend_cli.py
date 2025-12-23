@@ -1,7 +1,8 @@
 import requests
-import config
+from dotenv import load_dotenv
+from config import API_URL
 
-API_URL = config.API_URL
+load_dotenv()
 
 def run_sync_agent():
     prompt = input("Enter your prompt for the Sync Agent: ").strip()
