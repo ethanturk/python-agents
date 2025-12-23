@@ -1,0 +1,16 @@
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+# Celery Configuration
+# RabbitMQ Broker URL
+CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', 'amqp://guest:guest@192.168.5.200:5672//')
+CELERY_RESULT_BACKEND = 'rpc://'
+
+# OpenAI / Local LLM Configuration
+# Pointing to LM Studio
+OPENAI_API_BASE = os.getenv('OPENAI_API_BASE', 'http://192.168.5.203:1234/v1')
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', 'lm-studio') # Dummy key for local LLM
+OPENAI_MODEL = os.getenv('OPENAI_MODEL', 'gpt-oss-20b')
+
