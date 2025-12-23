@@ -26,7 +26,7 @@ services:
     user: "1027:100"
 
   backend:
-    build: https://github.com/ethanturk/python-agents.git#main
+    build: .
     ports:
       - "9999:8000"
     depends_on:
@@ -38,7 +38,7 @@ services:
       OPENAI_MODEL: ${OPENAI_MODEL}
 
   worker:
-    build: https://github.com/ethanturk/python-agents.git#main
+    build: .
     command: celery -A async_tasks worker --loglevel=info
     depends_on:
       - backend
