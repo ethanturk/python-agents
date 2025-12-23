@@ -12,7 +12,6 @@ This project demonstrates a Client-Server architecture for LLM Agents:
 
 ## Prerequisites
 - Python 3.9+
-- RabbitMQ running at `192.168.5.200` (Default port 5672)
 - OpenAI API Key
 
 ## Setup
