@@ -1,8 +1,7 @@
 import requests
-import sys
-import time
+import config
 
-API_URL = "http://localhost:8000"
+API_URL = config.API_URL
 
 def run_sync_agent():
     prompt = input("Enter your prompt for the Sync Agent: ").strip()

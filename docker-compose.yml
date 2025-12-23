@@ -26,9 +26,9 @@ services:
     user: "1027:100"
 
   backend:
-    build: .
+    build: https://github.com/ethanturk/python-agents.git#main
     ports:
-      - "8000:8000"
+      - "9999:8000"
     depends_on:
       - rabbitmq
     environment:
@@ -38,7 +38,7 @@ services:
       OPENAI_MODEL: ${OPENAI_MODEL}
 
   worker:
-    build: .
+    build: https://github.com/ethanturk/python-agents.git#main
     command: celery -A async_tasks worker --loglevel=info
     depends_on:
       - backend

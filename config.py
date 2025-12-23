@@ -14,3 +14,4 @@ OPENAI_API_BASE = os.getenv('OPENAI_API_BASE', 'http://192.168.5.203:1234/v1')
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', 'lm-studio') # Dummy key for local LLM
 OPENAI_MODEL = os.getenv('OPENAI_MODEL', 'gpt-oss-20b')
 
+API_URL = os.getenv('API_URL', 'http://localhost:9999')

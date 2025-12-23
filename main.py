@@ -1,5 +1,3 @@
-import argparse
-import sys
 from sync_agent import run_sync_agent
 from async_tasks import check_knowledge_base, answer_question
 from celery import chain
