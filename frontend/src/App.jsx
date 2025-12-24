@@ -32,7 +32,7 @@ const darkTheme = createTheme({
   },
 });
 
-const API_BASE = 'http://backend:9999';
+const API_BASE = import.meta.env.VITE_API_BASE || 'http://192.168.5.200:9999';
 
 function App() {
   const [documents, setDocuments] = useState([]);
