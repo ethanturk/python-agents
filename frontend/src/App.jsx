@@ -20,6 +20,16 @@ const darkTheme = createTheme({
       paper: '#1e1e1e',
     },
   },
+  components: {
+    MuiButton: {
+      styleOverrides: {
+        root: {
+          padding: '12px 24px',
+          fontSize: '1rem',
+        },
+      },
+    },
+  },
 });
 
 const API_BASE = 'http://backend:9999';
@@ -72,7 +82,7 @@ function App() {
         </Toolbar>
       </AppBar>
 
-      <Container maxWidth="md" sx={{ mt: 4 }}>
+      <Container maxWidth="xl" sx={{ mt: 4 }}>
         {/* Search Bar */}
         <Paper sx={{ p: 2, display: 'flex', alignItems: 'center', mb: 4 }}>
           <TextField
