@@ -203,24 +203,3 @@ def ingest_docs_task(files_data):
                 
     return "\n".join(results)
 
-def search_docs_sync(query):
-    """
-    Synchronous search against Qdrant.
-    """
-    # Check if collection exists first to avoid errors
-    try:
-        qdrant_client.get_collection("documents")
-    except:
-        return []
-
-    vector = embeddings_model.embed_query(query)
-    search_result = qdrant_client.search(
-        collection_name="documents",
-        query_vector=vector,
-        limit=5
-    )
-    
-    return [
-        {"content": hit.payload.get("content"), "metadata": {"filename": hit.payload.get("filename")}}
-        for hit in search_result
-    ]
