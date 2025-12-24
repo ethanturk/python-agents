@@ -6,4 +6,5 @@ fastapi
 uvicorn
 requests
 qdrant-client
+langchain-text-splitters
 docling
