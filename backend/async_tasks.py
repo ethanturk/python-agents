@@ -12,9 +12,11 @@ from qdrant_client import QdrantClient
 from qdrant_client.http.models import VectorParams, Distance, PointStruct
 from langchain_openai import OpenAIEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+import shutil
+from datetime import datetime
 
 
-# Initialize Celery
+
 # Initialize Celery
 app = Celery('langchain_agent_sample', broker=config.CELERY_BROKER_URL, backend=config.CELERY_RESULT_BACKEND)
 
@@ -141,7 +143,7 @@ def answer_question(context_data):
 def ingest_docs_task(files_data):
     """
     Ingest a list of files.
-    files_data: list of dicts {'filename': str, 'content': str}
+    files_data: list of dicts {'filename': str, 'content': str, 'filepath': str (optional)}
     """
     converter = DocumentConverter()
     
@@ -192,6 +194,27 @@ def ingest_docs_task(files_data):
                 
             qdrant_client.upsert(collection_name="documents", points=points)
             results.append(f"Indexed {filename}: {len(chunks)} chunks.")
+            
+            # Handle file move if filepath is provided
+            filepath = file_item.get('filepath')
+            if filepath and os.path.exists(filepath):
+                try:
+                    # Construct processed path
+                    directory = os.path.dirname(filepath)
+                    processed_dir = os.path.join(directory, "processed")
+                    os.makedirs(processed_dir, exist_ok=True)
+                    
+                    # Construct new filename with date
+                    current_date = datetime.now().strftime("%m_%d_%Y")
+                    new_filename = f"{current_date}_{filename}"
+                    new_filepath = os.path.join(processed_dir, new_filename)
+                    
+                    # Move file
+                    shutil.move(filepath, new_filepath)
+                    results.append(f"Moved {filename} to {new_filepath}")
+                except Exception as e:
+                    results.append(f"Failed to move {filename}: {e}")
+
             
         except Exception as e:
             results.append(f"Failed {filename}: {str(e)}")

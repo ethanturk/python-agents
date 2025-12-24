@@ -26,7 +26,7 @@ class DocumentHandler(FileSystemEventHandler):
             with open(filepath, "r", encoding="utf-8") as f:
                 content = f.read()
                 
-            self.callback([{"filename": filename, "content": content}])
+            self.callback([{"filename": filename, "filepath": filepath, "content": content}])
         except Exception as e:
             logger.error(f"Error reading {filename}: {e}")
 
