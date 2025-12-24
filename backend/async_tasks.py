@@ -22,7 +22,7 @@ app = Celery('langchain_agent_sample', broker=config.CELERY_BROKER_URL, backend=
 
 # Initialize Qdrant and Embeddings
 # Robust extraction of the host from config or hardcoded for docker
-qdrant_client = QdrantClient(host="qdrant", port=6333)
+qdrant_client = QdrantClient(host="qdrant", port=6333, timeout=60)
 embeddings_model = OpenAIEmbeddings(
     api_key=config.OPENAI_API_KEY, 
     base_url=config.OPENAI_API_BASE,
