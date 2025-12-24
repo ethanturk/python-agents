@@ -9,11 +9,6 @@ import os
 # Initialize Celery
 app = Celery('langchain_agent_sample', broker=config.CELERY_BROKER_URL, backend=config.CELERY_RESULT_BACKEND)
 
-# Ensure LLM Key is available usually, but we check inside tasks to be safe or assuming worker has env.
-# In a real app, you might want to lazily init the LLM to avoid pickling issues, 
-# but langchain objects are often serializable or re-instantiated.
-# usage: we will instantiate LLM inside tasks.
-
 def create_stub_kb():
     """Creates a stub knowledge base file."""
     kb_path = "stub_knowledge_base.txt"
@@ -55,26 +50,15 @@ def check_knowledge_base(user_input):
     # The requirement says "Prompt - Does a knowledge base currently exist...".
     # I will let the LLM decide. If it says NO, I create one.
     
-    # To ensure deterministic behavior for the demo allowing me to show the "Create stub" path:
-    # I will instruct it to say NO unless a file exists.
-    
     kb_exists_physically = os.path.exists("stub_knowledge_base.txt")
     context = f"File system check returns: {kb_exists_physically}"
     
-    # Actually, the user requirement is specific: "Prompts - Does a knowledge base currently exist..."
-    # I'll stick to the prompt.
-    
     try:
         response = chain.invoke({"input": ""}).strip().upper()
-        # If the LLM has no context, it might say anything.
-        # Let's force a "NO" if we want to demonstrate the feature, or just accept the output.
-        # But to be robust:
-        
         kb_location = None
         if "YES" in response:
-            kb_location = "existing_kb.txt" # Hypothetical
+            kb_location = "existing_kb.txt"
         else:
-            # If not, create stub method
             kb_location = create_stub_kb()
             
         return {
@@ -115,12 +99,6 @@ def answer_question(context_data):
         kb_content = "Could not read knowledge base."
 
     # Prompt 2: What question does the user want answered?
-    # Then answer it.
-    
-    # We will combine this into a chain.
-    # First extraction, then answering? 
-    # "What question does the user want answered?" -> Extract question
-    # Then Answer it.
     
     prompt_extract = ChatPromptTemplate.from_messages([
         ("system", "Extract the core question from the user input."),
@@ -130,7 +108,6 @@ def answer_question(context_data):
     chain_extract = prompt_extract | llm | StrOutputParser()
     question = chain_extract.invoke({"input": user_input})
     
-    # Now answer using KB
     prompt_answer = ChatPromptTemplate.from_messages([
         ("system", f"Answer the user's question using this knowledge base content: {kb_content}"),
         ("user", "{question}")

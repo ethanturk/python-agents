@@ -12,7 +12,6 @@ def run_sync_agent(user_input: str) -> str:
     if not config.OPENAI_API_KEY:
         return "Error: OPENAI_API_KEY not found in environment variables."
 
-    # Connect to Local LLM
     llm = ChatOpenAI(
         api_key=config.OPENAI_API_KEY,
         base_url=config.OPENAI_API_BASE,
@@ -33,5 +32,4 @@ def run_sync_agent(user_input: str) -> str:
         return f"Error running sync agent: {str(e)}"
 
 if __name__ == "__main__":
-    # Test block
     print(run_sync_agent("Hello, are you there?"))
