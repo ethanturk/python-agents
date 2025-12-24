@@ -5,12 +5,31 @@ from sync_agent import run_sync_agent, search_documents
 from async_tasks import check_knowledge_base, answer_question, ingest_docs_task, app as celery_app
 from celery import chain
 import logging
+from contextlib import asynccontextmanager
+from file_watcher import start_watching
+import os
+# Import needed for listing documents - assuming we add a helper or do it here
+from async_tasks import qdrant_client 
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = FastAPI()
+# Directory to monitor
+MONITORED_DIR = "/data/monitored"
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
+    logger.info("Starting up...")
+    observer = start_watching(MONITORED_DIR, lambda files: ingest_docs_task.delay(files))
+    yield
+    # Shutdown
+    observer.stop()
+    observer.join()
+    logger.info("Shutting down...")
+
+app = FastAPI(lifespan=lifespan)
 
 class AgentRequest(BaseModel):
     prompt: str
@@ -83,3 +102,31 @@ def search_documents(request: SearchRequest):
     except Exception as e:
         logger.error(f"Error executing search: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/agent/documents")
+def list_documents():
+    """
+    List all documents in the Qdrant collection.
+    """
+    try:
+        # Use scroll to list points. 
+        # Note: In production you'd want pagination.
+        result, _ = qdrant_client.scroll(
+            collection_name="documents",
+            limit=100,
+            with_payload=True,
+            with_vectors=False
+        )
+        
+        docs = []
+        for point in result:
+             docs.append({
+                 "id": point.id,
+                 "filename": point.payload.get("filename", "unknown"),
+                 "content_snippet": point.payload.get("content", "")[:200]
+             })
+        return {"documents": docs}
+    except Exception as e:
+        # Collection might not exist yet
+        logger.warning(f"Error fetching documents (likely empty): {e}")
+        return {"documents": []}

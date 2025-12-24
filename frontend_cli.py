@@ -1,7 +1,8 @@
 import requests
 import os
 from dotenv import load_dotenv
-from config import API_URL
+# from config import API_URL
+API_URL = os.getenv('API_URL', 'http://localhost:9999')
 
 load_dotenv()
 
@@ -41,7 +42,6 @@ def check_task_status():
         print(f"Status: {data.get('status')}")
         if data.get('result'):
             print(f"Result: {data.get('result')}")
-    except requests.exceptions.RequestException as e:
     except requests.exceptions.RequestException as e:
         print(f"Error: {e}")
 

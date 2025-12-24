@@ -8,3 +8,4 @@ requests
 qdrant-client
 langchain-text-splitters
 docling
+watchdog
