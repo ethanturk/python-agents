@@ -23,7 +23,7 @@ class DocumentHandler(FileSystemEventHandler):
         logger.info(f"New file detected: {filename}")
         
         try:
-            with open(filepath, "r", encoding="utf-8") as f:
+            with open(filepath, "rb") as f:
                 content = f.read()
                 
             self.callback([{"filename": filename, "filepath": filepath, "content": content}])
