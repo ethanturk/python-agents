@@ -5,4 +5,5 @@ python-dotenv
 fastapi
 uvicorn
 requests
-
+qdrant-client
+docling

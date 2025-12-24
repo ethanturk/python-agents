@@ -1,4 +1,5 @@
 import requests
+import os
 from dotenv import load_dotenv
 from config import API_URL
 
@@ -41,7 +42,60 @@ def check_task_status():
         if data.get('result'):
             print(f"Result: {data.get('result')}")
     except requests.exceptions.RequestException as e:
+    except requests.exceptions.RequestException as e:
         print(f"Error: {e}")
+
+def ingest_documents():
+    path = input("Enter the file or directory path to ingest: ").strip()
+    if not os.path.exists(path):
+        print("Invalid path.")
+        return
+
+    files_content = []
+    
+    if os.path.isfile(path):
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                files_content.append({"filename": os.path.basename(path), "content": f.read()})
+        except Exception as e:
+            print(f"Error reading file {path}: {e}")
+    elif os.path.isdir(path):
+        for root, _, files in os.walk(path):
+            for file in files:
+                file_path = os.path.join(root, file)
+                try:
+                    with open(file_path, "r", encoding="utf-8") as f:
+                        files_content.append({"filename": file, "content": f.read()})
+                except Exception as e:
+                    print(f"Skipping {file}: {e}")
+    
+    if not files_content:
+        print("No valid files found to ingest.")
+        return
+
+    print(f"\n--- Sending {len(files_content)} files for ingestion ---")
+    try:
+        response = requests.post(f"{API_URL}/agent/ingest", json={"files": files_content})
+        response.raise_for_status()
+        data = response.json()
+        print(f"Task submitted! ID: {data.get('task_id')}")
+        print("Check status using Option 3.")
+    except requests.exceptions.RequestException as e:
+        print(f"Error: {e}")
+
+def search_documents():
+    query = input("Enter search query: ").strip()
+    print("\n--- Searching Documents ---")
+    try:
+        response = requests.post(f"{API_URL}/agent/search", json={"prompt": query})
+        response.raise_for_status()
+        results = response.json()
+        print("\nSearch Results:")
+        for idx, result in enumerate(results.get("results", []), 1):
+             print(f"{idx}. {result['content']} (Source: {result['metadata'].get('filename')})")
+    except requests.exceptions.RequestException as e:
+        print(f"Error: {e}")
+
 
 def main():
     print("Welcome to the LangChain Agent Client")
@@ -49,7 +103,9 @@ def main():
         print("\n1. Run Synchronous Agent")
         print("2. Run Asynchronous Agent")
         print("3. Check Async Task Status")
-        print("4. Exit")
+        print("4. Ingest Documents")
+        print("5. Search Documents")
+        print("6. Exit")
         
         choice = input("Select an option: ").strip()
         
@@ -60,6 +116,10 @@ def main():
         elif choice == '3':
             check_task_status()
         elif choice == '4':
+            ingest_documents()
+        elif choice == '5':
+            search_documents()
+        elif choice == '6':
             print("Exiting...")
             break
         else:

@@ -5,9 +5,26 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 import config
 import os
+import tempfile
+import uuid
+from docling.document_converter import DocumentConverter
+from qdrant_client import QdrantClient
+from qdrant_client.http.models import VectorParams, Distance, PointStruct
+from langchain_openai import OpenAIEmbeddings
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 
 # Initialize Celery
+# Initialize Celery
 app = Celery('langchain_agent_sample', broker=config.CELERY_BROKER_URL, backend=config.CELERY_RESULT_BACKEND)
+
+# Initialize Qdrant and Embeddings
+# Robust extraction of the host from config or hardcoded for docker
+qdrant_client = QdrantClient(host="qdrant", port=6333)
+embeddings_model = OpenAIEmbeddings(
+    api_key=config.OPENAI_API_KEY, 
+    base_url=config.OPENAI_API_BASE,
+    model="text-embedding-3-small" # Use a standard small model for embeddings
+)
 
 def create_stub_kb():
     """Creates a stub knowledge base file."""
@@ -117,3 +134,93 @@ def answer_question(context_data):
     final_answer = chain_answer.invoke({"question": question})
     
     return f"Question Extracted: {question}\nAnswer: {final_answer}\n(Source KB: {kb_location})"
+
+
+@app.task
+def ingest_docs_task(files_data):
+    """
+    Ingest a list of files.
+    files_data: list of dicts {'filename': str, 'content': str}
+    """
+    converter = DocumentConverter()
+    
+    # Ensure collection exists
+    try:
+        qdrant_client.get_collection("documents")
+    except:
+        qdrant_client.create_collection(
+            collection_name="documents",
+            vectors_config=VectorParams(size=1536, distance=Distance.COSINE)
+        )
+
+    results = []
+    splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
+    
+    for file_item in files_data:
+        filename = file_item['filename']
+        content = file_item['content']
+        
+        # Create temp file because Docling typically works with file paths
+        tmp_path = None
+        try:
+            with tempfile.NamedTemporaryFile(mode='w+', suffix=f"_{filename}", delete=False) as tmp:
+                tmp.write(content)
+                tmp_path = tmp.name
+            
+            # Convert using Docling
+            doc = converter.convert(tmp_path)
+            markdown_content = doc.document.export_to_markdown()
+            
+            # Chunking
+            chunks = splitter.split_text(markdown_content)
+            
+            if not chunks:
+                 results.append(f"Skipped {filename}: No content extracted.")
+                 continue
+
+            # Embed and Index
+            vectors = embeddings_model.embed_documents(chunks) # Batch embedding
+            
+            points = []
+            for i, chunk in enumerate(chunks):
+                points.append(PointStruct(
+                    id=str(uuid.uuid4()),
+                    vector=vectors[i],
+                    payload={"filename": filename, "content": chunk}
+                ))
+                
+            qdrant_client.upsert(collection_name="documents", points=points)
+            results.append(f"Indexed {filename}: {len(chunks)} chunks.")
+            
+        except Exception as e:
+            results.append(f"Failed {filename}: {str(e)}")
+        finally:
+            if tmp_path and os.path.exists(tmp_path):
+                try:
+                    os.remove(tmp_path)
+                except:
+                    pass
+                
+    return "\n".join(results)
+
+def search_docs_sync(query):
+    """
+    Synchronous search against Qdrant.
+    """
+    # Check if collection exists first to avoid errors
+    try:
+        qdrant_client.get_collection("documents")
+    except:
+        return []
+
+    vector = embeddings_model.embed_query(query)
+    search_result = qdrant_client.search(
+        collection_name="documents",
+        query_vector=vector,
+        limit=5
+    )
+    
+    return [
+        {"content": hit.payload.get("content"), "metadata": {"filename": hit.payload.get("filename")}}
+        for hit in search_result
+    ]
