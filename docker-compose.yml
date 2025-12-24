@@ -52,14 +52,11 @@ services:
       - /volume1/data/documents:/data/monitored
 
   frontend:
-    image: node:18-alpine
+    build: ./frontend
     hostname: frontend
     working_dir: /app
     ports:
       - "3000:3000"
-    volumes:
-      - ./frontend:/app
-    command: sh -c "npm install && npm run dev"
     depends_on:
       - backend
 
