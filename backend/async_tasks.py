@@ -153,7 +153,7 @@ def ingest_docs_task(files_data):
     except:
         qdrant_client.create_collection(
             collection_name="documents",
-            vectors_config=VectorParams(size=1536, distance=Distance.COSINE)
+            vectors_config=VectorParams(size=config.OPENAI_EMBEDDING_DIMENSIONS, distance=Distance.COSINE)
         )
 
     results = []
