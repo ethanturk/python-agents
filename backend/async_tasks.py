@@ -177,12 +177,22 @@ def ingest_docs_task(files_data):
             # Chunking
             chunks = splitter.split_text(markdown_content)
             
+            # Sanitize chunks: ensure they are strings and not empty
+            chunks = [str(c) for c in chunks if c and str(c).strip()]
+            
             if not chunks:
                  results.append(f"Skipped {filename}: No content extracted.")
                  continue
 
             # Embed and Index
-            vectors = embeddings_model.embed_documents(chunks) # Batch embedding
+            try:
+                vectors = embeddings_model.embed_documents(chunks) # Batch embedding
+            except Exception as e:
+                print(f"DEBUG: Embedding failed. Chunks type: {type(chunks)}")
+                if chunks:
+                    print(f"DEBUG: First chunk type: {type(chunks[0])}")
+                    print(f"DEBUG: First chunk content: {chunks[0][:50]}...")
+                raise e
             
             points = []
             for i, chunk in enumerate(chunks):
