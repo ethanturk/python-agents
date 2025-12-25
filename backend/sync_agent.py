@@ -46,7 +46,7 @@ def search_documents(query: str) -> list:
     embeddings_model = OpenAIEmbeddings(
         api_key=config.OPENAI_API_KEY, 
         base_url=config.OPENAI_API_BASE,
-        model="text-embedding-3-small"
+        model=config.OPENAI_EMBEDDING_MODEL
     )
 
     try:

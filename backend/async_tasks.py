@@ -26,7 +26,7 @@ qdrant_client = QdrantClient(host="qdrant", port=6333, timeout=60)
 embeddings_model = OpenAIEmbeddings(
     api_key=config.OPENAI_API_KEY, 
     base_url=config.OPENAI_API_BASE,
-    model="text-embedding-3-small" # Use a standard small model for embeddings
+    model=config.OPENAI_EMBEDDING_MODEL # Use a standard small model for embeddings
 )
 
 def create_stub_kb():

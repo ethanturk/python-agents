@@ -104,7 +104,7 @@ def ingest_documents(request: IngestRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/agent/search")
-def search_documents(request: SearchRequest):
+def search_documents_endpoint(request: SearchRequest):
     logger.info(f"Received search request: {request.prompt}")
     try:
         results = search_documents(request.prompt)
