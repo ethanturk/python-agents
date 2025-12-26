@@ -33,7 +33,7 @@ services:
     ports:
       - "6333:6333"
     volumes:
-      - /volume1/docker/pyagents/qdrant:/data
+      - /volume1/docker/pyagents/qdrant:/qdrant/storage
 
   backend:
     build: ./backend

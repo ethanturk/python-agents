@@ -120,17 +120,22 @@ def list_documents():
     List all documents in the Qdrant collection.
     """
     try:
-        # Use scroll to list points. 
-        # Note: In production you'd want pagination.
-        result, _ = qdrant_client.scroll(
-            collection_name="documents",
-            limit=100,
-            with_payload=True,
-            with_vectors=False
-        )
+        all_points = []
+        offset = None
+        while True:
+            result, offset = qdrant_client.scroll(
+                collection_name="documents",
+                limit=100,
+                with_payload=True,
+                with_vectors=False,
+                offset=offset
+            )
+            all_points.extend(result)
+            if offset is None:
+                break
         
         docs = []
-        for point in result:
+        for point in all_points:
              docs.append({
                  "id": point.id,
                  "filename": point.payload.get("filename", "unknown"),
