@@ -147,7 +147,7 @@ def list_documents():
         logger.warning(f"Error fetching documents (likely empty): {e}")
         return {"documents": []}
 
-@app.delete("/agent/documents/{filename}")
+@app.delete("/agent/documents/{filename:path}")
 def delete_document_endpoint(filename: str):
     logger.info(f"Received delete request for document: {filename}")
     try:
