@@ -41,40 +41,42 @@ export default function SearchView({ query, setQuery, onSearch, searchData }) {
                 </Paper>
             )}
 
-            <Accordion defaultExpanded={!searchData.answer}>
-                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                    <Typography variant="h6">Related Documents ({uniqueFiles.length})</Typography>
-                </AccordionSummary>
-                <AccordionDetails>
-                    {uniqueFiles.length === 0 ? (
-                        <Alert severity="info" className="w-100">
-                            {searchData.answer ? "No citation sources found." : "Enter a query to search documents."}
-                        </Alert>
-                    ) : (
-                        <List>
-                            {uniqueFiles.map((filename, index) => (
-                                <React.Fragment key={index}>
-                                    <ListItem alignItems="center">
-                                        <ListItemText
-                                            primary={getFilenameOnly(filename)}
-                                            secondary={filename}
-                                        />
-                                        <Button
-                                            variant="outlined"
-                                            href={getWebLink(filename)}
-                                            target="_blank"
-                                            startIcon={<DescriptionIcon />}
-                                        >
-                                            View Document
-                                        </Button>
-                                    </ListItem>
-                                    {index < uniqueFiles.length - 1 && <Divider component="li" />}
-                                </React.Fragment>
-                            ))}
-                        </List>
-                    )}
-                </AccordionDetails>
-            </Accordion>
+            {(searchData.answer || uniqueFiles.length > 0) && (
+                <Accordion defaultExpanded={!searchData.answer}>
+                    <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                        <Typography variant="h6">Related Documents ({uniqueFiles.length})</Typography>
+                    </AccordionSummary>
+                    <AccordionDetails>
+                        {uniqueFiles.length === 0 ? (
+                            <Alert severity="info" className="w-100">
+                                No citation sources found.
+                            </Alert>
+                        ) : (
+                            <List>
+                                {uniqueFiles.map((filename, index) => (
+                                    <React.Fragment key={index}>
+                                        <ListItem alignItems="center">
+                                            <ListItemText
+                                                primary={getFilenameOnly(filename)}
+                                                secondary={filename}
+                                            />
+                                            <Button
+                                                variant="outlined"
+                                                href={getWebLink(filename)}
+                                                target="_blank"
+                                                startIcon={<DescriptionIcon />}
+                                            >
+                                                View Document
+                                            </Button>
+                                        </ListItem>
+                                        {index < uniqueFiles.length - 1 && <Divider component="li" />}
+                                    </React.Fragment>
+                                ))}
+                            </List>
+                        )}
+                    </AccordionDetails>
+                </Accordion>
+            )}
         </Box>
     );
 }
