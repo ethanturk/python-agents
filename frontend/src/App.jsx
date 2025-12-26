@@ -4,6 +4,7 @@ import CssBaseline from '@mui/material/CssBaseline';
 import { AppBar, Toolbar, Typography, Container, Box, TextField, Button, Paper, List, ListItem, ListItemText, Divider, Alert, CircularProgress, Accordion, AccordionSummary, AccordionDetails } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import SearchIcon from '@mui/icons-material/Search';
+import ReactMarkdown from 'react-markdown';
 import axios from 'axios';
 
 // Dark Theme Configuration
@@ -151,9 +152,15 @@ function App() {
             {searchData.answer && (
               <Paper sx={{ p: 3, mb: 3, bgcolor: '#004d40' }}>
                 <Typography variant="h5" gutterBottom sx={{ color: '#e0f2f1' }}>Generative Answer</Typography>
-                <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', fontSize: '1.1rem' }}>
-                  {searchData.answer}
-                </Typography>
+                <Box sx={{
+                  color: '#e0f2f1',
+                  '& p': { fontSize: '1.1rem', lineHeight: 1.6, mb: 2 },
+                  '& ul, & ol': { ml: 2, mb: 2 },
+                  '& li': { mb: 1, fontSize: '1.1rem' },
+                  '& strong': { color: '#80cbc4' }
+                }}>
+                  <ReactMarkdown>{searchData.answer}</ReactMarkdown>
+                </Box>
               </Paper>
             )}
 
