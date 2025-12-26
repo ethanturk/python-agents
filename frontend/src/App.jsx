@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
-import { AppBar, Toolbar, Typography, Container, Box, TextField, Button, Paper, List, ListItem, ListItemText, Divider, Alert, CircularProgress } from '@mui/material';
+import { AppBar, Toolbar, Typography, Container, Box, TextField, Button, Paper, List, ListItem, ListItemText, Divider, Alert, CircularProgress, Accordion, AccordionSummary, AccordionDetails } from '@mui/material';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import SearchIcon from '@mui/icons-material/Search';
 import axios from 'axios';
 
@@ -36,7 +37,7 @@ const API_BASE = import.meta.env.VITE_API_BASE || 'http://192.168.5.200:9999';
 
 function App() {
   const [documents, setDocuments] = useState([]);
-  const [searchResults, setSearchResults] = useState([]);
+  const [searchData, setSearchData] = useState({ answer: null, results: [] });
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [view, setView] = useState('list'); // 'list' or 'search'
@@ -61,7 +62,14 @@ function App() {
     setLoading(true);
     try {
       const response = await axios.post(`${API_BASE}/agent/search`, { prompt: query });
-      setSearchResults(response.data.results);
+      // Logic to handle old vs new response format or just expect new
+      const data = response.data;
+      if (data.answer) {
+        setSearchData({ answer: data.answer, results: data.results || [] });
+      } else {
+        // Fallback if API hasn't updated or returns old format
+        setSearchData({ answer: null, results: data.results || [] });
+      }
       setView('search');
     } catch (error) {
       console.error("Error searching:", error);
@@ -139,26 +147,49 @@ function App() {
         )}
 
         {!loading && view === 'search' && (
-          <Paper sx={{ p: 2 }}>
-            <Typography variant="h5" gutterBottom>Search Results</Typography>
-            {searchResults.length === 0 ? (
-              <Alert severity="warning">No matches found.</Alert>
-            ) : (
-              <List>
-                {searchResults.map((result, index) => (
-                  <React.Fragment key={index}>
-                    <ListItem alignItems="flex-start">
-                      <ListItemText
-                        primary={result.metadata.filename || "Unknown Source"}
-                        secondary={result.content}
-                      />
-                    </ListItem>
-                    {index < searchResults.length - 1 && <Divider component="li" />}
-                  </React.Fragment>
-                ))}
-              </List>
+          <Box>
+            {searchData.answer && (
+              <Paper sx={{ p: 3, mb: 3, bgcolor: '#004d40' }}>
+                <Typography variant="h5" gutterBottom sx={{ color: '#e0f2f1' }}>Generative Answer</Typography>
+                <Typography variant="body1" sx={{ whiteSpace: 'pre-wrap', fontSize: '1.1rem' }}>
+                  {searchData.answer}
+                </Typography>
+              </Paper>
             )}
-          </Paper>
+
+            <Accordion defaultExpanded={!searchData.answer}>
+              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                <Typography variant="h6">Raw Retrieval Results ({searchData.results.length})</Typography>
+              </AccordionSummary>
+              <AccordionDetails>
+                {searchData.results.length === 0 ? (
+                  <Alert severity="warning">No matches found.</Alert>
+                ) : (
+                  <List>
+                    {searchData.results.map((result, index) => (
+                      <React.Fragment key={index}>
+                        <ListItem alignItems="flex-start">
+                          <ListItemText
+                            primary={
+                              <Typography variant="subtitle1" color="primary">
+                                Source: {result.metadata.filename || "Unknown"}
+                              </Typography>
+                            }
+                            secondary={
+                              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                                {result.content}
+                              </Typography>
+                            }
+                          />
+                        </ListItem>
+                        {index < searchData.results.length - 1 && <Divider component="li" />}
+                      </React.Fragment>
+                    ))}
+                  </List>
+                )}
+              </AccordionDetails>
+            </Accordion>
+          </Box>
         )}
       </Container>
     </ThemeProvider>
