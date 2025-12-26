@@ -30,12 +30,37 @@ class DocumentHandler(FileSystemEventHandler):
         except Exception as e:
             logger.error(f"Error reading {filename}: {e}")
 
-def start_watching(path, callback):
+def process_existing_files(path, callback):
+    """
+    Scans for existing files and triggers callback.
+    """
+    logger.info(f"Scanning for existing files in {path}...")
+    try:
+        for filename in os.listdir(path):
+            filepath = os.path.join(path, filename)
+            # Skip hidden files and directories
+            if os.path.isfile(filepath) and not filename.startswith('.'):
+                try:
+                    logger.info(f"Processing existing file: {filename}")
+                    with open(filepath, "rb") as f:
+                        content = f.read()
+                    callback([{"filename": filename, "filepath": filepath, "content": content}])
+                except Exception as e:
+                    logger.error(f"Error reading existing file {filename}: {e}")
+    except Exception as e:
+        logger.error(f"Error scanning directory {path}: {e}")
+
+def start_watching(path, callback, process_existing=True):
     """
     Starts watching a directory in a background thread.
+    Optionally processes existing files.
     """
     if not os.path.exists(path):
         os.makedirs(path, exist_ok=True)
+        
+    if process_existing:
+        # Run in a separate thread to distinguish from realtime events and not block
+        threading.Thread(target=process_existing_files, args=(path, callback), daemon=True).start()
         
     event_handler = DocumentHandler(callback)
     observer = Observer()
