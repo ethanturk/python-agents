@@ -8,7 +8,7 @@ import { getWebLink, getFilenameOnly } from '../utils';
 export default function DocumentListView({ groupedDocs, onDelete }) {
     return (
         <Paper className="p-2">
-            <Typography variant="h5" gutterBottom>Ingested Documents</Typography>
+            <Typography variant="h5" gutterBottom>Ingested Documents ({Object.keys(groupedDocs).length})</Typography>
             {Object.keys(groupedDocs).length === 0 ? (
                 <Alert severity="info">No documents found. Drop files into 'monitored_data' folder.</Alert>
             ) : (
