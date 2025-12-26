@@ -1,11 +1,10 @@
-import React from 'react';
 import { AppBar, Toolbar, Typography, Button } from '@mui/material';
 
 export default function NavBar({ onShowSearch, onShowDocuments, onShowSummarize }) {
     return (
         <AppBar position="static">
             <Toolbar>
-                <Typography variant="h6" component="div" className="flex-grow-1">
+                <Typography variant="h6" component="div" className={['flex-grow-1', 'mb-4'].join(' ')}>
                     Agent Document Manager
                 </Typography>
                 <Button color="inherit" onClick={onShowSearch}>Search</Button>

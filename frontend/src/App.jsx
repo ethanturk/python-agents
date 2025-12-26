@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { Container, Box, CircularProgress } from '@mui/material';
 import axios from 'axios';
+import './App.css';
 
 import NavBar from './components/NavBar';
 import DocumentListView from './components/DocumentListView';
@@ -160,7 +161,7 @@ function App() {
         onShowSummarize={handleSwitchToSummarize}
       />
 
-      <Container maxWidth="xl" className="header-container">
+      <Container maxWidth="xl" className={['mt-4', 'mb-2'].join(' ')}>
         {loading && <Box className="flex-justify-center my-4"><CircularProgress /></Box>}
 
         {/* View: Search View (Default) */}
