@@ -101,12 +101,10 @@ def check_unindexed_files_loop(path, callback, interval=300):
                             logger.error(f"Error reading unindexed file {filepath}: {e}")
 
             if files_to_index:
-                logger.info(f"Found {len(files_to_index)} unindexed files. Queuing in batches of 5...")
-                batch_size = 5
-                for i in range(0, len(files_to_index), batch_size):
-                    batch = files_to_index[i:i + batch_size]
-                    logger.info(f"Queuing batch {i//batch_size + 1}: {len(batch)} files")
-                    callback(batch)
+                logger.info(f"Found {len(files_to_index)} unindexed files. Queuing files individually...")
+                for file_item in files_to_index:
+                    logger.info(f"Queuing file: {file_item['filename']}")
+                    callback([file_item])
             else:
                 logger.debug("No unindexed files found.")
                 
