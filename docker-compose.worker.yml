@@ -13,5 +13,3 @@ services:
       OPENAI_MODEL: ${OPENAI_MODEL}
       QDRANT_HOST: 192.168.5.200
       USE_NNPACK: "0"
-    volumes:
-      - /volume1/data/documents/searchable:/data/monitored
