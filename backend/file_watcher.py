@@ -4,6 +4,8 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 import threading
 import logging
+from async_tasks import qdrant_client
+from qdrant_client.http.models import ScrollRequest, WithPayloadSelector
 
 logger = logging.getLogger(__name__)
 
@@ -31,9 +33,86 @@ class DocumentHandler(FileSystemEventHandler):
         except Exception as e:
             logger.error(f"Error reading {filename}: {e}")
 
+def get_indexed_filenames():
+    """
+    Retrieves a set of all filenames currently indexed in Qdrant.
+    """
+    indexed_files = set()
+    offset = None
+    try:
+        # Check if collection exists first
+        qdrant_client.get_collection("documents")
+        
+        while True:
+            # Scroll through all points, fetching only the 'filename' from payload
+            records, next_offset = qdrant_client.scroll(
+                collection_name="documents",
+                scroll_filter=None,
+                limit=100,
+                with_payload=["filename"],
+                with_vectors=False,
+                offset=offset
+            )
+            
+            for record in records:
+                if record.payload and "filename" in record.payload:
+                    indexed_files.add(record.payload["filename"])
+            
+            offset = next_offset
+            if offset is None:
+                break
+    except Exception as e:
+        logger.warning(f"Could not fetch indexed files (collection might not exist yet): {e}")
+        
+    return indexed_files
+
+def check_unindexed_files_loop(path, callback, interval=300):
+    """
+    Periodically checks for files that are not indexed and queues them.
+    """
+    logger.info(f"Starting periodic unindexed file check monitor (interval={interval}s)")
+    while True:
+        try:
+            time.sleep(interval)
+            logger.info("Running periodic unindexed file check...")
+            
+            indexed_files = get_indexed_filenames()
+            logger.info(f"Found {len(indexed_files)} unique files already indexed.")
+            
+            files_to_index = []
+            
+            for root, dirs, files in os.walk(path):
+                for filename in files:
+                    if filename.startswith('.'):
+                        continue
+                        
+                    filepath = os.path.join(root, filename)
+                    
+                    # If this file path is NOT in the indexed set, we assume it needs indexing
+                    # Note: This simple check assumes the 'filename' stored in Qdrant is the absolute path
+                    # which matches our logic in on_created.
+                    if filepath not in indexed_files:
+                        logger.info(f"Found unindexed file: {filepath}")
+                        try:
+                            with open(filepath, "rb") as f:
+                                content = f.read()
+                            files_to_index.append({"filename": filepath, "filepath": filepath, "content": content})
+                        except Exception as e:
+                            logger.error(f"Error reading unindexed file {filepath}: {e}")
+
+            if files_to_index:
+                logger.info(f"Queuing {len(files_to_index)} unindexed files for ingestion.")
+                callback(files_to_index)
+            else:
+                logger.debug("No unindexed files found.")
+                
+        except Exception as e:
+            logger.error(f"Error in periodic check loop: {e}")
+
 def process_existing_files(path, callback):
     """
     Scans for existing files (recursively) and triggers callback.
+    This is run once on startup.
     """
     logger.info(f"Scanning for existing files in {path}...")
     try:
@@ -59,14 +138,17 @@ def process_existing_files(path, callback):
 def start_watching(path, callback, process_existing=True):
     """
     Starts watching a directory in a background thread.
-    Optionally processes existing files.
+    Optionally processes existing files and starts periodic checks.
     """
     if not os.path.exists(path):
         os.makedirs(path, exist_ok=True)
         
     if process_existing:
-        # Run in a separate thread to distinguish from realtime events and not block
+        # Run initial scan in a separate thread
         threading.Thread(target=process_existing_files, args=(path, callback), daemon=True).start()
+
+    # Start the periodic check loop thread
+    threading.Thread(target=check_unindexed_files_loop, args=(path, callback), daemon=True).start()
         
     event_handler = DocumentHandler(callback)
     observer = Observer()
