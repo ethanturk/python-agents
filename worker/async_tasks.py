@@ -19,6 +19,7 @@ from datetime import datetime
 
 # Initialize Celery
 app = Celery('langchain_agent_sample', broker=config.CELERY_BROKER_URL, backend=config.CELERY_RESULT_BACKEND)
+app.conf.worker_max_memory_per_child = 524288 # 512MB in KB
 
 # Initialize Qdrant and Embeddings
 # Robust extraction of the host from config or hardcoded for docker
