@@ -59,7 +59,7 @@ def search_documents(query: str) -> list:
     response = qdrant_client.query_points(
         collection_name="documents",
         query=vector,
-        limit=5
+        limit=25
     )
     search_result = response.points
     
