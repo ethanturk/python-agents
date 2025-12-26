@@ -8,6 +8,9 @@ import remarkGfm from 'remark-gfm';
 import { getWebLink, getFilenameOnly } from '../utils';
 
 export default function SearchView({ query, setQuery, onSearch, searchData }) {
+    // Calculate unique filenames for display
+    const uniqueFiles = [...new Set(searchData.results.map(r => r.metadata.filename))];
+
     return (
         <Box>
             <Paper className="search-bar-paper">
@@ -40,16 +43,16 @@ export default function SearchView({ query, setQuery, onSearch, searchData }) {
 
             <Accordion defaultExpanded={!searchData.answer}>
                 <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                    <Typography variant="h6">Related Documents ({searchData.results.length})</Typography>
+                    <Typography variant="h6">Related Documents ({uniqueFiles.length})</Typography>
                 </AccordionSummary>
                 <AccordionDetails>
-                    {searchData.results.length === 0 ? (
+                    {uniqueFiles.length === 0 ? (
                         <Alert severity="info" className="w-100">
                             {searchData.answer ? "No citation sources found." : "Enter a query to search documents."}
                         </Alert>
                     ) : (
                         <List>
-                            {[...new Set(searchData.results.map(r => r.metadata.filename))].map((filename, index) => (
+                            {uniqueFiles.map((filename, index) => (
                                 <React.Fragment key={index}>
                                     <ListItem alignItems="center">
                                         <ListItemText
@@ -65,7 +68,7 @@ export default function SearchView({ query, setQuery, onSearch, searchData }) {
                                             View Document
                                         </Button>
                                     </ListItem>
-                                    {index < [...new Set(searchData.results.map(r => r.metadata.filename))].length - 1 && <Divider component="li" />}
+                                    {index < uniqueFiles.length - 1 && <Divider component="li" />}
                                 </React.Fragment>
                             ))}
                         </List>
