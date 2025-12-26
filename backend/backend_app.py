@@ -9,7 +9,8 @@ from contextlib import asynccontextmanager
 from file_watcher import start_watching
 import os
 # Import needed for listing documents - assuming we add a helper or do it here
-from async_tasks import qdrant_client 
+from async_tasks import qdrant_client
+from qdrant_client.http.models import Filter, FieldCondition, MatchValue 
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -140,3 +141,23 @@ def list_documents():
         # Collection might not exist yet
         logger.warning(f"Error fetching documents (likely empty): {e}")
         return {"documents": []}
+
+@app.delete("/agent/documents/{filename}")
+def delete_document_endpoint(filename: str):
+    logger.info(f"Received delete request for document: {filename}")
+    try:
+        qdrant_client.delete(
+            collection_name="documents",
+            points_selector=Filter(
+                must=[
+                    FieldCondition(
+                        key="filename",
+                        match=MatchValue(value=filename)
+                    )
+                ]
+            )
+        )
+        return {"status": "success", "message": f"Deleted {filename}"}
+    except Exception as e:
+        logger.error(f"Error deleting document {filename}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

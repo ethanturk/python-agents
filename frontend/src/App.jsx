@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
-import { AppBar, Toolbar, Typography, Container, Box, TextField, Button, Paper, List, ListItem, ListItemText, Divider, Alert, CircularProgress, Accordion, AccordionSummary, AccordionDetails } from '@mui/material';
+import { AppBar, Toolbar, Typography, Container, Box, TextField, Button, Paper, List, ListItem, ListItemText, Divider, Alert, CircularProgress, Accordion, AccordionSummary, AccordionDetails, IconButton, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import SearchIcon from '@mui/icons-material/Search';
+import DeleteIcon from '@mui/icons-material/Delete';
 import ReactMarkdown from 'react-markdown';
 import axios from 'axios';
 
@@ -43,17 +44,55 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [view, setView] = useState('list'); // 'list' or 'search'
 
-  // Fetch Documents
+  // Grouped Documents State
+  const [groupedDocs, setGroupedDocs] = useState({});
+
+  // Delete Dialog State
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [docToDelete, setDocToDelete] = useState(null);
+
+  // Fetch Documents and Group them
   const fetchDocuments = async () => {
     setLoading(true);
     try {
       const response = await axios.get(`${API_BASE}/agent/documents`);
-      setDocuments(response.data.documents);
+      const docs = response.data.documents;
+
+      // Group by filename
+      const groups = docs.reduce((acc, doc) => {
+        const file = doc.filename || "Unknown";
+        if (!acc[file]) acc[file] = [];
+        acc[file].push(doc);
+        return acc;
+      }, {});
+
+      setGroupedDocs(groups);
       setView('list');
     } catch (error) {
       console.error("Error fetching documents:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Handle Delete Click
+  const promptDelete = (filename, e) => {
+    e.stopPropagation(); // Prevent accordion expansion
+    setDocToDelete(filename);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!docToDelete) return;
+    try {
+      await axios.delete(`${API_BASE}/agent/documents/${docToDelete}`);
+      // Refresh list
+      fetchDocuments();
+      setDeleteDialogOpen(false);
+      setDocToDelete(null);
+    } catch (error) {
+      console.error("Error deleting document:", error);
+      alert("Failed to delete document");
     }
   };
 
@@ -118,31 +157,38 @@ function App() {
         {!loading && view === 'list' && (
           <Paper sx={{ p: 2 }}>
             <Typography variant="h5" gutterBottom>Ingested Documents</Typography>
-            {documents.length === 0 ? (
+            {Object.keys(groupedDocs).length === 0 ? (
               <Alert severity="info">No documents found. Drop files into 'monitored_data' folder.</Alert>
             ) : (
-              <List>
-                {documents.map((doc, index) => (
-                  <React.Fragment key={doc.id || index}>
-                    <ListItem alignItems="flex-start">
-                      <ListItemText
-                        primary={doc.filename}
-                        secondary={
-                          <Typography
-                            sx={{ display: 'inline' }}
-                            component="span"
-                            variant="body2"
-                            color="text.secondary"
-                          >
-                            {doc.content_snippet}...
-                          </Typography>
-                        }
-                      />
-                    </ListItem>
-                    {index < documents.length - 1 && <Divider variant="inset" component="li" />}
-                  </React.Fragment>
+              <Box>
+                {Object.entries(groupedDocs).map(([filename, chunks]) => (
+                  <Accordion key={filename}>
+                    <AccordionSummary
+                      expandIcon={<ExpandMoreIcon />}
+                      sx={{ '& .MuiAccordionSummary-content': { alignItems: 'center', justifyContent: 'space-between' } }}
+                    >
+                      <Typography variant="h6">{filename} ({chunks.length} chunks)</Typography>
+                      <IconButton onClick={(e) => promptDelete(filename, e)} color="error" size="small">
+                        <DeleteIcon />
+                      </IconButton>
+                    </AccordionSummary>
+                    <AccordionDetails>
+                      <List>
+                        {chunks.map((doc, index) => (
+                          <React.Fragment key={index}>
+                            <ListItem alignItems="flex-start">
+                              <ListItemText
+                                secondary={doc.content_snippet + "..."}
+                              />
+                            </ListItem>
+                            {index < chunks.length - 1 && <Divider component="li" />}
+                          </React.Fragment>
+                        ))}
+                      </List>
+                    </AccordionDetails>
+                  </Accordion>
                 ))}
-              </List>
+              </Box>
             )}
           </Paper>
         )}
@@ -198,6 +244,25 @@ function App() {
             </Accordion>
           </Box>
         )}
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog
+          open={deleteDialogOpen}
+          onClose={() => setDeleteDialogOpen(false)}
+        >
+          <DialogTitle>Confirm Deletion</DialogTitle>
+          <DialogContent>
+            <DialogContentText>
+              Are you sure you want to delete <strong>{docToDelete}</strong>? This action cannot be undone.
+            </DialogContentText>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+            <Button onClick={confirmDelete} color="error" autoFocus>
+              Delete
+            </Button>
+          </DialogActions>
+        </Dialog>
       </Container>
     </ThemeProvider>
   );
