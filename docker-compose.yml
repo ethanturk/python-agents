@@ -21,6 +21,7 @@ services:
       - "5555:5555"
     environment:
       CELERY_BROKER_URL: amqp://guest:guest@rabbitmq:5672//
+      FLOWER_UNAUTHENTICATED_API: true
     volumes:
       - /volume1/docker/pyagents/flower:/data
     depends_on:
