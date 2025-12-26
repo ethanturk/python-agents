@@ -1,0 +1,11 @@
+services:
+  frontend:
+    build: ./frontend
+    hostname: frontend
+    working_dir: /app
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    environment:
+      VITE_API_BASE: ${VITE_API_BASE:-http://192.168.5.200:9999}
