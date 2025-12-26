@@ -1,63 +1,71 @@
-# LangChain Agent Client-Server
+# LangChain Agent System
 
-This project demonstrates a Client-Server architecture for LLM Agents:
-1.  **Backend API**: FastAPI service managing agent execution.
-2.  **Frontend CLI**: a Python CLI tool interacting with the API.
-3.  **Worker**: Celery worker for asynchronous task orchestration.
+This project demonstrates a scalable Client-Server architecture for LLM Agents with a React frontend and distributed background processing.
 
 ## Architecture
 
-- **Sync Agent**: CLI -> API -> LLM -> API -> CLI
-- **Async Agent**: CLI -> API -> Celery (RabbitMQ) -> Worker -> LLM -> API -> CLI
+The system is composed of several independent services, each deployable via Docker:
+
+1.  **Frontend**: React + Vite Web Application (UI).
+2.  **Backend API**: FastAPI service managing agent execution and state.
+3.  **Worker**: Celery worker for handling asynchronous tasks and document ingestion.
+4.  **Infrastructure**:
+    *   **RabbitMQ**: Message broker for task queues.
+    *   **Qdrant**: Vector database for RAG (retrieval-augmented generation).
+    *   **Flower**: Monitoring tool for Celery workers.
+
+**Data Flow**: `Frontend -> Backend API -> RabbitMQ -> Worker -> LLM / Qdrant`
 
 ## Prerequisites
-- Python 3.9+
-- OpenAI API Key
+
+- Docker & Docker Compose
+- OpenAI API Key (or compatible endpoint)
 
 ## Setup
-1.  Create and ACTIVATE a virtual environment (Required):
-    ```bash
-    python3 -m venv venv
-    source venv/bin/activate
+
+1.  **Environment Variables**:
+    Create a `.env` file in the project root. You can copy the example variables.
+    
+    ```properties
+    OPENAI_API_KEY=sk-...
+    OPENAI_API_BASE=https://api.openai.com/v1
+    OPENAI_MODEL=gpt-4o
+    
+    # Optional Overrides
+    # CELERY_BROKER_URL=amqp://guest:guest@rabbitmq:5672//
+    # VITE_API_BASE=http://localhost:9999
     ```
-2.  Install dependencies:
-    ```bash
-    pip install -r requirements.txt
-    ```
-3.  Create a `.env` file (or `config.py`) with your OpenAI API Key.
 
 ## Running the Project
 
-You will need **three** separate terminal windows. Ensure the virtual environment is activated in ALL of them.
+The project is split into separate Docker Compose files for flexible deployment.
 
-### 1. Start Celery Worker
-Handles asynchronous tasks.
+### 1. Start Infrastructure & Backend
+This launches RabbitMQ, Qdrant, Flower, and the main Backend API.
+
 ```bash
-# Terminal 1
-source venv/bin/activate
-celery -A async_tasks worker --loglevel=info
+docker-compose -f docker-compose.yml up -d --build
+```
+*   **Backend API**: [http://localhost:9999/docs](http://localhost:9999/docs)
+*   **Flower Dashboard**: [http://localhost:5555](http://localhost:5555)
+*   **RabbitMQ Console**: [http://localhost:15672](http://localhost:15672) (guest/guest)
+
+### 2. Start Worker
+Launches the Celery worker to process background tasks and document ingestion.
+
+```bash
+docker-compose -f docker-compose.worker.yml up -d --build
 ```
 
-### 2. Start Backend API
-Hosts the agent logic.
-```bash
-# Terminal 2
-source venv/bin/activate
-uvicorn backend_app:app --reload
-```
-The API will be available at `http://localhost:8000`.
+### 3. Start Frontend
+Launches the React Web UI.
 
-### 3. Run Client CLI
-Interactive frontend for the user.
 ```bash
-# Terminal 3
-source venv/bin/activate
-python frontend_cli.py
+docker-compose -f docker-compose.frontend.yml up -d --build
 ```
-Follow the on-screen prompts to use Sync or Async agents.
+*   **Web UI**: [http://localhost:3000](http://localhost:3000)
 
-## Standalone Mode (Legacy)
-To run the agents directly without the Client-Server setup:
-```bash
-python main.py
-```
+## Development Notes
+
+*   **Shared Volumes**: Data is persisted in docker volumes mapping to local directories (check `docker-compose.yml` volumes explicitly if you need to change storage paths).
+*   **Networking**: Services communicate via the Docker network. The Frontend (running in browser) connects to the Backend URL configured via `VITE_API_BASE`.

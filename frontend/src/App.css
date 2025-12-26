@@ -68,8 +68,9 @@
   margin-left: 16px !important;
 }
 
-.mt-4 {
+.header-container {
   margin-top: 32px !important;
+  margin-bottom: 32px;
 }
 
 .w-100 {

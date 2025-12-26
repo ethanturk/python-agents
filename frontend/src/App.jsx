@@ -160,7 +160,7 @@ function App() {
         onShowSummarize={handleSwitchToSummarize}
       />
 
-      <Container maxWidth="xl" className="mt-4">
+      <Container maxWidth="xl" className="header-container">
         {loading && <Box className="flex-justify-center my-4"><CircularProgress /></Box>}
 
         {/* View: Search View (Default) */}
