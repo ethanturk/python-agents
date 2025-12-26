@@ -19,22 +19,32 @@ export default function DocumentListView({ groupedDocs, onDelete }) {
                                 expandIcon={<ExpandMoreIcon />}
                                 className="custom-accordion-summary"
                             >
-                                <Box className="flex-center">
-                                    <Typography variant="h6" className="mr-2">{getFilenameOnly(filename)}</Typography>
-                                    <Button
-                                        variant="outlined"
-                                        size="small"
-                                        href={getWebLink(filename)}
-                                        target="_blank"
-                                        onClick={(e) => e.stopPropagation()}
-                                        startIcon={<DescriptionIcon />}
+                                <Box className="document-row">
+                                    <Typography
+                                        variant="body1"
+                                        noWrap
+                                        className="document-filename"
+                                        title={filename} // Tooltip for full filename on hover
                                     >
-                                        View
-                                    </Button>
+                                        {getFilenameOnly(filename)}
+                                    </Typography>
+                                    <Box className="document-actions">
+                                        <Button
+                                            variant="outlined"
+                                            size="small"
+                                            href={getWebLink(filename)}
+                                            target="_blank"
+                                            onClick={(e) => e.stopPropagation()}
+                                            startIcon={<DescriptionIcon />}
+                                            className="action-button-view"
+                                        >
+                                            View
+                                        </Button>
+                                        <IconButton onClick={(e) => onDelete(filename, e)} color="error" size="small">
+                                            <DeleteIcon />
+                                        </IconButton>
+                                    </Box>
                                 </Box>
-                                <IconButton onClick={(e) => onDelete(filename, e)} color="error" size="small">
-                                    <DeleteIcon />
-                                </IconButton>
                             </AccordionSummary>
                             <AccordionDetails>
                                 <Typography variant="subtitle2" className="mb-1 text-secondary">Full Path: {filename}</Typography>
