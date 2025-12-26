@@ -1,7 +1,7 @@
 services:
   worker:
     build: ./worker
-    command: celery -A async_tasks worker --loglevel=info --concurrency=10
+    command: celery -A async_tasks worker --loglevel=info --concurrency=8
     deploy:
       resources:
         limits:
