@@ -71,7 +71,11 @@ function App() {
         return acc;
       }, {});
 
-      setGroupedDocs(groups);
+      const sortedGroups = Object.fromEntries(
+        Object.entries(groups).sort()
+      );
+
+      setGroupedDocs(sortedGroups);
     } catch (error) {
       console.error("Error fetching documents:", error);
     } finally {
