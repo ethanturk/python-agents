@@ -178,6 +178,26 @@ def ingest_docs_task(files_data):
                 tmp.write(content)
                 tmp_path = tmp.name
             
+            # Check if file is already indexed
+            try:
+                count_result = qdrant_client.count(
+                    collection_name="documents",
+                    count_filter=Filter(
+                        must=[
+                            FieldCondition(
+                                key="filename",
+                                match=MatchValue(value=filename)
+                            )
+                        ]
+                    )
+                )
+                if count_result.count > 0:
+                    results.append(f"Skipped {filename}: Already indexed.")
+                    continue
+            except Exception as e:
+                # If collection doesn't exist or other error, proceed (collection creation is handled above)
+                pass
+
             # Convert using Docling
             doc = converter.convert(tmp_path)
             markdown_content = doc.document.export_to_markdown()
@@ -212,41 +232,8 @@ def ingest_docs_task(files_data):
                     payload={"filename": filename, "content": chunk}
                 ))
                 
-            # Delete existing points for this filename to avoid duplicates
-            qdrant_client.delete(
-                collection_name="documents",
-                points_selector=Filter(
-                    must=[
-                        FieldCondition(
-                            key="filename",
-                            match=MatchValue(value=filename)
-                        )
-                    ]
-                )
-            )
-
             qdrant_client.upsert(collection_name="documents", points=points)
             results.append(f"Indexed {filename}: {len(chunks)} chunks.")
-            
-            # Handle file move if filepath is provided
-            filepath = file_item.get('filepath')
-            if filepath and os.path.exists(filepath):
-                try:
-                    # Construct processed path
-                    directory = os.path.dirname(filepath)
-                    processed_dir = os.path.join(directory, "processed")
-                    os.makedirs(processed_dir, exist_ok=True)
-                    
-                    # Construct new filename with date
-                    current_date = datetime.now().strftime("%m_%d_%Y")
-                    new_filename = f"{current_date}_{filename}"
-                    new_filepath = os.path.join(processed_dir, new_filename)
-                    
-                    # Move file
-                    shutil.move(filepath, new_filepath)
-                    results.append(f"Moved {filename} to {new_filepath}")
-                except Exception as e:
-                    results.append(f"Failed to move {filename}: {e}")
 
             
         except Exception as e:

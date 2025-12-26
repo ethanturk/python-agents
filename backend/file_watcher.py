@@ -16,7 +16,8 @@ class DocumentHandler(FileSystemEventHandler):
             return
         
         filepath = event.src_path
-        filename = os.path.basename(filepath)
+        # Use full path as filename as requested
+        filename = filepath
         
         # Simple debounce / wait for write to finish could be handled here 
         # but for simplicity we assume file is ready or handle retries in ingest
@@ -32,22 +33,26 @@ class DocumentHandler(FileSystemEventHandler):
 
 def process_existing_files(path, callback):
     """
-    Scans for existing files and triggers callback.
+    Scans for existing files (recursively) and triggers callback.
     """
     logger.info(f"Scanning for existing files in {path}...")
     try:
-        for filename in os.listdir(path):
-            filepath = os.path.join(path, filename)
-            # Skip hidden files and directories
-            if os.path.isfile(filepath) and not filename.startswith('.'):
+        for root, dirs, files in os.walk(path):
+            for filename in files:
+                # Skip hidden files
+                if filename.startswith('.'):
+                    continue
+                    
+                filepath = os.path.join(root, filename)
                 try:
-                    logger.info(f"Processing existing file: {filename}")
+                    logger.info(f"Processing existing file: {filepath}")
                     with open(filepath, "rb") as f:
                         content = f.read()
-                    callback([{"filename": filename, "filepath": filepath, "content": content}])
-                    time.sleep(2) # Throttle to prevent overloading downstream services
+                    # Pass full path as filename
+                    callback([{"filename": filepath, "filepath": filepath, "content": content}])
+                    time.sleep(0.5) # Throttle slightly less
                 except Exception as e:
-                    logger.error(f"Error reading existing file {filename}: {e}")
+                    logger.error(f"Error reading existing file {filepath}: {e}")
     except Exception as e:
         logger.error(f"Error scanning directory {path}: {e}")
 
@@ -65,7 +70,7 @@ def start_watching(path, callback, process_existing=True):
         
     event_handler = DocumentHandler(callback)
     observer = Observer()
-    observer.schedule(event_handler, path, recursive=False)
+    observer.schedule(event_handler, path, recursive=True)
     observer.start()
     
     logger.info(f"Started monitoring {path}")
