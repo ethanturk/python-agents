@@ -18,6 +18,7 @@ export default function DocumentListView({ groupedDocs, onDelete }) {
                             <AccordionSummary
                                 expandIcon={<ExpandMoreIcon />}
                                 className="custom-accordion-summary"
+                                component="div"
                             >
                                 <Box className="document-row">
                                     <Typography
@@ -40,7 +41,14 @@ export default function DocumentListView({ groupedDocs, onDelete }) {
                                         >
                                             View
                                         </Button>
-                                        <IconButton onClick={(e) => onDelete(filename, e)} color="error" size="small">
+                                        <IconButton
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                onDelete(filename);
+                                            }}
+                                            color="error"
+                                            size="small"
+                                        >
                                             <DeleteIcon />
                                         </IconButton>
                                     </Box>
