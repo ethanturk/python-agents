@@ -4,10 +4,7 @@ celery
 python-dotenv
 fastapi
 uvicorn
-requests
 qdrant-client
 langchain-text-splitters
 docling
 watchdog
-pypdf
-langchain-community

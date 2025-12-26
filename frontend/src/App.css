@@ -40,3 +40,146 @@
 .read-the-docs {
   color: #888;
 }
+/* --- Refactored Components --- */
+
+/* Layout & Spacing */
+.p-2 { padding: 16px !important; }
+.p-3 { padding: 24px !important; }
+.p-4 { padding: 32px !important; }
+.mb-3 { margin-bottom: 24px !important; }
+.mb-4 { margin-bottom: 32px !important; }
+.ml-2 { margin-left: 16px !important; }
+.mt-4 { margin-top: 32px !important; }
+.w-100 { width: 100% !important; }
+
+.flex-center {
+  display: flex !important;
+  align-items: center !important;
+}
+
+.flex-between {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+}
+
+.flex-gap-2 {
+  display: flex !important;
+  gap: 16px !important;
+}
+
+/* Component: Search Bar */
+.search-bar-paper {
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  margin-bottom: 32px;
+}
+
+.search-button {
+  margin-left: 16px !important;
+  height: 56px !important;
+}
+
+/* Component: Markdown Content Base */
+.markdown-body {
+  line-height: 1.6;
+}
+.markdown-body p {
+  margin-bottom: 16px;
+  font-size: 1.1rem;
+}
+.markdown-body ul, .markdown-body ol {
+  margin-left: 16px;
+  margin-bottom: 16px;
+}
+.markdown-body li {
+  margin-bottom: 8px;
+  font-size: 1.1rem;
+}
+.markdown-body table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 16px;
+}
+
+/* Variant: Search Answer (Teal Theme) */
+.answer-paper {
+  padding: 24px;
+  margin-bottom: 24px;
+  background-color: #004d40 !important;
+}
+.answer-title {
+  color: #e0f2f1 !important;
+}
+.markdown-search {
+  color: #e0f2f1;
+}
+.markdown-search strong {
+  color: #80cbc4;
+}
+.markdown-search th, .markdown-search td {
+  border: 1px solid #4db6ac;
+  padding: 8px;
+  text-align: left;
+}
+.markdown-search th {
+  background-color: #00695c;
+  color: #ffffff;
+}
+
+/* Variant: Summary (Default Theme) */
+.summary-paper {
+  padding: 24px;
+  background-color: #1e1e1e; /* matches paper default in dark theme */
+}
+.markdown-summary strong {
+  color: #90caf9;
+}
+
+.accordion-summary-content {
+  align-items: center;
+  justify-content: space-between;
+/* MUI overrides need specific targeting often, but we will apply to the sx's target class or container */
+}
+
+/* Additional Utils */
+.flex-justify-center {
+  display: flex !important;
+  justify-content: center !important;
+}
+
+.flex-grow-1 {
+  flex-grow: 1 !important;
+}
+
+.my-4 {
+  margin-top: 32px !important;
+  margin-bottom: 32px !important;
+}
+
+.mb-2 {
+  margin-bottom: 16px !important;
+}
+
+.mr-2 {
+  margin-right: 16px !important;
+}
+
+.mb-1 {
+  margin-bottom: 8px !important;
+}
+
+.text-secondary {
+  color: rgba(255, 255, 255, 0.7) !important; /* Mui text.secondary equivalent for dark theme */
+}
+
+.custom-accordion-summary .MuiAccordionSummary-content {
+  align-items: center !important;
+  justify-content: space-between !important;
+}
+
+.my-3 {
+  margin-top: 24px !important;
+  margin-bottom: 24px !important;
+}
