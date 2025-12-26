@@ -9,7 +9,7 @@ import tempfile
 import uuid
 from docling.document_converter import DocumentConverter
 from qdrant_client import QdrantClient
-from qdrant_client.http.models import VectorParams, Distance, PointStruct
+from qdrant_client.http.models import VectorParams, Distance, PointStruct, Filter, FieldCondition, MatchValue
 from langchain_openai import OpenAIEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 import shutil
@@ -212,6 +212,19 @@ def ingest_docs_task(files_data):
                     payload={"filename": filename, "content": chunk}
                 ))
                 
+            # Delete existing points for this filename to avoid duplicates
+            qdrant_client.delete(
+                collection_name="documents",
+                points_selector=Filter(
+                    must=[
+                        FieldCondition(
+                            key="filename",
+                            match=MatchValue(value=filename)
+                        )
+                    ]
+                )
+            )
+
             qdrant_client.upsert(collection_name="documents", points=points)
             results.append(f"Indexed {filename}: {len(chunks)} chunks.")
             
