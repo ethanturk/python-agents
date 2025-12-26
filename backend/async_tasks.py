@@ -174,7 +174,7 @@ def ingest_docs_task(files_data):
         # Create temp file because Docling typically works with file paths
         tmp_path = None
         try:
-            with tempfile.NamedTemporaryFile(mode='wb+', suffix=f"_{filename}", delete=False) as tmp:
+            with tempfile.NamedTemporaryFile(mode='wb+', suffix=f"_{os.path.basename(filename)}", delete=False) as tmp:
                 tmp.write(content)
                 tmp_path = tmp.name
             
