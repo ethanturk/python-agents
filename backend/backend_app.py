@@ -62,6 +62,7 @@ class IngestRequest(BaseModel):
 
 class SearchRequest(BaseModel):
     prompt: str
+    limit: int = 10
 
 class SummarizeRequest(BaseModel):
     filename: str
@@ -116,9 +117,9 @@ def ingest_documents(request: IngestRequest):
 
 @app.post("/agent/search")
 def search_documents_endpoint(request: SearchRequest):
-    logger.info(f"Received search request: {request.prompt}")
+    logger.info(f"Received search request: {request.prompt} (limit={request.limit})")
     try:
-        result = perform_rag(request.prompt)
+        result = perform_rag(request.prompt, request.limit)
         return result
     except Exception as e:
         logger.error(f"Error executing search: {e}")

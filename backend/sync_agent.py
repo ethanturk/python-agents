@@ -33,7 +33,7 @@ def run_sync_agent(user_input: str) -> str:
     except Exception as e:
         return f"Error running sync agent: {str(e)}"
 
-def search_documents(query: str) -> list:
+def search_documents(query: str, limit: int = 10) -> list:
     """
     Search documents in Qdrant (Synchronous).
     """
@@ -59,7 +59,7 @@ def search_documents(query: str) -> list:
     response = qdrant_client.query_points(
         collection_name="documents",
         query=vector,
-        limit=25
+        limit=limit
     )
     search_result = response.points
     
@@ -68,14 +68,14 @@ def search_documents(query: str) -> list:
         for hit in search_result
     ]
 
-def perform_rag(query: str) -> dict:
+def perform_rag(query: str, limit: int = 10) -> dict:
     """
     Perform RAG: Search -> Context -> LLM Answer.
     """
     if not config.OPENAI_API_KEY:
         return {"answer": "Error: Missing API Key", "results": []}
 
-    results = search_documents(query)
+    results = search_documents(query, limit)
     
     if not results:
         return {

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Paper, Typography, Accordion, AccordionSummary, AccordionDetails, Alert, List, ListItem, ListItemText, Button, Divider, TextField } from '@mui/material';
+import { Box, Paper, Typography, Accordion, AccordionSummary, AccordionDetails, Alert, List, ListItem, ListItemText, Button, Divider, TextField, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import DescriptionIcon from '@mui/icons-material/Description';
 import SearchIcon from '@mui/icons-material/Search';
@@ -7,7 +7,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { getWebLink, getFilenameOnly } from '../utils';
 
-export default function SearchView({ query, setQuery, onSearch, searchData }) {
+export default function SearchView({ query, setQuery, onSearch, searchData, searchLimit, setSearchLimit }) {
     // Calculate unique filenames for display
     const uniqueFiles = [...new Set(searchData.results.map(r => r.metadata.filename))];
 
@@ -22,6 +22,21 @@ export default function SearchView({ query, setQuery, onSearch, searchData }) {
                     onChange={(e) => setQuery(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && onSearch()}
                 />
+                <FormControl className="ml-2" variant="outlined" style={{ minWidth: 100 }}>
+                    <InputLabel id="limit-select-label">Limit</InputLabel>
+                    <Select
+                        labelId="limit-select-label"
+                        id="limit-select"
+                        value={searchLimit}
+                        onChange={(e) => setSearchLimit(e.target.value)}
+                        label="Limit"
+                    >
+                        <MenuItem value={10}>10</MenuItem>
+                        <MenuItem value={25}>25</MenuItem>
+                        <MenuItem value={50}>50</MenuItem>
+                        <MenuItem value={100}>100</MenuItem>
+                    </Select>
+                </FormControl>
                 <Button
                     variant="contained"
                     className="search-button"

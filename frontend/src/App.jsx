@@ -44,9 +44,7 @@ function App() {
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [view, setView] = useState('search'); // 'list', 'search', 'summarize'
-
-  // Grouped Documents State
-  const [groupedDocs, setGroupedDocs] = useState({});
+  const [searchLimit, setSearchLimit] = useState(10);
 
   // Delete Dialog State
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -54,6 +52,9 @@ function App() {
 
   // Summarize Result State (selected doc state is now in SummarizeView)
   const [summaryResult, setSummaryResult] = useState(null);
+
+  // Grouped Documents State
+  const [groupedDocs, setGroupedDocs] = useState({});
 
   // Fetch Documents and Group them
   const fetchDocuments = async () => {
@@ -132,13 +133,12 @@ function App() {
       setLoading(false);
     }
   };
-
   // Search Documents
   const handleSearch = async () => {
     if (!query) return;
     setLoading(true);
     try {
-      const response = await axios.post(`${API_BASE}/agent/search`, { prompt: query });
+      const response = await axios.post(`${API_BASE}/agent/search`, { prompt: query, limit: searchLimit });
       const data = response.data;
       if (data.answer) {
         setSearchData({ answer: data.answer, results: data.results || [] });
@@ -171,6 +171,8 @@ function App() {
             setQuery={setQuery}
             onSearch={handleSearch}
             searchData={searchData}
+            searchLimit={searchLimit}
+            setSearchLimit={setSearchLimit}
           />
         )}
 
