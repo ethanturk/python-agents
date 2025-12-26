@@ -90,9 +90,12 @@ def search_documents():
         response = requests.post(f"{API_URL}/agent/search", json={"prompt": query})
         response.raise_for_status()
         results = response.json()
-        print("\nSearch Results:")
+        if results.get("answer"):
+            print(f"\n--- Thought-out Answer ---\n{results['answer']}\n")
+        
+        print("--- Sources ---")
         for idx, result in enumerate(results.get("results", []), 1):
-             print(f"{idx}. {result['content']} (Source: {result['metadata'].get('filename')})")
+             print(f"{idx}. {result['content'][:200]}... (Source: {result['metadata'].get('filename')})")
     except requests.exceptions.RequestException as e:
         print(f"Error: {e}")
 
