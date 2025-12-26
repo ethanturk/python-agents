@@ -68,5 +68,47 @@ def search_documents(query: str) -> list:
         for hit in search_result
     ]
 
+def perform_rag(query: str) -> dict:
+    """
+    Perform RAG: Search -> Context -> LLM Answer.
+    """
+    if not config.OPENAI_API_KEY:
+        return {"answer": "Error: Missing API Key", "results": []}
+
+    results = search_documents(query)
+    
+    if not results:
+        return {
+            "answer": "I couldn't find any relevant information in the knowledge base.",
+            "results": []
+        }
+
+    context_str = "\n\n".join([
+        f"Source '{r['metadata']['filename']}':\n{r['content']}" 
+        for r in results
+    ])
+
+    llm = ChatOpenAI(
+        api_key=config.OPENAI_API_KEY,
+        base_url=config.OPENAI_API_BASE,
+        model=config.OPENAI_MODEL
+    )
+    
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", "You are a helpful assistant. Answer the user's question based ONLY on the following context. If the answer is not in the context, say so.\n\nContext:\n{context}"),
+        ("user", "{input}")
+    ])
+    
+    chain = prompt | llm | StrOutputParser()
+    try:
+        answer = chain.invoke({"input": query, "context": context_str})
+    except Exception as e:
+        answer = f"Error generating answer: {str(e)}"
+        
+    return {
+        "answer": answer,
+        "results": results
+    }
+
 if __name__ == "__main__":
     print(run_sync_agent("Hello, are you there?"))

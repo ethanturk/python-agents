@@ -151,11 +151,18 @@ def ingest_docs_task(files_data):
     # Ensure collection exists
     try:
         qdrant_client.get_collection("documents")
-    except:
-        qdrant_client.create_collection(
-            collection_name="documents",
-            vectors_config=VectorParams(size=config.OPENAI_EMBEDDING_DIMENSIONS, distance=Distance.COSINE)
-        )
+    except Exception:
+        try:
+            qdrant_client.create_collection(
+                collection_name="documents",
+                vectors_config=VectorParams(size=config.OPENAI_EMBEDDING_DIMENSIONS, distance=Distance.COSINE)
+            )
+        except Exception as e:
+            # If collection was created concurrently, ignore the 409 Conflict error
+            if "Conflict" in str(e) or "409" in str(e):
+                pass
+            else:
+                raise e
 
     results = []
     splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)

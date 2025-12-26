@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from celery.result import AsyncResult
-from sync_agent import run_sync_agent, search_documents
+from sync_agent import run_sync_agent, search_documents, perform_rag
 from async_tasks import check_knowledge_base, answer_question, ingest_docs_task, app as celery_app
 from celery import chain
 import logging
@@ -107,8 +107,8 @@ def ingest_documents(request: IngestRequest):
 def search_documents_endpoint(request: SearchRequest):
     logger.info(f"Received search request: {request.prompt}")
     try:
-        results = search_documents(request.prompt)
-        return {"results": results}
+        result = perform_rag(request.prompt)
+        return result
     except Exception as e:
         logger.error(f"Error executing search: {e}")
         raise HTTPException(status_code=500, detail=str(e))
