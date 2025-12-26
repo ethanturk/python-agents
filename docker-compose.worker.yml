@@ -1,11 +1,11 @@
 services:
   worker:
     build: ./worker
-    command: celery -A async_tasks worker --loglevel=info --concurrency=12
+    command: celery -A async_tasks worker --loglevel=info --concurrency=10
     deploy:
       resources:
         limits:
-          memory: 8000M
+          memory: 10000M
     environment:
       CELERY_BROKER_URL: ${CELERY_BROKER_URL:-amqp://guest:guest@192.168.5.200:5672//}
       OPENAI_API_KEY: ${OPENAI_API_KEY}
