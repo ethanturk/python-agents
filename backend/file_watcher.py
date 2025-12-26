@@ -5,7 +5,7 @@ from watchdog.events import FileSystemEventHandler
 import threading
 import logging
 from async_tasks import qdrant_client
-from qdrant_client.http.models import ScrollRequest, WithPayloadSelector
+
 
 logger = logging.getLogger(__name__)
 
