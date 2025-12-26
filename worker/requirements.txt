@@ -1,0 +1,10 @@
+langchain
+langchain-openai
+celery
+python-dotenv
+fastapi
+uvicorn
+qdrant-client
+langchain-text-splitters
+docling
+watchdog

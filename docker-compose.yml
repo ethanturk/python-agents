@@ -63,17 +63,3 @@ services:
       - backend
     environment:
       VITE_API_BASE: ${VITE_API_BASE:-http://192.168.5.200:9999}
-
-  worker:
-    build: ./backend
-    command: celery -A async_tasks worker --loglevel=info
-    depends_on:
-      - rabbitmq
-    environment:
-      CELERY_BROKER_URL: amqp://guest:guest@rabbitmq:5672//
-      OPENAI_API_KEY: ${OPENAI_API_KEY}
-      OPENAI_API_BASE: ${OPENAI_API_BASE}
-      OPENAI_MODEL: ${OPENAI_MODEL}
-      USE_NNPACK: "0"
-    volumes:
-      - /volume1/data/documents/searchable:/data/monitored
