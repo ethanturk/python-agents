@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from celery.result import AsyncResult
 from sync_agent import run_sync_agent, search_documents, perform_rag
@@ -11,6 +12,7 @@ import os
 # Import needed for listing documents - assuming we add a helper or do it here
 from async_tasks import qdrant_client
 from qdrant_client.http.models import Filter, FieldCondition, MatchValue 
+from summarizer import summarize_document 
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -42,6 +44,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Mount static files
+if not os.path.exists(MONITORED_DIR):
+    os.makedirs(MONITORED_DIR)
+app.mount("/agent/files", StaticFiles(directory=MONITORED_DIR), name="files")
+
 class AgentRequest(BaseModel):
     prompt: str
 
@@ -55,6 +62,9 @@ class IngestRequest(BaseModel):
 
 class SearchRequest(BaseModel):
     prompt: str
+
+class SummarizeRequest(BaseModel):
+    filename: str
 
 @app.post("/agent/sync")
 def run_sync(request: AgentRequest):
@@ -165,4 +175,21 @@ def delete_document_endpoint(filename: str):
         return {"status": "success", "message": f"Deleted {filename}"}
     except Exception as e:
         logger.error(f"Error deleting document {filename}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/agent/summarize")
+def summarize_document_endpoint(request: SummarizeRequest):
+    logger.info(f"Received summarization request for: {request.filename}")
+    try:
+        # Check if filename is path or just name. The watcher sends full path usually, 
+        # but the request might just send what's in the DB.
+        # If it's an absolute path, use it. If not, join with MONITORED_DIR.
+        filepath = request.filename
+        if not os.path.isabs(filepath):
+             filepath = os.path.join(MONITORED_DIR, request.filename)
+             
+        summary = summarize_document(filepath)
+        return {"summary": summary}
+    except Exception as e:
+        logger.error(f"Error summarizing {request.filename}: {e}")
         raise HTTPException(status_code=500, detail=str(e))

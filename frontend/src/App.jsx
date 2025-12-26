@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
-import { AppBar, Toolbar, Typography, Container, Box, TextField, Button, Paper, List, ListItem, ListItemText, Divider, Alert, CircularProgress, Accordion, AccordionSummary, AccordionDetails, IconButton, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions } from '@mui/material';
+import { AppBar, Toolbar, Typography, Container, Box, TextField, Button, Paper, List, ListItem, ListItemText, Divider, Alert, CircularProgress, Accordion, AccordionSummary, AccordionDetails, IconButton, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Select, MenuItem, FormControl, InputLabel } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import SearchIcon from '@mui/icons-material/Search';
 import DeleteIcon from '@mui/icons-material/Delete';
+import DescriptionIcon from '@mui/icons-material/Description';
+import SummarizeIcon from '@mui/icons-material/Summarize';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import axios from 'axios';
@@ -43,7 +45,7 @@ function App() {
   const [searchData, setSearchData] = useState({ answer: null, results: [] });
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
-  const [view, setView] = useState('list'); // 'list' or 'search'
+  const [view, setView] = useState('list'); // 'list', 'search', 'summarize'
 
   // Grouped Documents State
   const [groupedDocs, setGroupedDocs] = useState({});
@@ -51,6 +53,32 @@ function App() {
   // Delete Dialog State
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [docToDelete, setDocToDelete] = useState(null);
+
+  // Summarize State
+  const [selectedDocForSummary, setSelectedDocForSummary] = useState('');
+  const [summaryResult, setSummaryResult] = useState(null);
+
+  // Helper to get web link from absolute path
+  const getWebLink = (filepath) => {
+    if (!filepath) return "#";
+    // Assuming backend mounts /data/monitored at /agent/files
+    // And filepath is like /data/monitored/subdir/file.pdf
+    // We need to strip /data/monitored/
+    const prefix = "/data/monitored/";
+    if (filepath.startsWith(prefix)) {
+      const relative = filepath.substring(prefix.length);
+      return `${API_BASE}/agent/files/${relative}`;
+    }
+    // Fallback if path structure is different (e.g. flat) or unknown
+    const parts = filepath.split('/');
+    return `${API_BASE}/agent/files/${parts[parts.length - 1]}`;
+  };
+
+  const getFilenameOnly = (filepath) => {
+    if (!filepath) return "Unknown";
+    const parts = filepath.split('/');
+    return parts[parts.length - 1];
+  };
 
   // Fetch Documents and Group them
   const fetchDocuments = async () => {
@@ -68,12 +96,27 @@ function App() {
       }, {});
 
       setGroupedDocs(groups);
-      setView('list');
     } catch (error) {
       console.error("Error fetching documents:", error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const ensureDocsLoaded = async () => {
+    if (Object.keys(groupedDocs).length === 0) {
+      await fetchDocuments();
+    }
+  };
+
+  const handleSwitchToSummarize = async () => {
+    await ensureDocsLoaded();
+    setView('summarize');
+  };
+
+  const handleSwitchToDocs = async () => {
+    await ensureDocsLoaded();
+    setView('list');
   };
 
   // Handle Delete Click
@@ -88,12 +131,28 @@ function App() {
     try {
       await axios.delete(`${API_BASE}/agent/documents/${docToDelete}`);
       // Refresh list
-      fetchDocuments();
+      await fetchDocuments();
       setDeleteDialogOpen(false);
       setDocToDelete(null);
     } catch (error) {
       console.error("Error deleting document:", error);
       alert("Failed to delete document");
+    }
+  };
+
+  // Handle Summarize
+  const handleSummarize = async () => {
+    if (!selectedDocForSummary) return;
+    setLoading(true);
+    setSummaryResult(null);
+    try {
+      const response = await axios.post(`${API_BASE}/agent/summarize`, { filename: selectedDocForSummary });
+      setSummaryResult(response.data.summary);
+    } catch (error) {
+      console.error("Error summarizing:", error);
+      alert("Failed to summarize document");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -103,12 +162,10 @@ function App() {
     setLoading(true);
     try {
       const response = await axios.post(`${API_BASE}/agent/search`, { prompt: query });
-      // Logic to handle old vs new response format or just expect new
       const data = response.data;
       if (data.answer) {
         setSearchData({ answer: data.answer, results: data.results || [] });
       } else {
-        // Fallback if API hasn't updated or returns old format
         setSearchData({ answer: null, results: data.results || [] });
       }
       setView('search');
@@ -127,7 +184,8 @@ function App() {
           <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
             Agent Document Manager
           </Typography>
-          <Button color="inherit" onClick={fetchDocuments}>Documents</Button>
+          <Button color="inherit" onClick={handleSwitchToDocs}>Documents</Button>
+          <Button color="inherit" onClick={handleSwitchToSummarize}>Summarize</Button>
         </Toolbar>
       </AppBar>
 
@@ -154,7 +212,7 @@ function App() {
 
         {loading && <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}><CircularProgress /></Box>}
 
-        {/* Views */}
+        {/* View: Document List */}
         {!loading && view === 'list' && (
           <Paper sx={{ p: 2 }}>
             <Typography variant="h5" gutterBottom>Ingested Documents</Typography>
@@ -168,24 +226,26 @@ function App() {
                       expandIcon={<ExpandMoreIcon />}
                       sx={{ '& .MuiAccordionSummary-content': { alignItems: 'center', justifyContent: 'space-between' } }}
                     >
-                      <Typography variant="h6">{filename} ({chunks.length} chunks)</Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Typography variant="h6" sx={{ mr: 2 }}>{getFilenameOnly(filename)}</Typography>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          href={getWebLink(filename)}
+                          target="_blank"
+                          onClick={(e) => e.stopPropagation()}
+                          startIcon={<DescriptionIcon />}
+                        >
+                          View
+                        </Button>
+                      </Box>
                       <IconButton onClick={(e) => promptDelete(filename, e)} color="error" size="small">
                         <DeleteIcon />
                       </IconButton>
                     </AccordionSummary>
                     <AccordionDetails>
-                      <List>
-                        {chunks.map((doc, index) => (
-                          <React.Fragment key={index}>
-                            <ListItem alignItems="flex-start">
-                              <ListItemText
-                                secondary={doc.content_snippet + "..."}
-                              />
-                            </ListItem>
-                            {index < chunks.length - 1 && <Divider component="li" />}
-                          </React.Fragment>
-                        ))}
-                      </List>
+                      <Typography variant="subtitle2" sx={{ mb: 1, color: 'text.secondary' }}>Full Path: {filename}</Typography>
+                      <Typography variant="body2">{chunks.length} chunks indexed.</Typography>
                     </AccordionDetails>
                   </Accordion>
                 ))}
@@ -194,6 +254,61 @@ function App() {
           </Paper>
         )}
 
+        {/* View: Summarize */}
+        {!loading && view === 'summarize' && (
+          <Paper sx={{ p: 4 }}>
+            <Typography variant="h5" gutterBottom>Summarize Document</Typography>
+            <Box sx={{ display: 'flex', gap: 2, mb: 4 }}>
+              <FormControl fullWidth>
+                <InputLabel>Select Document</InputLabel>
+                <Select
+                  value={selectedDocForSummary}
+                  label="Select Document"
+                  onChange={(e) => setSelectedDocForSummary(e.target.value)}
+                >
+                  {Object.keys(groupedDocs).map((filename) => (
+                    <MenuItem key={filename} value={filename}>
+                      {getFilenameOnly(filename)}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              <Button
+                variant="contained"
+                size="large"
+                onClick={handleSummarize}
+                disabled={!selectedDocForSummary}
+                startIcon={<SummarizeIcon />}
+              >
+                Summarize
+              </Button>
+            </Box>
+
+            {summaryResult && (
+              <Box>
+                <Divider sx={{ my: 3 }} />
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                  <Typography variant="h6">Summary Result</Typography>
+                  <Button variant="outlined" href={getWebLink(selectedDocForSummary)} target="_blank">
+                    View Original Document
+                  </Button>
+                </Box>
+                <Paper elevation={3} sx={{ p: 3, bgcolor: 'background.default' }}>
+                  <Box sx={{
+                    '& p': { fontSize: '1.05rem', lineHeight: 1.6, mb: 2 },
+                    '& ul, & ol': { ml: 2, mb: 2 },
+                    '& li': { mb: 1 },
+                    '& strong': { color: '#90caf9' }
+                  }}>
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{summaryResult}</ReactMarkdown>
+                  </Box>
+                </Paper>
+              </Box>
+            )}
+          </Paper>
+        )}
+
+        {/* View: Search Results */}
         {!loading && view === 'search' && (
           <Box>
             {searchData.answer && (
@@ -216,30 +331,30 @@ function App() {
 
             <Accordion defaultExpanded={!searchData.answer}>
               <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                <Typography variant="h6">Raw Retrieval Results ({searchData.results.length})</Typography>
+                <Typography variant="h6">Related Documents</Typography>
               </AccordionSummary>
               <AccordionDetails>
                 {searchData.results.length === 0 ? (
                   <Alert severity="warning">No matches found.</Alert>
                 ) : (
                   <List>
-                    {searchData.results.map((result, index) => (
+                    {[...new Set(searchData.results.map(r => r.metadata.filename))].map((filename, index) => (
                       <React.Fragment key={index}>
-                        <ListItem alignItems="flex-start">
+                        <ListItem alignItems="center">
                           <ListItemText
-                            primary={
-                              <Typography variant="subtitle1" color="primary">
-                                Source: {result.metadata.filename || "Unknown"}
-                              </Typography>
-                            }
-                            secondary={
-                              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                                {result.content}
-                              </Typography>
-                            }
+                            primary={getFilenameOnly(filename)}
+                            secondary={filename}
                           />
+                          <Button
+                            variant="outlined"
+                            href={getWebLink(filename)}
+                            target="_blank"
+                            startIcon={<DescriptionIcon />}
+                          >
+                            View Document
+                          </Button>
                         </ListItem>
-                        {index < searchData.results.length - 1 && <Divider component="li" />}
+                        {index < [...new Set(searchData.results.map(r => r.metadata.filename))].length - 1 && <Divider component="li" />}
                       </React.Fragment>
                     ))}
                   </List>
@@ -257,7 +372,7 @@ function App() {
           <DialogTitle>Confirm Deletion</DialogTitle>
           <DialogContent>
             <DialogContentText>
-              Are you sure you want to delete <strong>{docToDelete}</strong>? This action cannot be undone.
+              Are you sure you want to delete <strong>{getFilenameOnly(docToDelete)}</strong>? This action cannot be undone.
             </DialogContentText>
           </DialogContent>
           <DialogActions>
