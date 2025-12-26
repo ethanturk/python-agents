@@ -186,7 +186,16 @@ def ingest_docs_task(files_data):
                  continue
 
             # Embed and Index
-            vectors = embeddings_model.embed_documents(chunks) # Batch embedding
+            vectors = []
+            for attempt in range(3):
+                try:
+                    vectors = embeddings_model.embed_documents(chunks) # Batch embedding
+                    break
+                except Exception as e:
+                    if attempt == 2:
+                        raise e
+                    print(f"Embedding failed (attempt {attempt+1}/3): {e}. Retrying...")
+                    time.sleep(2 * (attempt + 1))
             
             points = []
             for i, chunk in enumerate(chunks):

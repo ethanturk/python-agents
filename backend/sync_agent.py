@@ -56,11 +56,12 @@ def search_documents(query: str) -> list:
         return []
 
     vector = embeddings_model.embed_query(query)
-    search_result = qdrant_client.search(
+    response = qdrant_client.query_points(
         collection_name="documents",
-        query_vector=vector,
+        query=vector,
         limit=5
     )
+    search_result = response.points
     
     return [
         {"content": hit.payload.get("content"), "metadata": {"filename": hit.payload.get("filename")}}

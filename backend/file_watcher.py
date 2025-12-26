@@ -45,6 +45,7 @@ def process_existing_files(path, callback):
                     with open(filepath, "rb") as f:
                         content = f.read()
                     callback([{"filename": filename, "filepath": filepath, "content": content}])
+                    time.sleep(2) # Throttle to prevent overloading downstream services
                 except Exception as e:
                     logger.error(f"Error reading existing file {filename}: {e}")
     except Exception as e:
