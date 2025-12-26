@@ -68,7 +68,6 @@ services:
     build: ./backend
     command: celery -A async_tasks worker --loglevel=info
     depends_on:
-      - backend
       - rabbitmq
     environment:
       CELERY_BROKER_URL: amqp://guest:guest@rabbitmq:5672//
