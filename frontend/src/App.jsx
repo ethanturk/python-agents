@@ -6,6 +6,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import SearchIcon from '@mui/icons-material/Search';
 import DeleteIcon from '@mui/icons-material/Delete';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import axios from 'axios';
 
 // Dark Theme Configuration
@@ -203,9 +204,12 @@ function App() {
                   '& p': { fontSize: '1.1rem', lineHeight: 1.6, mb: 2 },
                   '& ul, & ol': { ml: 2, mb: 2 },
                   '& li': { mb: 1, fontSize: '1.1rem' },
-                  '& strong': { color: '#80cbc4' }
+                  '& strong': { color: '#80cbc4' },
+                  '& table': { width: '100%', borderCollapse: 'collapse', mb: 2 },
+                  '& th, & td': { border: '1px solid #4db6ac', padding: '8px', textAlign: 'left' },
+                  '& th': { backgroundColor: '#00695c', color: '#ffffff' }
                 }}>
-                  <ReactMarkdown>{searchData.answer}</ReactMarkdown>
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{searchData.answer}</ReactMarkdown>
                 </Box>
               </Paper>
             )}
