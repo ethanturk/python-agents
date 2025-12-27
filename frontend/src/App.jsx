@@ -50,7 +50,8 @@ function App() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [docToDelete, setDocToDelete] = useState(null);
 
-  // Summarize Result State (selected doc state is now in SummarizeView)
+  // Summarize Result State (selected doc state is now in SummarizeView -> Lifted to App)
+  const [selectedDoc, setSelectedDoc] = useState('');
   const [summaryResult, setSummaryResult] = useState(null);
 
   // Grouped Documents State
@@ -134,6 +135,7 @@ function App() {
       console.error("Error summarizing:", error);
       alert("Failed to summarize document");
     } finally {
+      // Don't reset selectedDoc here, so we keep it for the link
       setLoading(false);
     }
   };
@@ -195,10 +197,13 @@ function App() {
             onSummarize={handleSummarizeRequest}
             summaryResult={summaryResult}
             loading={loading}
+            selectedDoc={selectedDoc}
+            setSelectedDoc={setSelectedDoc}
           />
         )}
 
         {/* Delete Confirmation Dialog */}
+
         <DeleteConfirmDialog
           open={deleteDialogOpen}
           filename={docToDelete}

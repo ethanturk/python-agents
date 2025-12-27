@@ -1,12 +1,11 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Paper, Typography, Box, FormControl, InputLabel, Select, MenuItem, Button, Divider } from '@mui/material';
 import SummarizeIcon from '@mui/icons-material/Summarize';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { getWebLink, getFilenameOnly } from '../utils';
 
-export default function SummarizeView({ groupedDocs, onSummarize, summaryResult, loading }) {
-    const [selectedDoc, setSelectedDoc] = useState('');
+export default function SummarizeView({ groupedDocs, onSummarize, summaryResult, loading, selectedDoc, setSelectedDoc }) {
 
     const handleSummarizeClick = () => {
         if (selectedDoc) {
