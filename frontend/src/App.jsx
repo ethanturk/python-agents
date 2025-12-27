@@ -226,6 +226,18 @@ function App() {
     }
   };
 
+  const handleDeleteCachedSummary = (filename) => {
+    // Remove from Cache
+    setCachedSummaries(prev => {
+      const newCache = { ...prev };
+      delete newCache[filename];
+      return newCache;
+    });
+
+    // Remove from Notifications (if present)
+    setNotifications(prev => prev.filter(n => n.filename !== filename));
+  };
+
   const handleNewNotification = (notif) => {
     setNotifications(prev => [{ ...notif, read: false, timestamp: new Date() }, ...prev]);
     setUnreadCount(prev => prev + 1);
@@ -240,8 +252,17 @@ function App() {
 
     // Jump to summary
     setSelectedDoc(notif.filename);
-    setSummaryResult(notif.result);
-    setChatHistory([]); // Reset chat for new doc
+
+    // Prioritize Cache if notif result is missing/placeholder and we have a local copy
+    if ((!notif.result || notif.result === "No text") && cachedSummaries[notif.filename]) {
+      const entry = cachedSummaries[notif.filename];
+      setSummaryResult(entry.summaryResult);
+      setChatHistory(entry.chatHistory || []);
+    } else {
+      setSummaryResult(notif.result);
+      setChatHistory([]); // Reset chat for new doc (or maybe we should cache chat too? For now, reset if fresh from backend)
+    }
+
     handleSwitchToSummarize();
     setSidebarOpen(false);
   };
@@ -404,6 +425,7 @@ function App() {
         notifications={notifications}
         onNotificationClick={handleNotificationClick}
         activeSummaries={activeSummaries}
+        onDeleteCachedSummary={handleDeleteCachedSummary}
       />
 
       <Container maxWidth="xl" className={['mt-4', 'mb-2'].join(' ')}>
@@ -444,6 +466,7 @@ function App() {
             chatLoading={chatLoading}
             cachedSummaries={cachedSummaries}
             onSelectCachedSummary={handleSelectCachedSummary}
+            onDeleteCachedSummary={handleDeleteCachedSummary}
           />
         )}
 

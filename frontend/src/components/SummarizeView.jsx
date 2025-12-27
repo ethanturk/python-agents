@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Paper, Typography, Box, FormControl, InputLabel, Select, MenuItem, Button, Divider, TextField, IconButton } from '@mui/material';
+import { Paper, Typography, Box, FormControl, InputLabel, Select, MenuItem, Button, Divider, TextField, IconButton, Chip } from '@mui/material';
 import SummarizeIcon from '@mui/icons-material/Summarize';
 import SendIcon from '@mui/icons-material/Send';
+import DeleteIcon from '@mui/icons-material/Delete';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { getWebLink, getFilenameOnly } from '../utils';
@@ -17,7 +18,8 @@ export default function SummarizeView({
     onSendChat,
     chatLoading,
     cachedSummaries,
-    onSelectCachedSummary
+    onSelectCachedSummary,
+    onDeleteCachedSummary
 }) {
     const [question, setQuestion] = useState('');
 
@@ -69,16 +71,24 @@ export default function SummarizeView({
                     <Typography variant="overline" color="textSecondary">Recent Local Summaries</Typography>
                     <Box className="flex-gap-2 flex-wrap" sx={{ mt: 1 }}>
                         {Object.keys(cachedSummaries).map((filename) => (
-                            <Button
+                            <Chip
                                 key={filename}
-                                variant="outlined"
-                                size="small"
+                                label={getFilenameOnly(filename)}
                                 onClick={() => onSelectCachedSummary(filename)}
-                                sx={{ textTransform: 'none' }}
-                                color={selectedDoc === filename ? "primary" : "inherit"}
-                            >
-                                {getFilenameOnly(filename)}
-                            </Button>
+                                onDelete={() => onDeleteCachedSummary(filename)}
+                                variant={selectedDoc === filename ? "filled" : "outlined"}
+                                color={selectedDoc === filename ? "primary" : "default"}
+                                deleteIcon={<DeleteIcon style={{ color: '#ff1744' }} />}
+                                sx={{
+                                    borderRadius: '4px',
+                                    '& .MuiChip-deleteIcon': {
+                                        color: '#ff1744',
+                                        '&:hover': {
+                                            color: '#d50000'
+                                        }
+                                    }
+                                }}
+                            />
                         ))}
                     </Box>
                 </Box>

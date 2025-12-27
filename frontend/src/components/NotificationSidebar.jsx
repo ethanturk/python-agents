@@ -2,8 +2,9 @@ import React from 'react';
 import { Drawer, Box, Typography, IconButton, List, ListItem, ListItemText, Divider, CircularProgress } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import ArticleIcon from '@mui/icons-material/Article';
+import DeleteIcon from '@mui/icons-material/Delete';
 
-function NotificationSidebar({ open, onClose, notifications, onNotificationClick, activeSummaries = [] }) {
+function NotificationSidebar({ open, onClose, notifications, onNotificationClick, activeSummaries = [], onDeleteCachedSummary }) {
     return (
         <Drawer anchor="right" open={open} onClose={onClose}>
             <Box
@@ -68,6 +69,19 @@ function NotificationSidebar({ open, onClose, notifications, onNotificationClick
                             <ListItem
                                 button
                                 onClick={() => onNotificationClick(notif)}
+                                secondaryAction={
+                                    <IconButton
+                                        edge="end"
+                                        aria-label="delete"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            onDeleteCachedSummary(notif.filename);
+                                        }}
+                                        sx={{ color: '#ff1744' }} // bright red
+                                    >
+                                        <DeleteIcon />
+                                    </IconButton>
+                                }
                                 sx={{
                                     borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
                                     transition: 'background-color 0.2s',
@@ -75,6 +89,7 @@ function NotificationSidebar({ open, onClose, notifications, onNotificationClick
                                     '&:hover': {
                                         backgroundColor: 'rgba(255, 255, 255, 0.05)',
                                     },
+                                    paddingRight: '48px' // Make space for secondary action
                                 }}
                             >
                                 <ArticleIcon sx={{ marginRight: 2, color: 'primary.main' }} />
