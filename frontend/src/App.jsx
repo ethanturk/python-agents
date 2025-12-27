@@ -136,8 +136,8 @@ function App() {
       console.log("WebSocket Disconnected");
     };
 
-    // Load History
-    fetchSummaries();
+    // Load History (DISABLED - Using Local Cache only)
+    // fetchSummaries();
 
     return () => {
       if (ws.current) ws.current.close();
@@ -160,17 +160,30 @@ function App() {
         const data = JSON.parse(stored);
         const now = new Date().getTime();
         const validCache = {};
+        const initialNotifications = [];
 
         // Load Cache entries
         if (data.cache) {
           Object.entries(data.cache).forEach(([key, value]) => {
             if (now - value.timestamp < EXPIRY_TIME) {
               validCache[key] = value;
+              // Add to notifications list
+              initialNotifications.push({
+                filename: key,
+                result: value.summaryResult || "No text",
+                status: 'completed',
+                read: true,
+                timestamp: value.timestamp
+              });
             }
           });
         }
 
         setCachedSummaries(validCache);
+
+        // Sort notifications by timestamp descending (newest first)
+        initialNotifications.sort((a, b) => b.timestamp - a.timestamp);
+        setNotifications(initialNotifications);
 
         // Restore active doc if valid
         if (data.lastActiveDoc && validCache[data.lastActiveDoc]) {
@@ -246,6 +259,16 @@ function App() {
   };
 
   const handleNewNotification = (notif) => {
+    // Add to Cache immediately so it persists if we reload
+    setCachedSummaries(prev => ({
+      ...prev,
+      [notif.filename]: {
+        summaryResult: notif.result,
+        chatHistory: [],
+        timestamp: new Date().getTime()
+      }
+    }));
+
     setNotifications(prev => [{ ...notif, read: false, timestamp: new Date() }, ...prev]);
     setUnreadCount(prev => prev + 1);
     setSnackbarMessage(`Summary ready for ${notif.filename}`);
