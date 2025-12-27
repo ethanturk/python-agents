@@ -1,6 +1,9 @@
 import os
 import logging
-from docling.document_converter import DocumentConverter
+from docling.datamodel.base_models import InputFormat
+from docling.datamodel.pipeline_options import PdfPipelineOptions
+from docling.backend.pypdfium2_backend import PyPdfiumDocumentBackend
+from docling.document_converter import DocumentConverter, PdfFormatOption
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
@@ -19,7 +22,21 @@ def summarize_document(filepath: str) -> str:
 
         # Convert using Docling
         try:
-            converter = DocumentConverter()
+            pipeline_options = PdfPipelineOptions()
+            pipeline_options.do_ocr = False
+            pipeline_options.do_table_structure = True
+            pipeline_options.table_structure_options.do_cell_matching = False
+            pipeline_options.generate_page_images = False
+            pipeline_options.generate_picture_images = False
+
+            converter = DocumentConverter(
+                format_options={
+                    InputFormat.PDF: PdfFormatOption(
+                        pipeline_options=pipeline_options,
+                        backend=PyPdfiumDocumentBackend
+                    )
+                }
+            )
             doc_result = converter.convert(filepath)
             content = doc_result.document.export_to_markdown()
         except Exception as e:
