@@ -25,6 +25,10 @@ class DocumentHandler(FileSystemEventHandler):
         # but for simplicity we assume file is ready or handle retries in ingest
         logger.info(f"New file detected: {filename}")
         
+        if os.path.exists(filepath) and os.path.getsize(filepath) == 0:
+            logger.info(f"Skipping 0-byte file: {filename}")
+            return
+        
         try:
             with open(filepath, "rb") as f:
                 content = f.read()
@@ -66,7 +70,7 @@ def get_indexed_filenames():
         
     return indexed_files
 
-def check_unindexed_files_loop(path, callback, interval=300):
+def check_unindexed_files_loop(path, callback, interval=600):
     """
     Periodically checks for files that are not indexed and queues them.
     """
@@ -92,6 +96,10 @@ def check_unindexed_files_loop(path, callback, interval=300):
                     # Note: This simple check assumes the 'filename' stored in Qdrant is the absolute path
                     # which matches our logic in on_created.
                     if filepath not in indexed_files:
+                        if os.path.getsize(filepath) == 0:
+                             logger.info(f"Skipping 0-byte unindexed file: {filepath}")
+                             continue
+
                         logger.info(f"Found unindexed file: {filepath}")
                         try:
                             with open(filepath, "rb") as f:
@@ -126,6 +134,10 @@ def process_existing_files(path, callback):
                     
                 filepath = os.path.join(root, filename)
                 try:
+                    if os.path.getsize(filepath) == 0:
+                        logger.info(f"Skipping 0-byte existing file: {filepath}")
+                        continue
+                        
                     logger.info(f"Processing existing file: {filepath}")
                     with open(filepath, "rb") as f:
                         content = f.read()

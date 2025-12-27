@@ -165,7 +165,12 @@ def ingest_docs_task(files_data):
     
     for file_item in files_data:
         filename = file_item['filename']
-        content = file_item['content']
+        content = file_item.get('content')
+        
+        # Check for empty content if provided directly
+        if content is not None and len(content) == 0:
+            results.append(f"Skipped {filename}: Content is empty/0 bytes.")
+            continue
         
         # If content relies on shared volume, we use filepath directly
         # Docling accepts a file path, so we don't need a temp file if we have a path
@@ -189,6 +194,10 @@ def ingest_docs_task(files_data):
              source = file_item['filepath']
              if not os.path.exists(source):
                  results.append(f"Failed {filename}: File not found at {source}")
+                 continue
+             
+             if os.path.getsize(source) == 0:
+                 results.append(f"Skipped {filename}: 0-byte file at {source}")
                  continue
         else:
              results.append(f"Skipped {filename}: No content or filepath provided.")
