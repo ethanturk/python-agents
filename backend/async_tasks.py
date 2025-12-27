@@ -318,7 +318,7 @@ def ingest_docs_task(files_data):
 
     return "\n".join(results)
 
-@app.task
+@app.task(name="async_tasks.summarize_document_task")
 def summarize_document_task(filename: str, content_b64: str, backend_notify_url: str):
     """
     Async task to summarize a document.
