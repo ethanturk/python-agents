@@ -8,3 +8,4 @@ qdrant-client
 langchain-text-splitters
 watchdog
 docling
+pypdfium2
