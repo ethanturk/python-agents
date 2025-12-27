@@ -227,6 +227,13 @@ function App() {
   };
 
   const handleDeleteCachedSummary = (filename) => {
+    // If we are currently viewing this doc, clear the view
+    if (selectedDoc === filename) {
+      setSelectedDoc('');
+      setSummaryResult(null);
+      setChatHistory([]);
+    }
+
     // Remove from Cache
     setCachedSummaries(prev => {
       const newCache = { ...prev };
