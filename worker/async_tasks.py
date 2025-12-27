@@ -12,10 +12,8 @@ from qdrant_client import QdrantClient
 from qdrant_client.http.models import VectorParams, Distance, PointStruct, Filter, FieldCondition, MatchValue
 from langchain_openai import OpenAIEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-import shutil
-from datetime import datetime
 
-
+import pymupdf4llm
 
 # Initialize Celery
 app = Celery('langchain_agent_sample', broker=config.CELERY_BROKER_URL, backend=config.CELERY_RESULT_BACKEND)
@@ -171,36 +169,62 @@ def ingest_docs_task(files_data):
         filename = file_item['filename']
         content = file_item['content']
         
-        # Create temp file because Docling typically works with file paths
-        tmp_path = None
-        try:
-            with tempfile.NamedTemporaryFile(mode='wb+', suffix=f"_{os.path.basename(filename)}", delete=False) as tmp:
-                tmp.write(content)
-                tmp_path = tmp.name
-            
-            # Check if file is already indexed
+        # If content relies on shared volume, we use filepath directly
+        # Docling accepts a file path, so we don't need a temp file if we have a path
+        source = None
+        temp_file_path = None
+        
+        if file_item.get('content'):
+            # Legacy or direct content mode - create temp file
+            # Create temp file because Docling typically works with file paths
             try:
-                count_result = qdrant_client.count(
-                    collection_name="documents",
-                    count_filter=Filter(
-                        must=[
-                            FieldCondition(
-                                key="filename",
-                                match=MatchValue(value=filename)
-                            )
-                        ]
-                    )
-                )
-                if count_result.count > 0:
-                    results.append(f"Skipped {filename}: Already indexed.")
-                    continue
+                # We need to write bytes
+                with tempfile.NamedTemporaryFile(mode='wb+', suffix=f"_{os.path.basename(filename)}", delete=False) as tmp:
+                    tmp.write(file_item['content'])
+                    temp_file_path = tmp.name
+                    source = temp_file_path
             except Exception as e:
-                # If collection doesn't exist or other error, proceed (collection creation is handled above)
-                pass
+                results.append(f"Failed to write temp file for {filename}: {e}")
+                continue
+        elif file_item.get('filepath'):
+             # Path mode - use the shared path
+             source = file_item['filepath']
+             if not os.path.exists(source):
+                 results.append(f"Failed {filename}: File not found at {source}")
+                 continue
+        else:
+             results.append(f"Skipped {filename}: No content or filepath provided.")
+             continue
+        
+        # Check if file is already indexed
+        try:
+            count_result = qdrant_client.count(
+                collection_name="documents",
+                count_filter=Filter(
+                    must=[
+                        FieldCondition(
+                            key="filename",
+                            match=MatchValue(value=filename)
+                        )
+                    ]
+                )
+            )
+            if count_result.count > 0:
+                results.append(f"Skipped {filename}: Already indexed.")
+                continue
+        except Exception as e:
+            # If collection doesn't exist or other error, proceed (collection creation is handled above)
+            pass
 
-            # Convert using Docling
-            doc = converter.convert(tmp_path)
-            markdown_content = doc.document.export_to_markdown()
+        try:
+            # Convert
+            if filename.lower().endswith('.pdf'):
+                 # Use pymupdf4llm for PDFs
+                 markdown_content = pymupdf4llm.to_markdown(source)
+            else:
+                # Convert using Docling
+                doc = converter.convert(source)
+                markdown_content = doc.document.export_to_markdown()
             
             # Chunking
             chunks = splitter.split_text(markdown_content)
@@ -234,16 +258,14 @@ def ingest_docs_task(files_data):
                 
             qdrant_client.upsert(collection_name="documents", points=points)
             results.append(f"Indexed {filename}: {len(chunks)} chunks.")
-
             
         except Exception as e:
             results.append(f"Failed {filename}: {str(e)}")
         finally:
-            if tmp_path and os.path.exists(tmp_path):
+            if temp_file_path and os.path.exists(temp_file_path):
                 try:
-                    os.remove(tmp_path)
+                    os.remove(temp_file_path)
                 except:
                     pass
                 
     return "\n".join(results)
-

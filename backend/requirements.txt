@@ -8,3 +8,5 @@ qdrant-client
 langchain-text-splitters
 docling
 watchdog
+pymupdf
+pymupdf4llm

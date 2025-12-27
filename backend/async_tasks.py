@@ -12,10 +12,7 @@ from qdrant_client import QdrantClient
 from qdrant_client.http.models import VectorParams, Distance, PointStruct, Filter, FieldCondition, MatchValue
 from langchain_openai import OpenAIEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-import shutil
-from datetime import datetime
-
-
+import pymupdf4llm
 
 # Initialize Celery
 app = Celery('langchain_agent_sample', broker=config.CELERY_BROKER_URL, backend=config.CELERY_RESULT_BACKEND)
@@ -219,9 +216,14 @@ def ingest_docs_task(files_data):
             pass
 
         try:
-            # Convert using Docling
-            doc = converter.convert(source)
-            markdown_content = doc.document.export_to_markdown()
+            # Convert
+            if filename.lower().endswith('.pdf'):
+                 # Use pymupdf4llm for PDFs
+                 markdown_content = pymupdf4llm.to_markdown(source)
+            else:
+                # Convert using Docling
+                doc = converter.convert(source)
+                markdown_content = doc.document.export_to_markdown()
             
             # Chunking
             chunks = splitter.split_text(markdown_content)
