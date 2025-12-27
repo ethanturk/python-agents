@@ -259,7 +259,16 @@ def ingest_docs_task(files_data):
                     payload={"filename": filename, "content": chunk}
                 ))
                 
-            qdrant_client.upsert(collection_name="documents", points=points)
+            # Batch upsert to avoid payload limits
+            batch_size = 64
+            for i in range(0, len(points), batch_size):
+                try:
+                    batch_points = points[i : i + batch_size]
+                    qdrant_client.upsert(collection_name="documents", points=batch_points)
+                except Exception as batch_error:
+                    print(f"Error upserting batch {i//batch_size}: {batch_error}")
+                    if i == 0: # If the first batch fails, it might be a bigger issue, but we try to continue or raise
+                         raise batch_error
             results.append(f"Indexed {filename}: {len(chunks)} chunks.")
             
         except Exception as e:
