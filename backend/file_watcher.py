@@ -125,6 +125,10 @@ def process_existing_files(path, callback):
     This is run once on startup.
     """
     logger.info(f"Scanning for existing files in {path}...")
+    
+    indexed_files = get_indexed_filenames()
+    logger.info(f"Found {len(indexed_files)} unique files already indexed.")
+
     try:
         for root, dirs, files in os.walk(path):
             for filename in files:
@@ -133,6 +137,10 @@ def process_existing_files(path, callback):
                     continue
                     
                 filepath = os.path.join(root, filename)
+                
+                if filepath in indexed_files:
+                    continue
+
                 try:
                     if os.path.getsize(filepath) == 0:
                         logger.info(f"Skipping 0-byte existing file: {filepath}")
