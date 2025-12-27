@@ -83,7 +83,9 @@ export default function SummarizeView({
                         <Box className="summary-chat-history">
                             {chatHistory.map((msg, i) => (
                                 <Box key={i} className={msg.role === 'user' ? 'chat-bubble-user' : 'chat-bubble-ai'}>
-                                    <Typography variant="body1">{msg.text}</Typography>
+                                    <Box className="markdown-body">
+                                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.text}</ReactMarkdown>
+                                    </Box>
                                 </Box>
                             ))}
                             {chatLoading && <Box className="chat-bubble-ai"><Typography variant="body2">Thinking...</Typography></Box>}

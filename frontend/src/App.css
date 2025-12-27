@@ -297,3 +297,30 @@
   max-width: 80%;
   align-self: flex-start;
 }
+
+/* Styling for Markdown inside Chat Bubbles */
+.chat-bubble-user .markdown-body p,
+.chat-bubble-ai .markdown-body p {
+  margin-bottom: 8px;
+  /* Reduce default margin */
+  font-size: 1rem;
+}
+
+.chat-bubble-user .markdown-body,
+.chat-bubble-ai .markdown-body {
+  color: inherit;
+}
+
+.chat-bubble-user .markdown-body a,
+.chat-bubble-ai .markdown-body a {
+  color: #bbdefb;
+  /* Light blue link color for better contrast on dark bg */
+  text-decoration: underline;
+}
+
+.chat-bubble-user .markdown-body code,
+.chat-bubble-ai .markdown-body code {
+  background-color: rgba(0, 0, 0, 0.2);
+  padding: 2px 4px;
+  border-radius: 4px;
+}
