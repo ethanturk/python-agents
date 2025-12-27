@@ -7,13 +7,11 @@ import config
 import os
 import tempfile
 import uuid
-from docling.document_converter import DocumentConverter
+from markitdown import MarkItDown
 from qdrant_client import QdrantClient
 from qdrant_client.http.models import VectorParams, Distance, PointStruct, Filter, FieldCondition, MatchValue
 from langchain_openai import OpenAIEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-
-import pymupdf4llm
 
 # Initialize Celery
 app = Celery('langchain_agent_sample', broker=config.CELERY_BROKER_URL, backend=config.CELERY_RESULT_BACKEND)
@@ -144,7 +142,7 @@ def ingest_docs_task(files_data):
     Ingest a list of files.
     files_data: list of dicts {'filename': str, 'content': str, 'filepath': str (optional)}
     """
-    converter = DocumentConverter()
+    md = MarkItDown(enable_plugins=True)
     
     # Ensure collection exists
     try:
@@ -217,14 +215,9 @@ def ingest_docs_task(files_data):
             pass
 
         try:
-            # Convert
-            if filename.lower().endswith('.pdf'):
-                 # Use pymupdf4llm for PDFs
-                 markdown_content = pymupdf4llm.to_markdown(source)
-            else:
-                # Convert using Docling
-                doc = converter.convert(source)
-                markdown_content = doc.document.export_to_markdown()
+            # Convert using MarkItDown
+            result = md.convert(source)
+            markdown_content = result.text_content
             
             # Chunking
             chunks = splitter.split_text(markdown_content)
