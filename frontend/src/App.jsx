@@ -145,9 +145,12 @@ function App() {
   }, []);
 
   // --- Persistence Logic ---
-  const STORAGE_KEY = 'summarization_state';
+  const STORAGE_KEY = 'summarization_cache_v2';
   const EXPIRY_TIME = 24 * 60 * 60 * 1000; // 24 hours
   const isLoaded = useRef(false);
+
+  // Cache Structure: { [filename]: { summaryResult, chatHistory, timestamp } }
+  const [cachedSummaries, setCachedSummaries] = useState({});
 
   // Load from local storage on mount
   useEffect(() => {
@@ -156,37 +159,72 @@ function App() {
       if (stored) {
         const data = JSON.parse(stored);
         const now = new Date().getTime();
+        const validCache = {};
 
-        // Check expiry
-        if (now - data.timestamp < EXPIRY_TIME) {
-          if (data.selectedDoc) setSelectedDoc(data.selectedDoc);
-          if (data.summaryResult) setSummaryResult(data.summaryResult);
-          if (data.chatHistory) setChatHistory(data.chatHistory);
-        } else {
-          // Expired, clear it
-          localStorage.removeItem(STORAGE_KEY);
+        // Load Cache entries
+        if (data.cache) {
+          Object.entries(data.cache).forEach(([key, value]) => {
+            if (now - value.timestamp < EXPIRY_TIME) {
+              validCache[key] = value;
+            }
+          });
+        }
+
+        setCachedSummaries(validCache);
+
+        // Restore active doc if valid
+        if (data.lastActiveDoc && validCache[data.lastActiveDoc]) {
+          const entry = validCache[data.lastActiveDoc];
+          setSelectedDoc(data.lastActiveDoc);
+          setSummaryResult(entry.summaryResult);
+          setChatHistory(entry.chatHistory || []);
         }
       }
     } catch (e) {
-      console.error("Failed to load summarization state", e);
+      console.error("Failed to load summarization cache", e);
     } finally {
       isLoaded.current = true;
     }
   }, []);
 
-  // Save to local storage on change
+  // Update Cache when current summary changes
+  useEffect(() => {
+    if (!isLoaded.current) return;
+    if (selectedDoc && summaryResult) {
+      setCachedSummaries(prev => ({
+        ...prev,
+        [selectedDoc]: {
+          summaryResult,
+          chatHistory,
+          timestamp: new Date().getTime()
+        }
+      }));
+    }
+  }, [selectedDoc, summaryResult, chatHistory]);
+
+  // Persist Cache to LocalStorage
   useEffect(() => {
     if (!isLoaded.current) return;
 
+    // We save the entire cache + the current selectedDoc as "lastActive"
     const stateToSave = {
-      timestamp: new Date().getTime(),
-      selectedDoc,
-      summaryResult,
-      chatHistory
+      lastActiveDoc: selectedDoc,
+      cache: cachedSummaries
     };
 
     localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
-  }, [selectedDoc, summaryResult, chatHistory]);
+  }, [cachedSummaries, selectedDoc]);
+
+  const handleSelectCachedSummary = (filename) => {
+    const entry = cachedSummaries[filename];
+    if (entry) {
+      setSelectedDoc(filename);
+      setSummaryResult(entry.summaryResult);
+      setChatHistory(entry.chatHistory || []);
+      // Ensure we switch to summarize view
+      handleSwitchToSummarize();
+    }
+  };
 
   const handleNewNotification = (notif) => {
     setNotifications(prev => [{ ...notif, read: false, timestamp: new Date() }, ...prev]);
@@ -404,6 +442,8 @@ function App() {
             chatHistory={chatHistory}
             onSendChat={handleSendChat}
             chatLoading={chatLoading}
+            cachedSummaries={cachedSummaries}
+            onSelectCachedSummary={handleSelectCachedSummary}
           />
         )}
 

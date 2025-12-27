@@ -15,7 +15,9 @@ export default function SummarizeView({
     setSelectedDoc,
     chatHistory,
     onSendChat,
-    chatLoading
+    chatLoading,
+    cachedSummaries,
+    onSelectCachedSummary
 }) {
     const [question, setQuestion] = useState('');
 
@@ -60,6 +62,27 @@ export default function SummarizeView({
                     {loading ? 'Starting...' : 'Summarize'}
                 </Button>
             </Box>
+
+            {/* Cached Summaries List */}
+            {cachedSummaries && Object.keys(cachedSummaries).length > 0 && (
+                <Box className="mb-4">
+                    <Typography variant="overline" color="textSecondary">Recent Local Summaries</Typography>
+                    <Box className="flex-gap-2 flex-wrap" sx={{ mt: 1 }}>
+                        {Object.keys(cachedSummaries).map((filename) => (
+                            <Button
+                                key={filename}
+                                variant="outlined"
+                                size="small"
+                                onClick={() => onSelectCachedSummary(filename)}
+                                sx={{ textTransform: 'none' }}
+                                color={selectedDoc === filename ? "primary" : "inherit"}
+                            >
+                                {getFilenameOnly(filename)}
+                            </Button>
+                        ))}
+                    </Box>
+                </Box>
+            )}
 
             {summaryResult && (
                 <Box>
