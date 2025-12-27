@@ -1,6 +1,6 @@
 services:
   worker:
-    build: ./worker
+    build: ./backend
     command: celery -A async_tasks worker --loglevel=info --concurrency=4
     deploy:
       resources:
