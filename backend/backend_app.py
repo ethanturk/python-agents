@@ -1,3 +1,4 @@
+import os
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -13,6 +14,8 @@ import os
 from async_tasks import qdrant_client
 from qdrant_client.http.models import Filter, FieldCondition, MatchValue 
 from summarizer import summarize_document 
+
+os.environ["USE_NNPACK"] = "0"
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)

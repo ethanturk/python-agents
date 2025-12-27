@@ -1,3 +1,4 @@
+import os
 import time
 from celery import Celery
 from langchain_openai import ChatOpenAI
@@ -17,6 +18,8 @@ from qdrant_client import QdrantClient
 from qdrant_client.http.models import VectorParams, Distance, PointStruct, Filter, FieldCondition, MatchValue
 from langchain_openai import OpenAIEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+
+os.environ["USE_NNPACK"] = "0"
 
 # Initialize Celery
 app = Celery('langchain_agent_sample', broker=config.CELERY_BROKER_URL, backend=config.CELERY_RESULT_BACKEND)
