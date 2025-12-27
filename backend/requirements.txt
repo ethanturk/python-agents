@@ -7,4 +7,4 @@ uvicorn
 qdrant-client
 langchain-text-splitters
 watchdog
-markitdown[all]
+markitdown[xlsx,pdf,docx]
