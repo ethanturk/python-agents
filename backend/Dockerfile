@@ -7,8 +7,7 @@ WORKDIR /app
 # libgl1 and libglib2.0-0 are often required by cv2/vision libraries used in Markitdown
 RUN apt-get update && apt-get install -y \
     build-essential \
-    libgl1 \
-    libglib2.0-0 \
+    ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
 # Upgrade pip to ensure wheel compatibility
