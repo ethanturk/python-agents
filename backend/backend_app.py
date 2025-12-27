@@ -14,7 +14,7 @@ import os
 from async_tasks import qdrant_client
 from qdrant_client.http.models import Filter, FieldCondition, MatchValue 
 from summarizer import summarize_document 
-from database import init_db, get_summary, get_all_summaries
+from database import init_db, get_summary, get_all_summaries, save_summary
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
@@ -276,7 +276,9 @@ async def notify_endpoint(notification: NotificationRequest):
     # Save to DB if completed
     if notification.status == 'completed' and notification.result:
         try:
+             logger.info(f"Saving summary to DB for: {notification.filename}")
              save_summary(notification.filename, notification.result)
+             logger.info("Summary saved successfully.")
         except Exception as db_err:
              logger.error(f"Failed to save summary to DB: {db_err}")
 
@@ -314,6 +316,11 @@ def summary_qa_endpoint(request: SummaryQARequest):
             pass
             
         if not summary_record:
+             logger.warning(f"Summary lookup failed for: {request.filename}. DB contents may mismatch.")
+             # Debug dump
+             # all_sums = get_all_summaries()
+             # logger.info(f"Available summaries: {[s['filename'] for s in all_sums]}")
+             
              return {"answer": "Summary not found. Please summarize the document first."}
              
         summary_text = summary_record['summary_text']

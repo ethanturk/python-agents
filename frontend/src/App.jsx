@@ -72,6 +72,10 @@ function App() {
   const [snackbarMessage, setSnackbarMessage] = useState(null);
   const [isSummarizing, setIsSummarizing] = useState(false); // UI loading state for start btn
 
+  // Tasks Persistence
+  const [activeSummaries, setActiveSummaries] = useState([]);
+  const [showSuccess, setShowSuccess] = useState(false);
+
   // WebSocket Connection
   const ws = useRef(null);
 
@@ -111,6 +115,17 @@ function App() {
         const data = JSON.parse(event.data);
         if (data.type === 'summary_complete') {
           handleNewNotification(data);
+
+          // Remove from active list
+          setActiveSummaries(prev => prev.filter(f => f !== data.filename));
+
+          // Show success tick
+          setShowSuccess(true);
+          setTimeout(() => setShowSuccess(false), 5000);
+        } else if (data.type === 'summary_failed') {
+          // Handle explicit failure if backend sends it
+          setActiveSummaries(prev => prev.filter(f => f !== data.filename));
+          setSnackbarMessage(`Summary failed for ${data.filename}`);
         }
       } catch (e) {
         console.error("WS Parse Error", e);
@@ -224,6 +239,7 @@ function App() {
     try {
       await axios.post(`${API_BASE}/agent/summarize`, { filename });
       setSnackbarMessage("Summarization started. You will be notified when ready.");
+      setActiveSummaries(prev => [...prev, filename]);
     } catch (error) {
       console.error("Error summarizing:", error);
       alert("Failed to start summarization");
@@ -283,6 +299,8 @@ function App() {
         onShowSummarize={handleSwitchToSummarize}
         onShowNotifications={() => setSidebarOpen(true)}
         unreadCount={unreadCount}
+        loading={activeSummaries.length > 0}
+        showSuccess={showSuccess}
       />
 
       <NotificationSidebar
@@ -290,6 +308,7 @@ function App() {
         onClose={() => setSidebarOpen(false)}
         notifications={notifications}
         onNotificationClick={handleNotificationClick}
+        activeSummaries={activeSummaries}
       />
 
       <Container maxWidth="xl" className={['mt-4', 'mb-2'].join(' ')}>

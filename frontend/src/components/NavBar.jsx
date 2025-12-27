@@ -5,16 +5,21 @@ import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
 import NotificationsIcon from '@mui/icons-material/Notifications';
 import Badge from '@mui/material/Badge';
-import { Box } from '@mui/material';
+import { Box, CircularProgress } from '@mui/material';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 
-function NavBar({ onShowSearch, onShowDocuments, onShowSummarize, onShowNotifications, unreadCount }) {
+function NavBar({ onShowSearch, onShowDocuments, onShowSummarize, onShowNotifications, unreadCount, loading, showSuccess }) {
     return (
         <AppBar position="static" color="transparent" elevation={0} sx={{ borderBottom: '1px solid rgba(255, 255, 255, 0.12)' }}>
             <Toolbar>
                 <Typography variant="h6" component="div" sx={{ flexGrow: 1, fontWeight: 'bold' }}>
                     Agent Workspace
                 </Typography>
-                <Box sx={{ display: 'flex', gap: 2 }}>
+                <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                    {/* Status Indicators */}
+                    {loading && <CircularProgress size={24} color="inherit" />}
+                    {!loading && showSuccess && <CheckCircleIcon color="success" />}
+
                     <Button color="inherit" onClick={onShowSearch}>Search</Button>
                     <Button color="inherit" onClick={onShowDocuments}>Documents</Button>
                     <Button color="inherit" onClick={onShowSummarize}>Summarize</Button>
