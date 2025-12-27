@@ -149,7 +149,7 @@ def get_docling_converter():
     pipeline_options.table_structure_options.do_cell_matching = False
     pipeline_options.generate_page_images = False
     pipeline_options.generate_picture_images = False
-    pipeline_options.generate_source_format = False
+
     
     return DocumentConverter(
         format_options={
