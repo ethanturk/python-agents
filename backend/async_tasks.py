@@ -172,16 +172,11 @@ def ingest_docs_task(files_data):
             results.append(f"Skipped {filename}: Content is empty/0 bytes.")
             continue
         
-        # If content relies on shared volume, we use filepath directly
-        # Docling accepts a file path, so we don't need a temp file if we have a path
         source = None
         temp_file_path = None
         
         if file_item.get('content'):
-            # Legacy or direct content mode - create temp file
-            # Create temp file because Docling typically works with file paths
             try:
-                # We need to write bytes
                 with tempfile.NamedTemporaryFile(mode='wb+', suffix=f"_{os.path.basename(filename)}", delete=False) as tmp:
                     tmp.write(file_item['content'])
                     temp_file_path = tmp.name

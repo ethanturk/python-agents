@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 def summarize_document(filepath: str) -> str:
     """
-    Summarizes the content of a document using Docling for robust format support.
+    Summarizes the content of a document using Markitdown for robust format support.
     Assumes the content fits within the context window.
     """
     try:
