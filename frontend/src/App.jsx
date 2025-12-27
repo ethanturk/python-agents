@@ -144,6 +144,50 @@ function App() {
     }
   }, []);
 
+  // --- Persistence Logic ---
+  const STORAGE_KEY = 'summarization_state';
+  const EXPIRY_TIME = 24 * 60 * 60 * 1000; // 24 hours
+  const isLoaded = useRef(false);
+
+  // Load from local storage on mount
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        const data = JSON.parse(stored);
+        const now = new Date().getTime();
+
+        // Check expiry
+        if (now - data.timestamp < EXPIRY_TIME) {
+          if (data.selectedDoc) setSelectedDoc(data.selectedDoc);
+          if (data.summaryResult) setSummaryResult(data.summaryResult);
+          if (data.chatHistory) setChatHistory(data.chatHistory);
+        } else {
+          // Expired, clear it
+          localStorage.removeItem(STORAGE_KEY);
+        }
+      }
+    } catch (e) {
+      console.error("Failed to load summarization state", e);
+    } finally {
+      isLoaded.current = true;
+    }
+  }, []);
+
+  // Save to local storage on change
+  useEffect(() => {
+    if (!isLoaded.current) return;
+
+    const stateToSave = {
+      timestamp: new Date().getTime(),
+      selectedDoc,
+      summaryResult,
+      chatHistory
+    };
+
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
+  }, [selectedDoc, summaryResult, chatHistory]);
+
   const handleNewNotification = (notif) => {
     setNotifications(prev => [{ ...notif, read: false, timestamp: new Date() }, ...prev]);
     setUnreadCount(prev => prev + 1);
