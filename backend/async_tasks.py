@@ -20,8 +20,8 @@ from langchain_openai import OpenAIEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 import pandas as pd
 import httpx
+import base64
 from summarizer import summarize_document
-from database import save_summary
 
 os.environ["USE_NNPACK"] = "0"
 
@@ -319,32 +319,28 @@ def ingest_docs_task(files_data):
     return "\n".join(results)
 
 @app.task
-def summarize_document_task(filename: str, backend_notify_url: str):
+def summarize_document_task(filename: str, content_b64: str, backend_notify_url: str):
     """
     Async task to summarize a document.
     """
     print(f"Starting async summary for {filename}")
     try:
-        # Check if filename is absolute path or relative
-        filepath = filename
-        # Ideally, valid path check should happen here or be passed consistently
+        # Decode content
+        try:
+            content = base64.b64decode(content_b64)
+            source = BytesIO(content)
+        except Exception as e:
+            return f"Error decoding content: {e}"
         
-        summary = summarize_document(filepath)
+        summary = summarize_document(source, filename)
         
         if "Error" in summary and len(summary) < 200:
-             # Basic check if it failed
              status = "failed"
              result = summary
         else:
              status = "completed"
              result = summary
-             # Save to DB
-             # We store just the basename typically or full path? 
-             # Let's standardize on basename for lookup if unique, else full path.
-             # Existing frontend uses filename from qdrant which might be full path or just name.
-             # The watcher sends full path. Let's start with storing what we got.
-             save_summary(filename, summary)
-
+             
         # Notify Backend
         notification_data = {
             "type": "summary_complete",

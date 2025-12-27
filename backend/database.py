@@ -1,7 +1,7 @@
 import sqlite3
-import os
 from datetime import datetime
 
+# Local SQLite DB
 DB_PATH = "agent.db"
 
 def get_db_connection():

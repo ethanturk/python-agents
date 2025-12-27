@@ -11,15 +11,17 @@ import config
 
 logger = logging.getLogger(__name__)
 
-def summarize_document(filepath: str) -> str:
+from io import BytesIO
+from typing import Union
+from docling.datamodel.base_models import DocumentStream
+
+def summarize_document(source: Union[str, BytesIO], filename: str = "document") -> str:
     """
     Summarizes the content of a document using Markitdown for robust format support.
+    Accepts a filepath string or a BytesIO stream.
     Assumes the content fits within the context window.
     """
     try:
-        if not os.path.exists(filepath):
-            return "Error: File not found."
-
         # Convert using Docling
         try:
             pipeline_options = PdfPipelineOptions()
@@ -37,10 +39,18 @@ def summarize_document(filepath: str) -> str:
                     )
                 }
             )
-            doc_result = converter.convert(filepath)
+            # Determine input source
+            input_source = source
+            if isinstance(source, BytesIO):
+                input_source = DocumentStream(name=filename, stream=source)
+            elif isinstance(source, str):
+                 if not os.path.exists(source):
+                     return "Error: File not found."
+            
+            doc_result = converter.convert(input_source)
             content = doc_result.document.export_to_markdown()
         except Exception as e:
-            logger.error(f"Error converting document {filepath}: {e}")
+            logger.error(f"Error converting document {filename}: {e}")
             return f"Error reading document: {str(e)}"
 
         if not content.strip():

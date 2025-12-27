@@ -1,6 +1,5 @@
 import os
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
-
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from typing import List
@@ -12,7 +11,6 @@ import logging
 from contextlib import asynccontextmanager
 from file_watcher import start_watching
 import os
-# Import needed for listing documents - assuming we add a helper or do it here
 from async_tasks import qdrant_client
 from qdrant_client.http.models import Filter, FieldCondition, MatchValue 
 from summarizer import summarize_document 
@@ -21,6 +19,7 @@ from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 import config 
+import base64 
 
 os.environ["USE_NNPACK"] = "0"
 
@@ -231,12 +230,23 @@ def summarize_document_endpoint(request: SummarizeRequest):
         if not os.path.isabs(filepath):
              filepath = os.path.join(MONITORED_DIR, request.filename)
              
+        if not os.path.exists(filepath):
+             raise HTTPException(status_code=404, detail="File not found on backend")
+
+        # Read file content
+        try:
+            with open(filepath, "rb") as f:
+                content = f.read()
+            content_b64 = base64.b64encode(content).decode('utf-8')
+        except Exception as read_err:
+             raise HTTPException(status_code=500, detail=f"Failed to read file: {read_err}")
+
         # Trigger Async Task
         # We need to pass the backend URL so the worker can call us back
         # In Docker, 'backend' is the hostname. Port is 8000 internal.
         notify_url = f"{config.API_URL}/internal/notify"
         
-        task = summarize_document_task.delay(filepath, notify_url)
+        task = summarize_document_task.delay(request.filename, content_b64, notify_url)
         return {"task_id": task.id, "message": "Summarization started"}
         
     except Exception as e:
@@ -262,6 +272,14 @@ async def websocket_endpoint(websocket: WebSocket):
 @app.post("/internal/notify")
 async def notify_endpoint(notification: NotificationRequest):
     logger.info(f"Received notification from worker: {notification.type} for {notification.filename}")
+    
+    # Save to DB if completed
+    if notification.status == 'completed' and notification.result:
+        try:
+             save_summary(notification.filename, notification.result)
+        except Exception as db_err:
+             logger.error(f"Failed to save summary to DB: {db_err}")
+
     await manager.broadcast(notification.dict())
     return {"status": "ok"}
 
