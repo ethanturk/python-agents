@@ -1,6 +1,6 @@
 import os
 import logging
-from docling.document_converter import DocumentConverter
+from markitdown import MarkItDown
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
@@ -17,11 +17,11 @@ def summarize_document(filepath: str) -> str:
         if not os.path.exists(filepath):
             return "Error: File not found."
 
-        # Convert using Docling
+        # Convert using MarkItDown
         try:
-            converter = DocumentConverter()
-            doc = converter.convert(filepath)
-            content = doc.document.export_to_markdown()
+            md = MarkItDown(enable_plugins=True)
+            result = md.convert(filepath)
+            content = result.text_content
         except Exception as e:
             logger.error(f"Error converting document {filepath}: {e}")
             return f"Error reading document: {str(e)}"
