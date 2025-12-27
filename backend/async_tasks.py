@@ -12,7 +12,7 @@ from io import BytesIO
 from docling.document_converter import DocumentConverter, PdfFormatOption
 from docling.datamodel.base_models import InputFormat, DocumentStream
 from docling.datamodel.pipeline_options import PdfPipelineOptions
-from docling.backend.pypdfium_backend import PyPdfiumDocumentBackend
+from docling.backend.pypdfium2_backend import PyPdfiumDocumentBackend
 from qdrant_client import QdrantClient
 from qdrant_client.http.models import VectorParams, Distance, PointStruct, Filter, FieldCondition, MatchValue
 from langchain_openai import OpenAIEmbeddings
