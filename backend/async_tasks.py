@@ -7,7 +7,12 @@ import config
 import os
 import tempfile
 import uuid
-from markitdown import MarkItDown
+import gc
+from io import BytesIO
+from docling.document_converter import DocumentConverter, PdfFormatOption
+from docling.datamodel.base_models import InputFormat, DocumentStream
+from docling.datamodel.pipeline_options import PdfPipelineOptions
+from docling.backend.pypdfium_backend import PyPdfiumDocumentBackend
 from qdrant_client import QdrantClient
 from qdrant_client.http.models import VectorParams, Distance, PointStruct, Filter, FieldCondition, MatchValue
 from langchain_openai import OpenAIEmbeddings
@@ -136,14 +141,31 @@ def answer_question(context_data):
     return f"Question Extracted: {question}\nAnswer: {final_answer}\n(Source KB: {kb_location})"
 
 
+# Initialize Docling optimized converter
+def get_docling_converter():
+    pipeline_options = PdfPipelineOptions()
+    pipeline_options.do_ocr = False
+    pipeline_options.do_table_structure = True
+    pipeline_options.table_structure_options.do_cell_matching = False
+    pipeline_options.generate_page_images = False
+    pipeline_options.generate_picture_images = False
+    pipeline_options.generate_source_format = False
+    
+    return DocumentConverter(
+        format_options={
+            InputFormat.PDF: PdfFormatOption(
+                pipeline_options=pipeline_options,
+                backend=PyPdfiumDocumentBackend
+            )
+        }
+    )
+
 @app.task
 def ingest_docs_task(files_data):
     """
     Ingest a list of files.
     files_data: list of dicts {'filename': str, 'content': str, 'filepath': str (optional)}
     """
-    md = MarkItDown(enable_plugins=True)
-    
     # Ensure collection exists
     try:
         qdrant_client.get_collection("documents")
@@ -154,7 +176,6 @@ def ingest_docs_task(files_data):
                 vectors_config=VectorParams(size=config.OPENAI_EMBEDDING_DIMENSIONS, distance=Distance.COSINE)
             )
         except Exception as e:
-            # If collection was created concurrently, ignore the 409 Conflict error
             if "Conflict" in str(e) or "409" in str(e):
                 pass
             else:
@@ -163,70 +184,56 @@ def ingest_docs_task(files_data):
     results = []
     splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
     
+    converter = get_docling_converter()
+
     for file_item in files_data:
         filename = file_item['filename']
         content = file_item.get('content')
-        
-        # Check for empty content if provided directly
-        if content is not None and len(content) == 0:
-            results.append(f"Skipped {filename}: Content is empty/0 bytes.")
-            continue
-        
-        source = None
-        temp_file_path = None
-        
-        if file_item.get('content'):
-            try:
-                with tempfile.NamedTemporaryFile(mode='wb+', suffix=f"_{os.path.basename(filename)}", delete=False) as tmp:
-                    tmp.write(file_item['content'])
-                    temp_file_path = tmp.name
-                    source = temp_file_path
-            except Exception as e:
-                results.append(f"Failed to write temp file for {filename}: {e}")
-                continue
-        elif file_item.get('filepath'):
-             # Path mode - use the shared path
-             source = file_item['filepath']
-             if not os.path.exists(source):
-                 results.append(f"Failed {filename}: File not found at {source}")
-                 continue
-             
-             if os.path.getsize(source) == 0:
-                 results.append(f"Skipped {filename}: 0-byte file at {source}")
-                 continue
-        else:
-             results.append(f"Skipped {filename}: No content or filepath provided.")
-             continue
-        
-        # Check if file is already indexed
+        filepath = file_item.get('filepath')
+
+        # Check existing index
         try:
             count_result = qdrant_client.count(
                 collection_name="documents",
-                count_filter=Filter(
-                    must=[
-                        FieldCondition(
-                            key="filename",
-                            match=MatchValue(value=filename)
-                        )
-                    ]
-                )
+                count_filter=Filter(must=[FieldCondition(key="filename", match=MatchValue(value=filename))])
             )
             if count_result.count > 0:
                 results.append(f"Skipped {filename}: Already indexed.")
                 continue
-        except Exception as e:
-            # If collection doesn't exist or other error, proceed (collection creation is handled above)
+        except Exception:
             pass
 
         try:
-            # Convert using MarkItDown
-            result = md.convert(source)
-            markdown_content = result.text_content
+            # Prepare source stream
+            source = None
+            if content:
+                if len(content) == 0:
+                    results.append(f"Skipped {filename}: Content is empty/0 bytes.")
+                    continue
+                # Docling stream from bytes
+                source = DocumentStream(name=filename, stream=BytesIO(content))
+            elif filepath:
+                if not os.path.exists(filepath):
+                    results.append(f"Failed {filename}: File not found at {filepath}")
+                    continue
+                if os.path.getsize(filepath) == 0:
+                     results.append(f"Skipped {filename}: 0-byte file at {filepath}")
+                     continue
+                source = filepath
+            else:
+                results.append(f"Skipped {filename}: No content or filepath provided.")
+                continue
+
+            # Convert
+            doc_result = converter.convert(source)
+            markdown_content = doc_result.document.export_to_markdown()
             
+            # Explicit resource cleanup for memory safety
+            if hasattr(doc_result.input, '_backend') and doc_result.input._backend:
+                doc_result.input._backend.unload()
+
             # Chunking
             chunks = splitter.split_text(markdown_content)
-            
-            # Sanitize chunks: ensure they are strings and not empty
             chunks = [str(c) for c in chunks if c and str(c).strip()]
             
             if not chunks:
@@ -237,12 +244,11 @@ def ingest_docs_task(files_data):
             vectors = []
             for attempt in range(3):
                 try:
-                    vectors = embeddings_model.embed_documents(chunks) # Batch embedding
+                    vectors = embeddings_model.embed_documents(chunks)
                     break
                 except Exception as e:
                     if attempt == 2:
                         raise e
-                    print(f"Embedding failed (attempt {attempt+1}/3): {e}. Retrying...")
                     time.sleep(2 * (attempt + 1))
             
             points = []
@@ -259,10 +265,6 @@ def ingest_docs_task(files_data):
         except Exception as e:
             results.append(f"Failed {filename}: {str(e)}")
         finally:
-            if temp_file_path and os.path.exists(temp_file_path):
-                try:
-                    os.remove(temp_file_path)
-                except:
-                    pass
-                
+             gc.collect()
+
     return "\n".join(results)
