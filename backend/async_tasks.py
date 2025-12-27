@@ -18,6 +18,7 @@ from qdrant_client import QdrantClient
 from qdrant_client.http.models import VectorParams, Distance, PointStruct, Filter, FieldCondition, MatchValue
 from langchain_openai import OpenAIEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+import pandas as pd
 
 os.environ["USE_NNPACK"] = "0"
 
@@ -227,10 +228,43 @@ def ingest_docs_task(files_data):
                 results.append(f"Skipped {filename}: No content or filepath provided.")
                 continue
 
+            # Handle .xls files by converting to .xlsx
+            if filename.lower().endswith('.xls'):
+                try:
+                    # Read the .xls file (from bytes if available, else from path)
+                    if content:
+                        df_dict = pd.read_excel(BytesIO(content), sheet_name=None)
+                    else:
+                        df_dict = pd.read_excel(filepath, sheet_name=None)
+                        
+                    # Create a temporary .xlsx file
+                    temp_xlsx = tempfile.NamedTemporaryFile(suffix='.xlsx', delete=False)
+                    temp_xlsx_path = temp_xlsx.name
+                    temp_xlsx.close()
+                    
+                    # Write all sheets to the new .xlsx file
+                    with pd.ExcelWriter(temp_xlsx_path, engine='openpyxl') as writer:
+                         for sheet_name, df in df_dict.items():
+                             df.to_excel(writer, sheet_name=sheet_name, index=False)
+                             
+                    # Update source to point to the new temp file
+                    source = temp_xlsx_path
+                    # We will need to clean this up later
+                except Exception as e:
+                     results.append(f"Failed to convert .xls {filename}: {str(e)}")
+                     continue
+
             # Convert
             doc_result = converter.convert(source)
             markdown_content = doc_result.document.export_to_markdown()
             
+            # Cleanup temporary xlsx file if it was created
+            if filename.lower().endswith('.xls') and source and isinstance(source, str) and os.path.exists(source) and 'temp' in source:
+                 try:
+                     os.remove(source)
+                 except:
+                     pass
+
             # Explicit resource cleanup for memory safety
             if hasattr(doc_result.input, '_backend') and doc_result.input._backend:
                 doc_result.input._backend.unload()

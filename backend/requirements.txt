@@ -9,3 +9,6 @@ langchain-text-splitters
 watchdog
 docling
 pypdfium2
+pandas
+xlrd
+openpyxl
