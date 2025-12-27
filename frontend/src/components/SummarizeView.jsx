@@ -19,7 +19,8 @@ export default function SummarizeView({
     chatLoading,
     cachedSummaries,
     onSelectCachedSummary,
-    onDeleteCachedSummary
+    onDeleteCachedSummary,
+    activeSummaries = []
 }) {
     const [question, setQuestion] = useState('');
 
@@ -35,6 +36,10 @@ export default function SummarizeView({
         onSendChat(question);
         setQuestion('');
     };
+
+    const isInternalLoading = loading; // from prop
+    const isAsyncProcessing = selectedDoc && activeSummaries.includes(selectedDoc);
+    const showSpinner = isInternalLoading || isAsyncProcessing;
 
     return (
         <Paper className="p-4">
@@ -58,10 +63,10 @@ export default function SummarizeView({
                     variant="contained"
                     size="large"
                     onClick={handleSummarizeClick}
-                    disabled={!selectedDoc}
+                    disabled={!selectedDoc || showSpinner}
                     startIcon={<SummarizeIcon />}
                 >
-                    {loading ? 'Starting...' : 'Summarize'}
+                    {showSpinner ? 'Summarizing...' : 'Summarize'}
                 </Button>
             </Box>
 
@@ -94,7 +99,19 @@ export default function SummarizeView({
                 </Box>
             )}
 
-            {summaryResult && (
+            {showSpinner && (
+                <Box className="flex-center-col my-4 p-4 text-center">
+                    <CircularProgress size={40} className="mb-2" />
+                    <Typography variant="body1" color="textSecondary">
+                        Summarization in progress...
+                    </Typography>
+                    <Typography variant="caption" color="textSecondary">
+                        This may take a few moments. You will be notified when it's ready.
+                    </Typography>
+                </Box>
+            )}
+
+            {!showSpinner && summaryResult && (
                 <Box>
                     <Divider className="my-3" />
                     <Box className="flex-between mb-2">

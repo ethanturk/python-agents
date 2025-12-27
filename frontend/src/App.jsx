@@ -436,6 +436,13 @@ function App() {
     }
   };
 
+  // Handle manual selection from dropdown
+  const handleManualDocumentSelection = (filename) => {
+    setSelectedDoc(filename);
+    setSummaryResult(null); // Clear result so we don't cache stale data
+    setChatHistory([]);
+  };
+
   return (
     <ThemeProvider theme={darkTheme}>
       <CssBaseline />
@@ -490,13 +497,14 @@ function App() {
             summaryResult={summaryResult}
             loading={isSummarizing}
             selectedDoc={selectedDoc}
-            setSelectedDoc={setSelectedDoc}
+            setSelectedDoc={handleManualDocumentSelection}
             chatHistory={chatHistory}
             onSendChat={handleSendChat}
             chatLoading={chatLoading}
             cachedSummaries={cachedSummaries}
             onSelectCachedSummary={handleSelectCachedSummary}
             onDeleteCachedSummary={handleDeleteCachedSummary}
+            activeSummaries={activeSummaries}
           />
         )}
 
