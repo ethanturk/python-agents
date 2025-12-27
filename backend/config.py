@@ -3,9 +3,11 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+BASE_URL = os.getenv('BASE_URL') or '192.168.5.200'
+
 # Celery Configuration
 # RabbitMQ Broker URL
-CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', 'amqp://guest:guest@192.168.5.200:5672//')
+CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', f"amqp://guest:guest@{BASE_URL}:5672//")
 CELERY_RESULT_BACKEND = 'rpc://'
 
 # OpenAI / Local LLM Configuration
@@ -16,4 +18,4 @@ OPENAI_MODEL = os.getenv('OPENAI_MODEL') or 'gpt-oss-20b'
 OPENAI_EMBEDDING_MODEL = os.getenv('OPENAI_EMBEDDING_MODEL') or 'text-embedding-nomic-embed-text-v1.5-embedding'
 OPENAI_EMBEDDING_DIMENSIONS = int(os.getenv('OPENAI_EMBEDDING_DIMENSIONS') or '768')
 
-API_URL = os.getenv('API_URL', 'http://192.168.5.200:9999')
+API_URL = os.getenv('API_URL', f"http://{BASE_URL}:9999")

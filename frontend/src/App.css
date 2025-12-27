@@ -262,3 +262,67 @@
 .action-button-view {
   margin-right: 16px !important;
 }
+
+/* Notification Sidebar */
+.notification-sidebar-header {
+  padding: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.notification-list {
+  width: 350px;
+  max-width: 100vw;
+}
+
+.notification-item {
+  cursor: pointer;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  transition: background-color 0.2s;
+}
+
+.notification-item:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.notification-unread {
+  background-color: rgba(144, 202, 249, 0.08);
+  /* slight primary tint */
+}
+
+/* Chat with Summary */
+.summary-chat-container {
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.summary-chat-history {
+  margin-top: 24px;
+  margin-bottom: 24px;
+}
+
+.chat-bubble-user {
+  background-color: #1565c0;
+  /* Darker blue */
+  color: white;
+  padding: 12px 16px;
+  border-radius: 12px 12px 0 12px;
+  margin-bottom: 8px;
+  max-width: 80%;
+  margin-left: auto;
+  align-self: flex-end;
+}
+
+.chat-bubble-ai {
+  background-color: #2e7d32;
+  /* Darker green */
+  color: white;
+  padding: 12px 16px;
+  border-radius: 12px 12px 12px 0;
+  margin-bottom: 16px;
+  max-width: 80%;
+  align-self: flex-start;
+}

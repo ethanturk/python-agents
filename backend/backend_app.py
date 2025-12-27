@@ -1,10 +1,12 @@
 import os
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi.api import Body
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+from typing import List
 from celery.result import AsyncResult
 from sync_agent import run_sync_agent, search_documents, perform_rag
-from async_tasks import check_knowledge_base, answer_question, ingest_docs_task, app as celery_app
+from async_tasks import check_knowledge_base, answer_question, ingest_docs_task, summarize_document_task, app as celery_app
 from celery import chain
 import logging
 from contextlib import asynccontextmanager
@@ -14,6 +16,11 @@ import os
 from async_tasks import qdrant_client
 from qdrant_client.http.models import Filter, FieldCondition, MatchValue 
 from summarizer import summarize_document 
+from database import init_db, get_summary, get_all_summaries
+from langchain_openai import ChatOpenAI
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.output_parsers import StrOutputParser
+import config 
 
 os.environ["USE_NNPACK"] = "0"
 
@@ -28,6 +35,7 @@ MONITORED_DIR = "/data/monitored"
 async def lifespan(app: FastAPI):
     # Startup
     logger.info("Starting up...")
+    init_db()
     observer = start_watching(MONITORED_DIR, lambda files: ingest_docs_task.delay(files))
     yield
     # Shutdown
@@ -69,6 +77,37 @@ class SearchRequest(BaseModel):
 
 class SummarizeRequest(BaseModel):
     filename: str
+
+class NotificationRequest(BaseModel):
+    type: str
+    filename: str
+    status: str
+    result: str
+
+class SummaryQARequest(BaseModel):
+    filename: str
+    question: str
+
+# WebSocket Connection Manager
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: List[WebSocket] = []
+
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.append(websocket)
+
+    def disconnect(self, websocket: WebSocket):
+        self.active_connections.remove(websocket)
+
+    async def broadcast(self, message: dict):
+        for connection in self.active_connections:
+            try:
+                await connection.send_json(message)
+            except Exception as e:
+                logger.error(f"Error broadcasting to socket: {e}")
+
+manager = ConnectionManager()
 
 @app.post("/agent/sync")
 def run_sync(request: AgentRequest):
@@ -183,7 +222,7 @@ def delete_document_endpoint(filename: str):
 
 @app.post("/agent/summarize")
 def summarize_document_endpoint(request: SummarizeRequest):
-    logger.info(f"Received summarization request for: {request.filename}")
+    logger.info(f"Received async summarization request for: {request.filename}")
     try:
         # Check if filename is path or just name. The watcher sends full path usually, 
         # but the request might just send what's in the DB.
@@ -192,8 +231,92 @@ def summarize_document_endpoint(request: SummarizeRequest):
         if not os.path.isabs(filepath):
              filepath = os.path.join(MONITORED_DIR, request.filename)
              
-        summary = summarize_document(filepath)
-        return {"summary": summary}
+        # Trigger Async Task
+        # We need to pass the backend URL so the worker can call us back
+        # In Docker, 'backend' is the hostname. Port is 8000 internal.
+        notify_url = f"{config.API_URL}/internal/notify"
+        
+        task = summarize_document_task.delay(filepath, notify_url)
+        return {"task_id": task.id, "message": "Summarization started"}
+        
     except Exception as e:
-        logger.error(f"Error summarizing {request.filename}: {e}")
+        logger.error(f"Error triggering summarization for {request.filename}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await manager.connect(websocket)
+    try:
+        while True:
+            # We just keep it open. Validated receiving not needed for now.
+            await websocket.receive_text() 
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
+    except Exception as e:
+        logger.error(f"WebSocket error: {e}")
+        try:
+             manager.disconnect(websocket)
+        except:
+            pass
+
+@app.post("/internal/notify")
+async def notify_endpoint(notification: NotificationRequest):
+    logger.info(f"Received notification from worker: {notification.type} for {notification.filename}")
+    await manager.broadcast(notification.dict())
+    return {"status": "ok"}
+
+@app.get("/agent/summaries")
+def get_summaries_history():
+    try:
+        data = get_all_summaries()
+        return {"summaries": data}
+    except Exception as e:
+        logger.error(f"Error fetching summaries: {e}")
+        return {"summaries": []}
+
+@app.post("/agent/summary_qa")
+def summary_qa_endpoint(request: SummaryQARequest):
+    """
+    Answer questions based on a specific summary history.
+    """
+    logger.info(f"QA on summary for {request.filename}: {request.question}")
+    try:
+        # 1. Get summary from DB
+        # We might need to match partial filename if headers differ, but let's try exact first
+        # OR if filename sent is just basename vs full path.
+        # Let's try to match logic: existing DB stores what task sent.
+        
+        # Try finding by basename if full path provided or vice versa could be complex.
+        # For now, simplistic exact match or basename match.
+        
+        summary_record = get_summary(request.filename)
+        if not summary_record:
+            # Try basename
+            # summary_record = get_summary(os.path.basename(request.filename))
+            pass
+            
+        if not summary_record:
+             return {"answer": "Summary not found. Please summarize the document first."}
+             
+        summary_text = summary_record['summary_text']
+        
+        # 2. RAG-like QA but just on this text
+        llm = ChatOpenAI(
+            api_key=config.OPENAI_API_KEY,
+            base_url=config.OPENAI_API_BASE,
+            model=config.OPENAI_MODEL
+        )
+        
+        prompt = ChatPromptTemplate.from_messages([
+            ("system", "You are an assistant answering questions based oNLY on the provided summary."),
+            ("user", "Summary:\n{summary}\n\nQuestion: {question}")
+        ])
+        
+        chain = prompt | llm | StrOutputParser()
+        answer = chain.invoke({"summary": summary_text, "question": request.question})
+        
+        return {"answer": answer}
+
+    except Exception as e:
+        logger.error(f"Error in Summary QA: {e}")
         raise HTTPException(status_code=500, detail=str(e))

@@ -12,3 +12,5 @@ pypdfium2
 pandas
 xlrd
 openpyxl
+httpx
+websockets

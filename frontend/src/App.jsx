@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
-import { Container, Box, CircularProgress } from '@mui/material';
+import { Container, Box, CircularProgress, Snackbar, Alert } from '@mui/material';
 import axios from 'axios';
 import './App.css';
 
@@ -10,9 +10,13 @@ import DocumentListView from './components/DocumentListView';
 import SearchView from './components/SearchView';
 import SummarizeView from './components/SummarizeView';
 import DeleteConfirmDialog from './components/DeleteConfirmDialog';
+import NotificationSidebar from './components/NotificationSidebar';
 import { API_BASE } from './config';
 
-// Dark Theme Configuration
+// Determine WS URL
+const WS_BASE = API_BASE.replace('http', 'ws') + '/ws';
+
+// Dark Theme Configuration (unchanged)
 const darkTheme = createTheme({
   palette: {
     mode: 'dark',
@@ -50,12 +54,100 @@ function App() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [docToDelete, setDocToDelete] = useState(null);
 
-  // Summarize Result State (selected doc state is now in SummarizeView -> Lifted to App)
+  // Summarize Result State
   const [selectedDoc, setSelectedDoc] = useState('');
   const [summaryResult, setSummaryResult] = useState(null);
 
+  // Chat State
+  const [chatHistory, setChatHistory] = useState([]);
+  const [chatLoading, setChatLoading] = useState(false);
+
   // Grouped Documents State
   const [groupedDocs, setGroupedDocs] = useState({});
+
+  // Notifications State
+  const [notifications, setNotifications] = useState([]);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [snackbarMessage, setSnackbarMessage] = useState(null);
+  const [isSummarizing, setIsSummarizing] = useState(false); // UI loading state for start btn
+
+  // WebSocket Connection
+  const ws = useRef(null);
+
+  // Fetch existing summaries from DB
+  const fetchSummaries = async () => {
+    try {
+      const res = await axios.get(`${API_BASE}/agent/summaries`);
+      const history = res.data.summaries.map(s => ({
+        filename: s.filename,
+        result: s.summary_text || "No text", // handling legacy/schema
+        status: 'completed',
+        read: true,
+        timestamp: s.created_at
+      }));
+      // Prepend to notifications (or set initial)
+      setNotifications(prev => {
+        // Avoid duplicates if strict mode mounts twice
+        const existingFiles = new Set(prev.map(p => p.filename));
+        const newItems = history.filter(h => !existingFiles.has(h.filename));
+        return [...prev, ...newItems];
+      });
+    } catch (error) {
+      console.error("Failed to load summary history", error);
+    }
+  };
+
+  useEffect(() => {
+    // Determine WS Base dynamically if needed, or use constant
+    ws.current = new WebSocket(WS_BASE);
+
+    ws.current.onopen = () => {
+      console.log("WebSocket Connected");
+    };
+
+    ws.current.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === 'summary_complete') {
+          handleNewNotification(data);
+        }
+      } catch (e) {
+        console.error("WS Parse Error", e);
+      }
+    };
+
+    ws.current.onclose = () => {
+      console.log("WebSocket Disconnected");
+    };
+
+    // Load History
+    fetchSummaries();
+
+    return () => {
+      if (ws.current) ws.current.close();
+    }
+  }, []);
+
+  const handleNewNotification = (notif) => {
+    setNotifications(prev => [{ ...notif, read: false, timestamp: new Date() }, ...prev]);
+    setUnreadCount(prev => prev + 1);
+    setSnackbarMessage(`Summary ready for ${notif.filename}`);
+  };
+
+  const handleNotificationClick = (notif) => {
+    // Mark as read (in UI only for now)
+    setNotifications(prev => prev.map(n => n === notif ? { ...n, read: true } : n));
+    // Decrement unread only if it was false
+    if (!notif.read) setUnreadCount(prev => Math.max(0, prev - 1));
+
+    // Jump to summary
+    setSelectedDoc(notif.filename);
+    setSummaryResult(notif.result);
+    setChatHistory([]); // Reset chat for new doc
+    handleSwitchToSummarize();
+    setSidebarOpen(false);
+  };
 
   // Fetch Documents and Group them
   const fetchDocuments = async () => {
@@ -124,21 +216,45 @@ function App() {
     }
   };
 
-  // Handle Summarize Request (triggered from SummarizeView)
+  // Handle Summarize Request (Start Async)
   const handleSummarizeRequest = async (filename) => {
-    setLoading(true);
-    setSummaryResult(null);
+    setIsSummarizing(true);
+    setSummaryResult(null); // Clear previous
+    setChatHistory([]);
     try {
-      const response = await axios.post(`${API_BASE}/agent/summarize`, { filename });
-      setSummaryResult(response.data.summary);
+      await axios.post(`${API_BASE}/agent/summarize`, { filename });
+      setSnackbarMessage("Summarization started. You will be notified when ready.");
     } catch (error) {
       console.error("Error summarizing:", error);
-      alert("Failed to summarize document");
+      alert("Failed to start summarization");
     } finally {
-      // Don't reset selectedDoc here, so we keep it for the link
-      setLoading(false);
+      setIsSummarizing(false);
     }
   };
+
+  // Handle Chat Request
+  const handleSendChat = async (question) => {
+    if (!selectedDoc) return;
+    const newMsg = { role: 'user', text: question };
+    setChatHistory(prev => [...prev, newMsg]);
+    setChatLoading(true);
+
+    try {
+      const res = await axios.post(`${API_BASE}/agent/summary_qa`, {
+        filename: selectedDoc,
+        question: question
+      });
+      const answerMsg = { role: 'ai', text: res.data.answer };
+      setChatHistory(prev => [...prev, answerMsg]);
+    } catch (error) {
+      console.error("Chat error:", error);
+      const errorMsg = { role: 'ai', text: "Sorry, I encountered an error." };
+      setChatHistory(prev => [...prev, errorMsg]);
+    } finally {
+      setChatLoading(false);
+    }
+  };
+
   // Search Documents
   const handleSearch = async () => {
     if (!query) return;
@@ -165,9 +281,19 @@ function App() {
         onShowSearch={handleSwitchToSearch}
         onShowDocuments={handleSwitchToDocs}
         onShowSummarize={handleSwitchToSummarize}
+        onShowNotifications={() => setSidebarOpen(true)}
+        unreadCount={unreadCount}
+      />
+
+      <NotificationSidebar
+        open={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        notifications={notifications}
+        onNotificationClick={handleNotificationClick}
       />
 
       <Container maxWidth="xl" className={['mt-4', 'mb-2'].join(' ')}>
+        {/* Global Loading for initial data or search */}
         {loading && <Box className="flex-justify-center my-4"><CircularProgress /></Box>}
 
         {/* View: Search View (Default) */}
@@ -196,20 +322,35 @@ function App() {
             groupedDocs={groupedDocs}
             onSummarize={handleSummarizeRequest}
             summaryResult={summaryResult}
-            loading={loading}
+            loading={isSummarizing}
             selectedDoc={selectedDoc}
             setSelectedDoc={setSelectedDoc}
+            chatHistory={chatHistory}
+            onSendChat={handleSendChat}
+            chatLoading={chatLoading}
           />
         )}
 
         {/* Delete Confirmation Dialog */}
-
         <DeleteConfirmDialog
           open={deleteDialogOpen}
           filename={docToDelete}
           onClose={() => setDeleteDialogOpen(false)}
           onConfirm={confirmDelete}
         />
+
+        {/* Snackbar for Notifications */}
+        <Snackbar
+          open={!!snackbarMessage}
+          autoHideDuration={6000}
+          onClose={() => setSnackbarMessage(null)}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        >
+          <Alert onClose={() => setSnackbarMessage(null)} severity="success" sx={{ width: '100%' }}>
+            {snackbarMessage}
+          </Alert>
+        </Snackbar>
+
       </Container>
     </ThemeProvider>
   );

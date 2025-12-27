@@ -19,6 +19,9 @@ from qdrant_client.http.models import VectorParams, Distance, PointStruct, Filte
 from langchain_openai import OpenAIEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 import pandas as pd
+import httpx
+from summarizer import summarize_document
+from database import save_summary
 
 os.environ["USE_NNPACK"] = "0"
 
@@ -314,3 +317,56 @@ def ingest_docs_task(files_data):
              gc.collect()
 
     return "\n".join(results)
+
+@app.task
+def summarize_document_task(filename: str, backend_notify_url: str):
+    """
+    Async task to summarize a document.
+    """
+    print(f"Starting async summary for {filename}")
+    try:
+        # Check if filename is absolute path or relative
+        filepath = filename
+        # Ideally, valid path check should happen here or be passed consistently
+        
+        summary = summarize_document(filepath)
+        
+        if "Error" in summary and len(summary) < 200:
+             # Basic check if it failed
+             status = "failed"
+             result = summary
+        else:
+             status = "completed"
+             result = summary
+             # Save to DB
+             # We store just the basename typically or full path? 
+             # Let's standardize on basename for lookup if unique, else full path.
+             # Existing frontend uses filename from qdrant which might be full path or just name.
+             # The watcher sends full path. Let's start with storing what we got.
+             save_summary(filename, summary)
+
+        # Notify Backend
+        notification_data = {
+            "type": "summary_complete",
+            "filename": filename,
+            "status": status,
+            "result": result
+        }
+        
+        # Helper to send notification
+        try:
+             # We use httpx to call back the main API
+             # In docker, backend is at http://backend:8000
+             # But let's use the passed URL to be flexible
+             with httpx.Client() as client:
+                 client.post(backend_notify_url, json=notification_data)
+        except Exception as net_err:
+             print(f"Failed to notify backend: {net_err}")
+             
+        return result
+
+    except Exception as e:
+        error_msg = f"Task failed: {str(e)}"
+        print(error_msg)
+        return error_msg
+

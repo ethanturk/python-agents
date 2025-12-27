@@ -1,16 +1,35 @@
-import React from 'react';
-import { Paper, Typography, Box, FormControl, InputLabel, Select, MenuItem, Button, Divider } from '@mui/material';
+import React, { useState } from 'react';
+import { Paper, Typography, Box, FormControl, InputLabel, Select, MenuItem, Button, Divider, TextField, IconButton } from '@mui/material';
 import SummarizeIcon from '@mui/icons-material/Summarize';
+import SendIcon from '@mui/icons-material/Send';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { getWebLink, getFilenameOnly } from '../utils';
 
-export default function SummarizeView({ groupedDocs, onSummarize, summaryResult, loading, selectedDoc, setSelectedDoc }) {
+export default function SummarizeView({
+    groupedDocs,
+    onSummarize,
+    summaryResult,
+    loading,
+    selectedDoc,
+    setSelectedDoc,
+    chatHistory,
+    onSendChat,
+    chatLoading
+}) {
+    const [question, setQuestion] = useState('');
 
     const handleSummarizeClick = () => {
         if (selectedDoc) {
             onSummarize(selectedDoc);
         }
+    };
+
+    const handleChatSubmit = (e) => {
+        e.preventDefault();
+        if (!question.trim()) return;
+        onSendChat(question);
+        setQuestion('');
     };
 
     return (
@@ -35,10 +54,10 @@ export default function SummarizeView({ groupedDocs, onSummarize, summaryResult,
                     variant="contained"
                     size="large"
                     onClick={handleSummarizeClick}
-                    disabled={!selectedDoc || loading}
+                    disabled={!selectedDoc}
                     startIcon={<SummarizeIcon />}
                 >
-                    Summarize
+                    {loading ? 'Starting...' : 'Summarize'}
                 </Button>
             </Box>
 
@@ -56,6 +75,34 @@ export default function SummarizeView({ groupedDocs, onSummarize, summaryResult,
                             <ReactMarkdown remarkPlugins={[remarkGfm]}>{summaryResult}</ReactMarkdown>
                         </Box>
                     </Paper>
+
+                    {/* Chat Section */}
+                    <Box className="summary-chat-container">
+                        <Typography variant="h6">Chat with Summary</Typography>
+
+                        <Box className="summary-chat-history">
+                            {chatHistory.map((msg, i) => (
+                                <Box key={i} className={msg.role === 'user' ? 'chat-bubble-user' : 'chat-bubble-ai'}>
+                                    <Typography variant="body1">{msg.text}</Typography>
+                                </Box>
+                            ))}
+                            {chatLoading && <Box className="chat-bubble-ai"><Typography variant="body2">Thinking...</Typography></Box>}
+                        </Box>
+
+                        <form onSubmit={handleChatSubmit} style={{ display: 'flex', gap: '8px' }}>
+                            <TextField
+                                fullWidth
+                                variant="outlined"
+                                placeholder="Ask a question about this summary..."
+                                value={question}
+                                onChange={(e) => setQuestion(e.target.value)}
+                                disabled={chatLoading}
+                            />
+                            <IconButton type="submit" color="primary" size="large" disabled={chatLoading || !question.trim()}>
+                                <SendIcon />
+                            </IconButton>
+                        </form>
+                    </Box>
                 </Box>
             )}
         </Paper>
