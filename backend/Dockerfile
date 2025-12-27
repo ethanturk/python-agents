@@ -21,6 +21,10 @@ RUN pip install --no-cache-dir torch torchvision --index-url https://download.py
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Preload models
+COPY preload_models.py .
+RUN python preload_models.py
+
 COPY . .
 
 EXPOSE 8000

@@ -240,6 +240,19 @@ function App() {
       await axios.post(`${API_BASE}/agent/summarize`, { filename });
       setSnackbarMessage("Summarization started. You will be notified when ready.");
       setActiveSummaries(prev => [...prev, filename]);
+
+      // Timeout after 5 minutes
+      setTimeout(() => {
+        setActiveSummaries(prev => {
+          if (prev.includes(filename)) {
+            // If still active, remove it and notify
+            setSnackbarMessage(`Summary request for ${filename} timed out.`);
+            return prev.filter(f => f !== filename);
+          }
+          return prev;
+        });
+      }, 5 * 60 * 1000); // 5 minutes
+
     } catch (error) {
       console.error("Error summarizing:", error);
       alert("Failed to start summarization");
