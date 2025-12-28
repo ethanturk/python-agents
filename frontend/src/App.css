@@ -324,3 +324,75 @@
   padding: 2px 4px;
   border-radius: 4px;
 }
+
+/* --- Responsive Design --- */
+@media (max-width: 768px) {
+
+  /* Layout adjustments */
+  .p-4 {
+    padding: 16px !important;
+  }
+
+  .p-3 {
+    padding: 16px !important;
+  }
+
+  .card {
+    padding: 1em;
+  }
+
+  /* Navigation Bar responsive styling */
+  .nav-bar-container {
+    flex-direction: column;
+    gap: 8px;
+    padding: 8px !important;
+  }
+
+  .nav-buttons {
+    width: 100%;
+    justify-content: space-between;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    /* Scroll bar clearance if needed */
+  }
+
+  /* Document List responsiveness */
+  .document-row {
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 8px;
+  }
+
+  .document-filename {
+    margin-right: 0 !important;
+    margin-bottom: 8px !important;
+    width: 100%;
+    word-break: break-all;
+  }
+
+  .document-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .action-button-view {
+    margin-right: 8px !important;
+  }
+
+  /* Chat bubbles max-width increase on small screens */
+  .chat-bubble-user,
+  .chat-bubble-ai {
+    max-width: 95%;
+  }
+
+  /* Search Bar wrapping */
+  .search-bar-paper {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .search-button {
+    margin-left: 0 !important;
+    width: 100% !important;
+  }
+}

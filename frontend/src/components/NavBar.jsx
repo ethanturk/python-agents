@@ -15,7 +15,7 @@ function NavBar({ onShowSearch, onShowDocuments, onShowSummarize, onShowNotifica
                 <Typography variant="h6" component="div" sx={{ flexGrow: 1, fontWeight: 'bold' }}>
                     Agent Workspace
                 </Typography>
-                <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                <Box className="nav-buttons" sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
                     {/* Status Indicators */}
                     {loading && <CircularProgress size={24} color="inherit" />}
                     {!loading && showSuccess && <CheckCircleIcon color="success" />}

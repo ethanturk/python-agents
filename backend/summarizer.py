@@ -1,5 +1,7 @@
 import os
 import logging
+import pandas as pd
+import tempfile
 from docling.datamodel.base_models import InputFormat
 from docling.datamodel.pipeline_options import PdfPipelineOptions
 from docling.backend.pypdfium2_backend import PyPdfiumDocumentBackend
@@ -21,8 +23,47 @@ def summarize_document(source: Union[str, BytesIO], filename: str = "document") 
     Summarizes the content of a document using Markitdown for robust format support.
     Accepts a filepath string or a BytesIO stream.
     Handles large documents by chunking and using a Map-Reduce approach.
+    Also handles .xls files by converting them to .xlsx.
     """
+    temp_xlsx_path = None
     try:
+        # Determine input source and handle .xls conversion
+        input_source = source
+
+        # Check for XLS and convert if necessary
+        is_xls = False
+        if isinstance(source, str) and source.lower().endswith('.xls'):
+            is_xls = True
+        elif filename.lower().endswith('.xls'):
+            is_xls = True
+
+        if is_xls:
+            try:
+                # Read the .xls file
+                if isinstance(source, BytesIO):
+                    df_dict = pd.read_excel(source, sheet_name=None)
+                else: # source is a filepath
+                    df_dict = pd.read_excel(source, sheet_name=None)
+                
+                # Create a temporary .xlsx file
+                temp_xlsx = tempfile.NamedTemporaryFile(suffix='.xlsx', delete=False)
+                temp_xlsx_path = temp_xlsx.name
+                temp_xlsx.close()
+                
+                # Write all sheets to the new .xlsx file
+                with pd.ExcelWriter(temp_xlsx_path, engine='openpyxl') as writer:
+                        for sheet_name, df in df_dict.items():
+                            df.to_excel(writer, sheet_name=sheet_name, index=False)
+                
+                # Update source to point to the new temp file
+                # Docling works best with file paths for Excel usually, or streams. 
+                # Let's use the file path of the converted file.
+                input_source = temp_xlsx_path
+                
+            except Exception as e:
+                logger.error(f"Failed to convert .xls {filename}: {str(e)}")
+                return f"Error: Failed to convert .xls file: {str(e)}"
+
         # Convert using Docling
         try:
             pipeline_options = PdfPipelineOptions()
@@ -40,12 +81,13 @@ def summarize_document(source: Union[str, BytesIO], filename: str = "document") 
                     )
                 }
             )
-            # Determine input source
-            input_source = source
-            if isinstance(source, BytesIO):
-                input_source = DocumentStream(name=filename, stream=source)
-            elif isinstance(source, str):
-                 if not os.path.exists(source):
+            
+            # If we converted to pseudo-XLSX, input_source is a path string now.
+            # If it was originally a BytesIO and NOT xls, we need to wrap it in DocumentStream
+            if isinstance(input_source, BytesIO):
+                input_source = DocumentStream(name=filename, stream=input_source)
+            elif isinstance(input_source, str):
+                 if not os.path.exists(input_source):
                      return "Error: File not found."
             
             doc_result = converter.convert(input_source)
@@ -53,6 +95,12 @@ def summarize_document(source: Union[str, BytesIO], filename: str = "document") 
         except Exception as e:
             logger.error(f"Error converting document {filename}: {e}")
             return f"Error reading document: {str(e)}"
+        final
+        if temp_xlsx_path and os.path.exists(temp_xlsx_path):
+            try:
+                os.remove(temp_xlsx_path)
+            except:
+                pass
 
         if not content.strip():
             return "Error: Document is empty or could not be read."
@@ -66,7 +114,7 @@ def summarize_document(source: Union[str, BytesIO], filename: str = "document") 
 
         # Split text if too large
         # Approximate 4 chars per token. 62k tokens ~ 248k chars.
-        # We'll be conservative and split at 100k chars (~25k tokens) to be safe and allow room for prompt + response.
+        # We'll be conservative and split at 100k chars (~25k tokens) to be safe and allow room for map/reduce prompts.
         text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=100000,
             chunk_overlap=5000
@@ -115,5 +163,12 @@ def summarize_document(source: Union[str, BytesIO], filename: str = "document") 
             return final_summary
 
     except Exception as e:
+        # Cleanup in case of outer error
+        if temp_xlsx_path and os.path.exists(temp_xlsx_path):
+            try:
+                os.remove(temp_xlsx_path)
+            except:
+                pass
+
         logger.error(f"Summarization failed: {e}")
         return f"Summarization failed: {str(e)}"
