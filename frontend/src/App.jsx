@@ -147,7 +147,7 @@ function App() {
   // --- Persistence Logic ---
   const STORAGE_KEY = 'summarization_cache_v2';
   const EXPIRY_TIME = 24 * 60 * 60 * 1000; // 24 hours
-  const isLoaded = useRef(false);
+  const [storageLoaded, setStorageLoaded] = useState(false);
 
   // Cache Structure: { [filename]: { summaryResult, chatHistory, timestamp } }
   const [cachedSummaries, setCachedSummaries] = useState({});
@@ -196,13 +196,13 @@ function App() {
     } catch (e) {
       console.error("Failed to load summarization cache", e);
     } finally {
-      isLoaded.current = true;
+      setStorageLoaded(true);
     }
   }, []);
 
   // Update Cache when current summary changes
   useEffect(() => {
-    if (!isLoaded.current) return;
+    if (!storageLoaded) return;
     if (selectedDoc && summaryResult) {
       setCachedSummaries(prev => ({
         ...prev,
@@ -213,11 +213,11 @@ function App() {
         }
       }));
     }
-  }, [selectedDoc, summaryResult, chatHistory]);
+  }, [selectedDoc, summaryResult, chatHistory, storageLoaded]);
 
   // Persist Cache to LocalStorage
   useEffect(() => {
-    if (!isLoaded.current) return;
+    if (!storageLoaded) return;
 
     // We save the entire cache + the current selectedDoc as "lastActive"
     const stateToSave = {
@@ -226,7 +226,7 @@ function App() {
     };
 
     localStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
-  }, [cachedSummaries, selectedDoc]);
+  }, [cachedSummaries, selectedDoc, storageLoaded]);
 
   const handleSelectCachedSummary = (filename) => {
     const entry = cachedSummaries[filename];
