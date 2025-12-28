@@ -7,6 +7,7 @@ from docling.document_converter import DocumentConverter, PdfFormatOption
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 import config
 
 logger = logging.getLogger(__name__)
@@ -19,7 +20,7 @@ def summarize_document(source: Union[str, BytesIO], filename: str = "document") 
     """
     Summarizes the content of a document using Markitdown for robust format support.
     Accepts a filepath string or a BytesIO stream.
-    Assumes the content fits within the context window.
+    Handles large documents by chunking and using a Map-Reduce approach.
     """
     try:
         # Convert using Docling
@@ -63,17 +64,55 @@ def summarize_document(source: Union[str, BytesIO], filename: str = "document") 
             model=config.OPENAI_MODEL
         )
 
-        # Create Prompt
-        prompt = ChatPromptTemplate.from_messages([
-            ("system", "You are a helpful assistant that summarizes documents."),
-            ("user", "Please provide a concise summary of the following document content (converted to markdown):\n\n{text}")
-        ])
-
-        chain = prompt | llm | StrOutputParser()
+        # Split text if too large
+        # Approximate 4 chars per token. 62k tokens ~ 248k chars.
+        # We'll be conservative and split at 100k chars (~25k tokens) to be safe and allow room for prompt + response.
+        text_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=100000,
+            chunk_overlap=5000
+        )
         
-        # Execute
-        summary = chain.invoke({"text": content})
-        return summary
+        chunks = text_splitter.split_text(content)
+
+        if len(chunks) == 1:
+            # Single chunk - standard summary
+            prompt = ChatPromptTemplate.from_messages([
+                ("system", "You are a helpful assistant that summarizes documents."),
+                ("user", "Please provide a concise summary of the following document content (converted to markdown):\n\n{text}")
+            ])
+            chain = prompt | llm | StrOutputParser()
+            summary = chain.invoke({"text": chunks[0]})
+            return summary
+        else:
+            # Multiple chunks - Map-Reduce
+            logger.info(f"Document too large, splitting into {len(chunks)} chunks for summarization.")
+            
+            # Map Step
+            map_prompt = ChatPromptTemplate.from_messages([
+                ("system", "You are a helpful assistant reading a part of a larger document."),
+                ("user", "Please provide a concise summary of this section of the document:\n\n{text}")
+            ])
+            map_chain = map_prompt | llm | StrOutputParser()
+            
+            chunk_summaries = []
+            for i, chunk in enumerate(chunks):
+                try:
+                    chunk_summary = map_chain.invoke({"text": chunk})
+                    chunk_summaries.append(chunk_summary)
+                except Exception as e:
+                    logger.error(f"Error summarizing chunk {i}: {e}")
+                    chunk_summaries.append(f"[Error in chunk {i}]")
+
+            # Reduce Step
+            combined_summaries = "\n\n".join(chunk_summaries)
+            reduce_prompt = ChatPromptTemplate.from_messages([
+                ("system", "You are a helpful assistant that consolidates summaries."),
+                ("user", "Here are summaries of different sections of a document. Please combine them into one concise, cohesive summary of the entire document:\n\n{text}")
+            ])
+            reduce_chain = reduce_prompt | llm | StrOutputParser()
+            
+            final_summary = reduce_chain.invoke({"text": combined_summaries})
+            return final_summary
 
     except Exception as e:
         logger.error(f"Summarization failed: {e}")
