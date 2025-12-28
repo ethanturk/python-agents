@@ -443,6 +443,18 @@ function App() {
     setChatHistory([]);
   };
 
+  // Handle Summarize from List View
+  const handleSummarizeFromList = async (filename) => {
+    setSelectedDoc(filename);
+    setSummaryResult(null);
+    setChatHistory([]);
+    setView('summarize');
+    // We need to wait for state updates? standard react batching might be fine for the layout switch
+    // but the actual summarization trigger is async.
+    // Let's call the requester directly.
+    await handleSummarizeRequest(filename);
+  };
+
   return (
     <ThemeProvider theme={darkTheme}>
       <CssBaseline />
@@ -486,6 +498,7 @@ function App() {
           <DocumentListView
             groupedDocs={groupedDocs}
             onDelete={handlePromptDelete}
+            onSummarize={handleSummarizeFromList}
           />
         )}
 

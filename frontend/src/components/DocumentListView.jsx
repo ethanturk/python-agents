@@ -3,9 +3,10 @@ import { Paper, Typography, Box, Alert, Accordion, AccordionSummary, AccordionDe
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import DeleteIcon from '@mui/icons-material/Delete';
 import DescriptionIcon from '@mui/icons-material/Description';
+import SummarizeIcon from '@mui/icons-material/Summarize';
 import { getWebLink, getFilenameOnly } from '../utils';
 
-export default function DocumentListView({ groupedDocs, onDelete }) {
+export default function DocumentListView({ groupedDocs, onDelete, onSummarize }) {
     return (
         <Paper className="p-2">
             <Typography variant="h5" gutterBottom>Ingested Documents ({Object.keys(groupedDocs).length})</Typography>
@@ -40,6 +41,20 @@ export default function DocumentListView({ groupedDocs, onDelete }) {
                                             className="action-button-view"
                                         >
                                             View
+                                        </Button>
+                                        <Button
+                                            variant="outlined"
+                                            size="small"
+                                            color="secondary"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                onSummarize(filename);
+                                            }}
+                                            startIcon={<SummarizeIcon />}
+                                            className="action-button-summarize"
+                                            sx={{ ml: 1 }}
+                                        >
+                                            Summarize
                                         </Button>
                                         <IconButton
                                             onClick={(e) => {
