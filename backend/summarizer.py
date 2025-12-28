@@ -95,7 +95,7 @@ def summarize_document(source: Union[str, BytesIO], filename: str = "document") 
         except Exception as e:
             logger.error(f"Error converting document {filename}: {e}")
             return f"Error reading document: {str(e)}"
-        final
+
         if temp_xlsx_path and os.path.exists(temp_xlsx_path):
             try:
                 os.remove(temp_xlsx_path)
