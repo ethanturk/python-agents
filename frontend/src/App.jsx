@@ -117,10 +117,8 @@ function App() {
       };
 
       ws.current.onmessage = (event) => {
-        console.log("WebSocket message received raw:", event.data);
         try {
           const data = JSON.parse(event.data);
-          console.log("WebSocket message parsed:", data);
 
           if (data.type === 'summary_complete') {
             handleNewNotification(data);

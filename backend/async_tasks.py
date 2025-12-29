@@ -16,7 +16,7 @@ from docling.datamodel.pipeline_options import PdfPipelineOptions
 from docling.backend.pypdfium2_backend import PyPdfiumDocumentBackend
 from qdrant_client import QdrantClient
 from qdrant_client.http.models import VectorParams, Distance, PointStruct, Filter, FieldCondition, MatchValue
-from langchain_openai import OpenAIEmbeddings
+from openai import OpenAI
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 import pandas as pd
 import httpx
@@ -37,14 +37,13 @@ def get_model():
 # Initialize Celery
 app = Celery('langchain_agent_sample', broker=config.CELERY_BROKER_URL, backend=config.CELERY_RESULT_BACKEND)
 
-# Initialize Qdrant and Embeddings
+# Initialize Qdrant and OpenAI Client
 # Robust extraction of the host from config or hardcoded for docker
 qdrant_client = QdrantClient(host=os.getenv("QDRANT_HOST", "qdrant"), port=6333, timeout=60)
-embeddings_model = OpenAIEmbeddings(
-    api_key=config.OPENAI_API_KEY, 
-    base_url=config.OPENAI_API_BASE,
-    model=config.OPENAI_EMBEDDING_MODEL, # Use a standard small model for embeddings
-    check_embedding_ctx_length=False
+
+openai_client = OpenAI(
+    api_key=config.OPENAI_API_KEY,
+    base_url=config.OPENAI_API_BASE
 )
 
 def create_stub_kb():
@@ -79,7 +78,7 @@ def check_knowledge_base(user_input):
     )
     
     try:
-        response = agent.run_sync(user_prompt).output.strip().upper()
+        response = agent.run_sync(user_prompt).data.strip().upper()
         
         kb_location = None
         if "YES" in response:
@@ -121,13 +120,13 @@ def answer_question(context_data):
         get_model(),
         system_prompt="Extract the core question from the user input."
     )
-    question = agent_extract.run_sync(user_input).output
+    question = agent_extract.run_sync(user_input).data
     
     agent_answer = Agent(
         get_model(),
         system_prompt=f"Answer the user's question using this knowledge base content: {kb_content}"
     )
-    final_answer = agent_answer.run_sync(question).output
+    final_answer = agent_answer.run_sync(question).data
     
     return f"Question Extracted: {question}\nAnswer: {final_answer}\n(Source KB: {kb_location})"
 
@@ -268,7 +267,12 @@ def ingest_docs_task(files_data):
             vectors = []
             for attempt in range(3):
                 try:
-                    vectors = embeddings_model.embed_documents(chunks)
+                    # Native OpenAI embedding call
+                    response = openai_client.embeddings.create(
+                        input=chunks,
+                        model=config.OPENAI_EMBEDDING_MODEL
+                    )
+                    vectors = [d.embedding for d in response.data]
                     break
                 except Exception as e:
                     if attempt == 2:

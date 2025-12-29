@@ -2,21 +2,35 @@ import os
 import logging
 import pandas as pd
 import tempfile
-from docling.datamodel.base_models import InputFormat
+from io import BytesIO
+from typing import Union
+
+# Docling imports
+from docling.datamodel.base_models import InputFormat, DocumentStream
 from docling.datamodel.pipeline_options import PdfPipelineOptions
 from docling.backend.pypdfium2_backend import PyPdfiumDocumentBackend
 from docling.document_converter import DocumentConverter, PdfFormatOption
-from langchain_openai import ChatOpenAI
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.output_parsers import StrOutputParser
+
+# PydanticAI imports
+from pydantic_ai import Agent
+from pydantic_ai.models.openai import OpenAIModel
+from pydantic_ai.providers.openai import OpenAIProvider
+
+# LangChain Text Splitter (still used)
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+
 import config
 
 logger = logging.getLogger(__name__)
 
-from io import BytesIO
-from typing import Union
-from docling.datamodel.base_models import DocumentStream
+def get_model():
+    return OpenAIModel(
+        config.OPENAI_MODEL,
+        provider=OpenAIProvider(
+            base_url=config.OPENAI_API_BASE,
+            api_key=config.OPENAI_API_KEY
+        )
+    )
 
 def summarize_document(source: Union[str, BytesIO], filename: str = "document") -> str:
     """
@@ -105,16 +119,12 @@ def summarize_document(source: Union[str, BytesIO], filename: str = "document") 
         if not content.strip():
             return "Error: Document is empty or could not be read."
 
-        # Setup LLM
-        llm = ChatOpenAI(
-            api_key=config.OPENAI_API_KEY,
-            base_url=config.OPENAI_API_BASE,
-            model=config.OPENAI_MODEL
-        )
-
+        # Setup Agent
+        logger.info(f"Summarizer initializing PydanticAI Agent with model: {config.OPENAI_MODEL}")
+        
         # Split text if too large
         # Approximate 4 chars per token. 62k tokens ~ 248k chars.
-        # We'll be conservative and split at 100k chars (~25k tokens) to be safe and allow room for map/reduce prompts.
+        # We'll be conservative and split at 100k chars (~25k tokens) to be safe.
         text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=100000,
             chunk_overlap=5000
@@ -124,43 +134,46 @@ def summarize_document(source: Union[str, BytesIO], filename: str = "document") 
 
         if len(chunks) == 1:
             # Single chunk - standard summary
-            prompt = ChatPromptTemplate.from_messages([
-                ("system", "You are a helpful assistant that summarizes documents."),
-                ("user", "Please provide a concise summary of the following document content (converted to markdown):\n\n{text}")
-            ])
-            chain = prompt | llm | StrOutputParser()
-            summary = chain.invoke({"text": chunks[0]})
-            return summary
+            agent = Agent(
+                get_model(),
+                system_prompt="You are a helpful assistant that summarizes documents."
+            )
+            user_msg = f"Please provide a concise summary of the following document content (converted to markdown):\n\n{chunks[0]}"
+            
+            result = agent.run_sync(user_msg)
+            return result.data
         else:
             # Multiple chunks - Map-Reduce
             logger.info(f"Document too large, splitting into {len(chunks)} chunks for summarization.")
             
             # Map Step
-            map_prompt = ChatPromptTemplate.from_messages([
-                ("system", "You are a helpful assistant reading a part of a larger document."),
-                ("user", "Please provide a concise summary of this section of the document:\n\n{text}")
-            ])
-            map_chain = map_prompt | llm | StrOutputParser()
+            map_agent = Agent(
+                get_model(),
+                system_prompt="You are a helpful assistant reading a part of a larger document."
+            )
             
             chunk_summaries = []
             for i, chunk in enumerate(chunks):
                 try:
-                    chunk_summary = map_chain.invoke({"text": chunk})
-                    chunk_summaries.append(chunk_summary)
+                    user_msg = f"Please provide a concise summary of this section of the document:\n\n{chunk}"
+                    chunk_result = map_agent.run_sync(user_msg)
+                    chunk_summaries.append(chunk_result.data)
                 except Exception as e:
                     logger.error(f"Error summarizing chunk {i}: {e}")
                     chunk_summaries.append(f"[Error in chunk {i}]")
 
             # Reduce Step
             combined_summaries = "\n\n".join(chunk_summaries)
-            reduce_prompt = ChatPromptTemplate.from_messages([
-                ("system", "You are a helpful assistant that consolidates summaries."),
-                ("user", "Here are summaries of different sections of a document. Please combine them into one concise, cohesive summary of the entire document:\n\n{text}")
-            ])
-            reduce_chain = reduce_prompt | llm | StrOutputParser()
             
-            final_summary = reduce_chain.invoke({"text": combined_summaries})
-            return final_summary
+            reduce_agent = Agent(
+                get_model(),
+                system_prompt="You are a helpful assistant that consolidates summaries."
+            )
+            
+            reduce_msg = f"Here are summaries of different sections of a document. Please combine them into one concise, cohesive summary of the entire document:\n\n{combined_summaries}"
+            
+            final_result = reduce_agent.run_sync(reduce_msg)
+            return final_result.data
 
     except Exception as e:
         # Cleanup in case of outer error

@@ -2,6 +2,9 @@ import os
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+from pydantic_ai import Agent
+from pydantic_ai.models.openai import OpenAIModel
+from pydantic_ai.providers.openai import OpenAIProvider
 from typing import List
 from celery.result import AsyncResult
 from sync_agent import run_sync_agent, search_documents, perform_rag
@@ -15,9 +18,6 @@ from async_tasks import qdrant_client
 from qdrant_client.http.models import Filter, FieldCondition, MatchValue 
 from summarizer import summarize_document 
 from database import init_db, get_summary, get_all_summaries, save_summary
-from langchain_openai import ChatOpenAI
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.output_parsers import StrOutputParser
 import config 
 import base64 
 
@@ -298,6 +298,15 @@ def get_summaries_history():
         logger.error(f"Error fetching summaries: {e}")
         return {"summaries": []}
 
+def get_model():
+    return OpenAIModel(
+        config.OPENAI_MODEL,
+        provider=OpenAIProvider(
+            base_url=config.OPENAI_API_BASE,
+            api_key=config.OPENAI_API_KEY
+        )
+    )
+
 @app.post("/agent/summary_qa")
 def summary_qa_endpoint(request: SummaryQARequest):
     """
@@ -305,46 +314,27 @@ def summary_qa_endpoint(request: SummaryQARequest):
     """
     logger.info(f"QA on summary for {request.filename}: {request.question}")
     try:
-        # 1. Get summary from DB
-        # We might need to match partial filename if headers differ, but let's try exact first
-        # OR if filename sent is just basename vs full path.
-        # Let's try to match logic: existing DB stores what task sent.
-        
-        # Try finding by basename if full path provided or vice versa could be complex.
-        # For now, simplistic exact match or basename match.
-        
         summary_record = get_summary(request.filename)
         if not summary_record:
-            # Try basename
-            # summary_record = get_summary(os.path.basename(request.filename))
             pass
             
         if not summary_record:
              logger.warning(f"Summary lookup failed for: {request.filename}. DB contents may mismatch.")
-             # Debug dump
-             # all_sums = get_all_summaries()
-             # logger.info(f"Available summaries: {[s['filename'] for s in all_sums]}")
-             
              return {"answer": "Summary not found. Please summarize the document first."}
              
         summary_text = summary_record['summary_text']
         
-        # 2. RAG-like QA but just on this text
-        llm = ChatOpenAI(
-            api_key=config.OPENAI_API_KEY,
-            base_url=config.OPENAI_API_BASE,
-            model=config.OPENAI_MODEL
+        # PydanticAI Agent
+        agent = Agent(
+            get_model(),
+            system_prompt="You are an assistant answering questions based oNLY on the provided summary."
         )
         
-        prompt = ChatPromptTemplate.from_messages([
-            ("system", "You are an assistant answering questions based oNLY on the provided summary."),
-            ("user", "Summary:\n{summary}\n\nQuestion: {question}")
-        ])
+        user_prompt = f"Summary:\n{summary_text}\n\nQuestion: {request.question}"
         
-        chain = prompt | llm | StrOutputParser()
-        answer = chain.invoke({"summary": summary_text, "question": request.question})
+        result = agent.run_sync(user_prompt)
         
-        return {"answer": answer}
+        return {"answer": result.data}
 
     except Exception as e:
         logger.error(f"Error in Summary QA: {e}")
