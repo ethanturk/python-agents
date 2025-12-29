@@ -53,6 +53,7 @@ export default function DocumentListView({ groupedDocs, onDelete, onSummarize })
                                             startIcon={<SummarizeIcon />}
                                             className="action-button-summarize"
                                             sx={{ ml: 1 }}
+                                            data-testid={`summarize-btn-${filename}`}
                                         >
                                             Summarize
                                         </Button>
