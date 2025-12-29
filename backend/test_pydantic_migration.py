@@ -20,7 +20,7 @@ class TestPydanticMigration(unittest.TestCase):
     def test_run_sync_agent(self, MockAgent):
         # Setup mock agent
         mock_instance = MockAgent.return_value
-        mock_instance.run_sync.return_value.data = "Mock Response"
+        mock_instance.run_sync.return_value.output = "Mock Response"
         
         response = run_sync_agent("Hello")
         
@@ -33,7 +33,7 @@ class TestPydanticMigration(unittest.TestCase):
     def test_perform_rag(self, mock_search, MockAgent):
         mock_search.return_value = [{"content": "foo", "metadata": {"filename": "bar"}}]
         mock_instance = MockAgent.return_value
-        mock_instance.run_sync.return_value.data = "RAG Answer"
+        mock_instance.run_sync.return_value.output = "RAG Answer"
         
         response = perform_rag("query")
         
@@ -46,7 +46,7 @@ class TestPydanticMigration(unittest.TestCase):
     def test_async_check_kb(self, mock_exists, MockAgent):
         mock_exists.return_value = True
         mock_instance = MockAgent.return_value
-        mock_instance.run_sync.return_value.data = "YES"
+        mock_instance.run_sync.return_value.output = "YES"
         
         result = check_knowledge_base({"user_input": "hi"})
         
@@ -58,10 +58,10 @@ class TestPydanticMigration(unittest.TestCase):
         # We Mock Agent twice (once for extract, once for answer)
         # So MockAgent() returns a new mock each time
         mock_extract = MagicMock()
-        mock_extract.run_sync.return_value.data = "Extracted Question"
+        mock_extract.run_sync.return_value.output = "Extracted Question"
         
         mock_answer = MagicMock()
-        mock_answer.run_sync.return_value.data = "Final Answer"
+        mock_answer.run_sync.return_value.output = "Final Answer"
         
         MockAgent.side_effect = [mock_extract, mock_answer]
         

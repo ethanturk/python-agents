@@ -6,4 +6,4 @@ services:
     ports:
       - "3000:3000"
     environment:
-      VITE_API_BASE: ${VITE_API_BASE:-http://192.168.5.200:9999}
+      VITE_API_BASE: ${VITE_API_BASE}
