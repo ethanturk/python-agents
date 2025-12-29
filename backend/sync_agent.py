@@ -35,7 +35,7 @@ def run_sync_agent(user_input: str) -> str:
     
     try:
         result = agent.run_sync(user_input)
-        return result.data
+        return result.output
     except Exception as e:
         return f"Error running sync agent: {str(e)}"
 
@@ -106,7 +106,7 @@ def perform_rag(query: str, limit: int = 10) -> dict:
     
     try:
         result = agent.run_sync(full_prompt)
-        answer = result.data
+        answer = result.output
     except Exception as e:
         answer = f"Error generating answer: {str(e)}"
         

@@ -79,7 +79,7 @@ def check_knowledge_base(user_input):
     )
     
     try:
-        response = agent.run_sync(user_prompt).data.strip().upper()
+        response = agent.run_sync(user_prompt).output.strip().upper()
         
         kb_location = None
         if "YES" in response:
@@ -121,13 +121,13 @@ def answer_question(context_data):
         get_model(),
         system_prompt="Extract the core question from the user input."
     )
-    question = agent_extract.run_sync(user_input).data
+    question = agent_extract.run_sync(user_input).output
     
     agent_answer = Agent(
         get_model(),
         system_prompt=f"Answer the user's question using this knowledge base content: {kb_content}"
     )
-    final_answer = agent_answer.run_sync(question).data
+    final_answer = agent_answer.run_sync(question).output
     
     return f"Question Extracted: {question}\nAnswer: {final_answer}\n(Source KB: {kb_location})"
 
