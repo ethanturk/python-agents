@@ -1,6 +1,6 @@
 from pydantic_ai import Agent
 from pydantic_ai.models.openai import OpenAIModel
-from openai import AsyncOpenAI
+from pydantic_ai.providers.openai import OpenAIProvider
 import nest_asyncio
 import asyncio
 from qdrant_client import QdrantClient
@@ -11,13 +11,12 @@ import config
 nest_asyncio.apply()
 
 def get_model():
-    client = AsyncOpenAI(
-        base_url=config.OPENAI_API_BASE,
-        api_key=config.OPENAI_API_KEY
-    )
     return OpenAIModel(
         config.OPENAI_MODEL,
-        openai_client=client
+        provider=OpenAIProvider(
+            base_url=config.OPENAI_API_BASE,
+            api_key=config.OPENAI_API_KEY
+        )
     )
 
 def run_sync_agent(user_input: str) -> str:
