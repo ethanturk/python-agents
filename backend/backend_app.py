@@ -95,11 +95,14 @@ class ConnectionManager:
     async def connect(self, websocket: WebSocket):
         await websocket.accept()
         self.active_connections.append(websocket)
+        logger.info(f"WebSocket client connected. Active connections: {len(self.active_connections)}")
 
     def disconnect(self, websocket: WebSocket):
         self.active_connections.remove(websocket)
+        logger.info(f"WebSocket client disconnected. Active connections: {len(self.active_connections)}")
 
     async def broadcast(self, message: dict):
+        logger.info(f"Broadcasting message to {len(self.active_connections)} clients: {message}")
         for connection in self.active_connections:
             try:
                 await connection.send_json(message)
@@ -282,6 +285,7 @@ async def notify_endpoint(notification: NotificationRequest):
         except Exception as db_err:
              logger.error(f"Failed to save summary to DB: {db_err}")
 
+    logger.info("Broadcasting notification...")
     await manager.broadcast(notification.dict())
     return {"status": "ok"}
 
