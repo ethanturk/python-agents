@@ -102,45 +102,65 @@ function App() {
     }
   };
 
+  const [isConnected, setIsConnected] = useState(false);
+
+  // WebSocket Connection Logic
   useEffect(() => {
-    // Determine WS Base dynamically if needed, or use constant
-    ws.current = new WebSocket(WS_BASE);
+    let timeoutId = null;
 
-    ws.current.onopen = () => {
-      console.log("WebSocket Connected");
-    };
+    const connect = () => {
+      ws.current = new WebSocket(WS_BASE);
 
-    ws.current.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        if (data.type === 'summary_complete') {
-          handleNewNotification(data);
+      ws.current.onopen = () => {
+        console.log("WebSocket Connected");
+        setIsConnected(true);
+      };
 
-          // Remove from active list
-          setActiveSummaries(prev => prev.filter(f => f !== data.filename));
+      ws.current.onmessage = (event) => {
+        console.log("WebSocket message received raw:", event.data);
+        try {
+          const data = JSON.parse(event.data);
+          console.log("WebSocket message parsed:", data);
 
-          // Show success tick
-          setShowSuccess(true);
-          setTimeout(() => setShowSuccess(false), 5000);
-        } else if (data.type === 'summary_failed') {
-          // Handle explicit failure if backend sends it
-          setActiveSummaries(prev => prev.filter(f => f !== data.filename));
-          setSnackbarMessage(`Summary failed for ${data.filename}`);
+          if (data.type === 'summary_complete') {
+            handleNewNotification(data);
+
+            // Remove from active list
+            setActiveSummaries(prev => prev.filter(f => f !== data.filename));
+
+            // Show success tick
+            setShowSuccess(true);
+            setTimeout(() => setShowSuccess(false), 5000);
+          } else if (data.type === 'summary_failed') {
+            // Handle explicit failure if backend sends it
+            setActiveSummaries(prev => prev.filter(f => f !== data.filename));
+            setSnackbarMessage(`Summary failed for ${data.filename}`);
+          }
+        } catch (e) {
+          console.error("WS Parse Error", e);
         }
-      } catch (e) {
-        console.error("WS Parse Error", e);
-      }
+      };
+
+      ws.current.onclose = () => {
+        console.log("WebSocket Disconnected. Reconnecting...");
+        setIsConnected(false);
+        timeoutId = setTimeout(connect, 3000); // Retry every 3 seconds
+      };
+
+      ws.current.onerror = (err) => {
+        console.error("WebSocket Error:", err);
+        ws.current.close();
+      };
     };
 
-    ws.current.onclose = () => {
-      console.log("WebSocket Disconnected");
-    };
+    connect();
 
     // Load History (DISABLED - Using Local Cache only)
     // fetchSummaries();
 
     return () => {
       if (ws.current) ws.current.close();
+      if (timeoutId) clearTimeout(timeoutId);
     }
   }, []);
 
@@ -480,6 +500,13 @@ function App() {
       <Container maxWidth="xl" className={['mt-4', 'mb-2'].join(' ')}>
         {/* Global Loading for initial data or search */}
         {loading && <Box className="flex-justify-center my-4"><CircularProgress /></Box>}
+
+        {/* Connection Status Indicator */}
+        {!isConnected && (
+          <Alert severity="warning" className="mb-2">
+            WebSocket disconnected. Attempting to reconnect...
+          </Alert>
+        )}
 
         {/* View: Search View (Default) */}
         {!loading && view === 'search' && (
