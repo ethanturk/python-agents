@@ -3,6 +3,7 @@ import time
 from celery import Celery
 from pydantic_ai import Agent
 from pydantic_ai.models.openai import OpenAIModel
+from openai import AsyncOpenAI
 import config
 import os
 import tempfile
@@ -25,10 +26,13 @@ from summarizer import summarize_document
 os.environ["USE_NNPACK"] = "0"
 
 def get_model():
-    return OpenAIModel(
-        config.OPENAI_MODEL,
+    client = AsyncOpenAI(
         base_url=config.OPENAI_API_BASE,
         api_key=config.OPENAI_API_KEY
+    )
+    return OpenAIModel(
+        config.OPENAI_MODEL,
+        openai_client=client
     )
 
 # Initialize Celery
