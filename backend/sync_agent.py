@@ -42,6 +42,7 @@ def run_sync_agent(user_input: str) -> str:
 def search_documents(query: str, limit: int = 10) -> list:
     """
     Search documents in Qdrant (Synchronous).
+    Uses search_groups to limit by unique documents (group_by filename) rather than chunks.
     """
     if not config.OPENAI_API_KEY:
         return []
@@ -62,17 +63,28 @@ def search_documents(query: str, limit: int = 10) -> list:
         return []
 
     vector = embeddings_model.embed_query(query)
-    response = qdrant_client.query_points(
-        collection_name="documents",
-        query=vector,
-        limit=limit
-    )
-    search_result = response.points
     
-    return [
-        {"content": hit.payload.get("content"), "metadata": {"filename": hit.payload.get("filename")}}
-        for hit in search_result
-    ]
+    # Use search_groups to group by filename
+    # limit = number of groups (documents)
+    # group_size = number of chunks per document to retrieve
+    response = qdrant_client.search_groups(
+        collection_name="documents",
+        query_vector=vector,
+        group_by="filename",
+        limit=limit,
+        group_size=3
+    )
+    
+    # Flatten the grouped results
+    results = []
+    for group in response.groups:
+        for hit in group.hits:
+            results.append({
+                "content": hit.payload.get("content"), 
+                "metadata": {"filename": hit.payload.get("filename")}
+            })
+    
+    return results
 
 def perform_rag(query: str, limit: int = 10) -> dict:
     """
