@@ -2,7 +2,7 @@ import os
 import time
 from celery import Celery
 from pydantic_ai import Agent
-from pydantic_ai.models.openai import OpenAIModel
+from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.openai import OpenAIProvider
 import config
 import os
@@ -26,7 +26,7 @@ from summarizer import summarize_document
 os.environ["USE_NNPACK"] = "0"
 
 def get_model():
-    return OpenAIModel(
+    return OpenAIChatModel(
         config.OPENAI_MODEL,
         provider=OpenAIProvider(
             base_url=config.OPENAI_API_BASE,

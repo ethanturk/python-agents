@@ -13,7 +13,7 @@ from docling.document_converter import DocumentConverter, PdfFormatOption
 
 # PydanticAI imports
 from pydantic_ai import Agent
-from pydantic_ai.models.openai import OpenAIModel
+from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.openai import OpenAIProvider
 
 # LangChain Text Splitter (still used)
@@ -24,7 +24,7 @@ import config
 logger = logging.getLogger(__name__)
 
 def get_model():
-    return OpenAIModel(
+    return OpenAIChatModel(
         config.OPENAI_MODEL,
         provider=OpenAIProvider(
             base_url=config.OPENAI_API_BASE,

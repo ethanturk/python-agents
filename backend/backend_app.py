@@ -3,7 +3,7 @@ from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from pydantic_ai import Agent
-from pydantic_ai.models.openai import OpenAIModel
+from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.openai import OpenAIProvider
 from typing import List
 from celery.result import AsyncResult
@@ -299,7 +299,7 @@ def get_summaries_history():
         return {"summaries": []}
 
 def get_model():
-    return OpenAIModel(
+    return OpenAIChatModel(
         config.OPENAI_MODEL,
         provider=OpenAIProvider(
             base_url=config.OPENAI_API_BASE,
