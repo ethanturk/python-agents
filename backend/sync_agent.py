@@ -1,9 +1,20 @@
-from langchain_openai import ChatOpenAI
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.output_parsers import StrOutputParser
+from pydantic_ai import Agent
+from pydantic_ai.models.openai import OpenAIModel
+import nest_asyncio
+import asyncio
 from qdrant_client import QdrantClient
 from langchain_openai import OpenAIEmbeddings
 import config
+
+# Apply nest_asyncio to allow nested event loops if necessary
+nest_asyncio.apply()
+
+def get_model():
+    return OpenAIModel(
+        config.OPENAI_MODEL,
+        base_url=config.OPENAI_API_BASE,
+        api_key=config.OPENAI_API_KEY
+    )
 
 def run_sync_agent(user_input: str) -> str:
     """
@@ -14,22 +25,14 @@ def run_sync_agent(user_input: str) -> str:
     if not config.OPENAI_API_KEY:
         return "Error: OPENAI_API_KEY not found in environment variables."
 
-    llm = ChatOpenAI(
-        api_key=config.OPENAI_API_KEY,
-        base_url=config.OPENAI_API_BASE,
-        model=config.OPENAI_MODEL
+    agent = Agent(
+        get_model(),
+        system_prompt="You are a helpful assistant."
     )
     
-    prompt = ChatPromptTemplate.from_messages([
-        ("system", "You are a helpful assistant."),
-        ("user", "{input}")
-    ])
-    
-    chain = prompt | llm | StrOutputParser()
-    
     try:
-        response = chain.invoke({"input": user_input})
-        return response
+        result = agent.run_sync(user_input)
+        return result.data
     except Exception as e:
         return f"Error running sync agent: {str(e)}"
 
@@ -88,20 +91,19 @@ def perform_rag(query: str, limit: int = 10) -> dict:
         for r in results
     ])
 
-    llm = ChatOpenAI(
-        api_key=config.OPENAI_API_KEY,
-        base_url=config.OPENAI_API_BASE,
-        model=config.OPENAI_MODEL
+    agent = Agent(
+        get_model(),
+        system_prompt=(
+            "You are a helpful assistant. Answer the user's question based ONLY on the following context. "
+            "If the answer is not in the context, say so.\n\n"
+        )
     )
+
+    full_prompt = f"Context:\n{context_str}\n\nQuestion: {query}"
     
-    prompt = ChatPromptTemplate.from_messages([
-        ("system", "You are a helpful assistant. Answer the user's question based ONLY on the following context. If the answer is not in the context, say so.\n\nContext:\n{context}"),
-        ("user", "{input}")
-    ])
-    
-    chain = prompt | llm | StrOutputParser()
     try:
-        answer = chain.invoke({"input": query, "context": context_str})
+        result = agent.run_sync(full_prompt)
+        answer = result.data
     except Exception as e:
         answer = f"Error generating answer: {str(e)}"
         

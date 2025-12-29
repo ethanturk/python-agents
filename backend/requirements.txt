@@ -1,5 +1,7 @@
-langchain
+
 langchain-openai
+pydantic-ai
+nest_asyncio
 celery
 python-dotenv
 fastapi

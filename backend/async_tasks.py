@@ -1,9 +1,8 @@
 import os
 import time
 from celery import Celery
-from langchain_openai import ChatOpenAI
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.output_parsers import StrOutputParser
+from pydantic_ai import Agent
+from pydantic_ai.models.openai import OpenAIModel
 import config
 import os
 import tempfile
@@ -24,6 +23,13 @@ import base64
 from summarizer import summarize_document
 
 os.environ["USE_NNPACK"] = "0"
+
+def get_model():
+    return OpenAIModel(
+        config.OPENAI_MODEL,
+        base_url=config.OPENAI_API_BASE,
+        api_key=config.OPENAI_API_KEY
+    )
 
 # Initialize Celery
 app = Celery('langchain_agent_sample', broker=config.CELERY_BROKER_URL, backend=config.CELERY_RESULT_BACKEND)
@@ -54,36 +60,24 @@ def check_knowledge_base(user_input):
     if not config.OPENAI_API_KEY:
         return {"error": "Missing API Key"}
 
-    llm = ChatOpenAI(
-        api_key=config.OPENAI_API_KEY,
-        base_url=config.OPENAI_API_BASE,
-        model=config.OPENAI_MODEL
+    agent = Agent(
+        get_model(),
+        system_prompt="You are an intelligent assistant managing a codebase."
     )
-    print(f"DEBUG: check_knowledge_base using model: {llm.model_name}")
+    print(f"DEBUG: check_knowledge_base using model: {agent.model.model_name if hasattr(agent.model, 'model_name') else config.OPENAI_MODEL}")
     
-    # Prompt 1: Does a knowledge base currently exist?
-    # We provide some context or just ask. Since I am an AI, I don't know the file system unless told.
-    # However, for the sake of the exercise, we will ask the LLM to determined it based on a "system context"
-    # OR we just implement the logic: Ask LLM, if it says "No", we make one.
-    # To make it interesting, we'll prompt the LLM about the concept of a KB for "this codebase".
-    
-    prompt = ChatPromptTemplate.from_messages([
-        ("system", "You are an intelligent assistant managing a codebase."),
-        ("user", "Does a knowledge base currently exist for this codebase? Reply 'YES' or 'NO' only.")
-    ])
-    
-    chain = prompt | llm | StrOutputParser()
-    
-    # We might simulate "this codebase" context by just checking real file existence 
-    # and feeding that to the prompt, or just letting the LLM hallucinate.
-    # The requirement says "Prompt - Does a knowledge base currently exist...".
-    # I will let the LLM decide. If it says NO, I create one.
-    
+    # Check physical existence
     kb_exists_physically = os.path.exists("stub_knowledge_base.txt")
-    context = f"File system check returns: {kb_exists_physically}"
+    
+    # Prompt with context
+    user_prompt = (
+        f"Context: File system check returns: {kb_exists_physically}.\n"
+        "Does a knowledge base currently exist for this codebase? Reply 'YES' or 'NO' only."
+    )
     
     try:
-        response = chain.invoke({"input": ""}).strip().upper()
+        response = agent.run_sync(user_prompt).data.strip().upper()
+        
         kb_location = None
         if "YES" in response:
             kb_location = "existing_kb.txt"
@@ -112,13 +106,6 @@ def answer_question(context_data):
     if not config.OPENAI_API_KEY:
         return "Error: Missing API Key"
 
-    llm = ChatOpenAI(
-        api_key=config.OPENAI_API_KEY,
-        base_url=config.OPENAI_API_BASE,
-        model=config.OPENAI_MODEL
-    )
-    print(f"DEBUG: answer_question using model: {llm.model_name}")
-
     # Load KB content (stub)
     kb_content = ""
     try:
@@ -127,23 +114,17 @@ def answer_question(context_data):
     except:
         kb_content = "Could not read knowledge base."
 
-    # Prompt 2: What question does the user want answered?
+    agent_extract = Agent(
+        get_model(),
+        system_prompt="Extract the core question from the user input."
+    )
+    question = agent_extract.run_sync(user_input).data
     
-    prompt_extract = ChatPromptTemplate.from_messages([
-        ("system", "Extract the core question from the user input."),
-        ("user", "{input}")
-    ])
-    
-    chain_extract = prompt_extract | llm | StrOutputParser()
-    question = chain_extract.invoke({"input": user_input})
-    
-    prompt_answer = ChatPromptTemplate.from_messages([
-        ("system", f"Answer the user's question using this knowledge base content: {kb_content}"),
-        ("user", "{question}")
-    ])
-    
-    chain_answer = prompt_answer | llm | StrOutputParser()
-    final_answer = chain_answer.invoke({"question": question})
+    agent_answer = Agent(
+        get_model(),
+        system_prompt=f"Answer the user's question using this knowledge base content: {kb_content}"
+    )
+    final_answer = agent_answer.run_sync(question).data
     
     return f"Question Extracted: {question}\nAnswer: {final_answer}\n(Source KB: {kb_location})"
 
