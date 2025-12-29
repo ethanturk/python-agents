@@ -334,7 +334,7 @@ def summary_qa_endpoint(request: SummaryQARequest):
         
         result = agent.run_sync(user_prompt)
         
-        return {"answer": result.data}
+        return {"answer": result.output}
 
     except Exception as e:
         logger.error(f"Error in Summary QA: {e}")

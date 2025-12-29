@@ -141,7 +141,7 @@ def summarize_document(source: Union[str, BytesIO], filename: str = "document") 
             user_msg = f"Please provide a concise summary of the following document content (converted to markdown):\n\n{chunks[0]}"
             
             result = agent.run_sync(user_msg)
-            return result.data
+            return result.output
         else:
             # Multiple chunks - Map-Reduce
             logger.info(f"Document too large, splitting into {len(chunks)} chunks for summarization.")
@@ -157,7 +157,7 @@ def summarize_document(source: Union[str, BytesIO], filename: str = "document") 
                 try:
                     user_msg = f"Please provide a concise summary of this section of the document:\n\n{chunk}"
                     chunk_result = map_agent.run_sync(user_msg)
-                    chunk_summaries.append(chunk_result.data)
+                    chunk_summaries.append(chunk_result.output)
                 except Exception as e:
                     logger.error(f"Error summarizing chunk {i}: {e}")
                     chunk_summaries.append(f"[Error in chunk {i}]")
@@ -173,7 +173,7 @@ def summarize_document(source: Union[str, BytesIO], filename: str = "document") 
             reduce_msg = f"Here are summaries of different sections of a document. Please combine them into one concise, cohesive summary of the entire document:\n\n{combined_summaries}"
             
             final_result = reduce_agent.run_sync(reduce_msg)
-            return final_result.data
+            return final_result.output
 
     except Exception as e:
         # Cleanup in case of outer error
