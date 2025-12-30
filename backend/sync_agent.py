@@ -5,6 +5,7 @@ import nest_asyncio
 import asyncio
 from qdrant_client import QdrantClient
 from langchain_openai import OpenAIEmbeddings
+import os
 import config
 
 # Apply nest_asyncio to allow nested event loops if necessary
