@@ -253,7 +253,12 @@ def ingest_docs_task(files_data):
 
             # Explicit resource cleanup for memory safety
             if hasattr(doc_result.input, '_backend') and doc_result.input._backend:
-                doc_result.input._backend.unload()
+                try:
+                    doc_result.input._backend.unload()
+                except Exception as e:
+                    # Ignore specific error related to cleaning up already closed/None resources
+                    if "'NoneType' object has no attribute 'close'" not in str(e):
+                         print(f"Warning: Error unloading backend for {filename}: {e}")
 
             # Chunking
             chunks = splitter.split_text(markdown_content)
