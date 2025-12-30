@@ -45,6 +45,10 @@ def search_documents(query: str, limit: int = 10) -> list:
     Search documents in Qdrant (Synchronous).
     Uses search_groups to limit by unique documents (group_by filename) rather than chunks.
     """
+    import qdrant_client
+    print(f"DEBUG: Qdrant Client Version: {qdrant_client.__version__}")
+    print(f"DEBUG: Has search_groups: {hasattr(qdrant_client.QdrantClient, 'search_groups')}")
+
     if not config.OPENAI_API_KEY:
         return []
 
