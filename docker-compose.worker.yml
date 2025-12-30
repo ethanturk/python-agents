@@ -18,7 +18,7 @@ services:
         source: nas
         target: /data/monitored
         volume:
-          subpath: data/documents/searchable
+          subpath: documents/searchable
 
 volumes:
   nas:
