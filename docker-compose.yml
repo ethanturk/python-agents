@@ -3,14 +3,18 @@ services:
     image: mher/flower
     hostname: flower
     command: celery flower
+    user: "1027:100"
     ports:
       - "5555:5555"
     environment:
       CELERY_BROKER_URL: amqp://guest:guest@192.168.5.204:5672//
       FLOWER_UNAUTHENTICATED_API: true
     volumes:
-      - /volume1/docker/pyagents/flower:/data
-    user: "1027:100"
+      - type: volume
+        source: nas
+        target: /data
+        volume:
+          subpath: docker/pyagents/flower
 
   backend:
     build: ./backend
@@ -24,4 +28,12 @@ services:
       OPENAI_MODEL: ${OPENAI_MODEL}
       USE_NNPACK: "0"
     volumes:
-      - /volume1/data/documents/searchable:/data/monitored
+      - type: volume
+        source: nas
+        target: /data/monitored
+        volume:
+          subpath: data/documents/searchable
+
+volumes:
+  nas:
+    external: true

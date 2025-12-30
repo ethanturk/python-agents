@@ -13,3 +13,13 @@ services:
       OPENAI_MODEL: 'gpt-oss-20b'
       QDRANT_HOST: 192.168.5.204
       USE_NNPACK: "0"
+    volumes:
+      - type: volume
+        source: nas
+        target: /data/monitored
+        volume:
+          subpath: data/documents/searchable
+
+volumes:
+  nas:
+    external: true
