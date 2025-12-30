@@ -1,21 +1,4 @@
 services:
-  flower:
-    image: mher/flower
-    hostname: flower
-    command: celery flower
-    user: "1027:100"
-    ports:
-      - "5555:5555"
-    environment:
-      CELERY_BROKER_URL: amqp://guest:guest@192.168.5.204:5672//
-      FLOWER_UNAUTHENTICATED_API: true
-    volumes:
-      - type: volume
-        source: nas
-        target: /data
-        volume:
-          subpath: docker/pyagents/flower
-
   backend:
     build: ./backend
     hostname: backend
