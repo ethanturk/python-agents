@@ -53,36 +53,12 @@ def search_documents(query: str, limit: int = 10) -> list:
     except Exception as e:
         print(f"DEBUG: Could not get version via metadata: {e}")
 
-    print(f"DEBUG: Qdrant module file: {qdrant_client.__file__}")
-    print(f"DEBUG: Has search_groups: {hasattr(qdrant_client.QdrantClient, 'search_groups')}")
-    print(f"DEBUG: QdrantClient dir: {dir(qdrant_client.QdrantClient)}")
-
-    if not config.OPENAI_API_KEY:
-        return []
-
-    # Initialize Qdrant and Embeddings
-    # Using hardcoded host "qdrant" as per existing pattern for Docker
-    qdrant_client = QdrantClient(host=os.getenv("QDRANT_HOST", "qdrant"), port=6333, timeout=60)
-    embeddings_model = OpenAIEmbeddings(
-        api_key=config.OPENAI_API_KEY, 
-        base_url=config.OPENAI_API_BASE,
-        model=config.OPENAI_EMBEDDING_MODEL,
-        check_embedding_ctx_length=False
-    )
-
-    try:
-        qdrant_client.get_collection("documents")
-    except:
-        return []
-
-    vector = embeddings_model.embed_query(query)
-    
-    # Use search_groups to group by filename
+    # Use query_points_groups (new API) to group by filename
     # limit = number of groups (documents)
     # group_size = number of chunks per document to retrieve
-    response = qdrant_client.search_groups(
+    response = qdrant_client.query_points_groups(
         collection_name="documents",
-        query_vector=vector,
+        query=vector,
         group_by="filename",
         limit=limit,
         group_size=3
