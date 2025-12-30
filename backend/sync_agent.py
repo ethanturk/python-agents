@@ -49,7 +49,7 @@ def search_documents(query: str, limit: int = 10) -> list:
 
     # Initialize Qdrant and Embeddings
     # Using hardcoded host "qdrant" as per existing pattern for Docker
-    qdrant_client = QdrantClient(host="qdrant", port=6333)
+    qdrant_client = QdrantClient(host=os.getenv("QDRANT_HOST", "qdrant"), port=6333, timeout=60)
     embeddings_model = OpenAIEmbeddings(
         api_key=config.OPENAI_API_KEY, 
         base_url=config.OPENAI_API_BASE,
