@@ -45,14 +45,26 @@ def search_documents(query: str, limit: int = 10) -> list:
     Search documents in Qdrant (Synchronous).
     Uses search_groups to limit by unique documents (group_by filename) rather than chunks.
     """
-    import qdrant_client
-    import importlib.metadata
-    try:
-        version = importlib.metadata.version("qdrant-client")
-        print(f"DEBUG: Qdrant Client Version (metadata): {version}")
-    except Exception as e:
-        print(f"DEBUG: Could not get version via metadata: {e}")
+    if not config.OPENAI_API_KEY:
+        return []
 
+    # Initialize Qdrant and Embeddings
+    # Using hardcoded host "qdrant" as per existing pattern for Docker
+    qdrant_client = QdrantClient(host=os.getenv("QDRANT_HOST", "qdrant"), port=6333, timeout=60)
+    embeddings_model = OpenAIEmbeddings(
+        api_key=config.OPENAI_API_KEY, 
+        base_url=config.OPENAI_API_BASE,
+        model=config.OPENAI_EMBEDDING_MODEL,
+        check_embedding_ctx_length=False
+    )
+
+    try:
+        qdrant_client.get_collection("documents")
+    except:
+        return []
+
+    vector = embeddings_model.embed_query(query)
+    
     # Use query_points_groups (new API) to group by filename
     # limit = number of groups (documents)
     # group_size = number of chunks per document to retrieve
