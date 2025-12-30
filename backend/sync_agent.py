@@ -46,7 +46,14 @@ def search_documents(query: str, limit: int = 10) -> list:
     Uses search_groups to limit by unique documents (group_by filename) rather than chunks.
     """
     import qdrant_client
-    print(f"DEBUG: Qdrant Client Version: {qdrant_client.__version__}")
+    import importlib.metadata
+    try:
+        version = importlib.metadata.version("qdrant-client")
+        print(f"DEBUG: Qdrant Client Version (metadata): {version}")
+    except Exception as e:
+        print(f"DEBUG: Could not get version via metadata: {e}")
+
+    print(f"DEBUG: Qdrant module file: {qdrant_client.__file__}")
     print(f"DEBUG: Has search_groups: {hasattr(qdrant_client.QdrantClient, 'search_groups')}")
 
     if not config.OPENAI_API_KEY:
