@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-BASE_URL = os.getenv('BASE_URL') or '192.168.5.200'
+BASE_URL = os.getenv('BASE_URL') or '192.168.5.204'
 
 # Celery Configuration
 # RabbitMQ Broker URL

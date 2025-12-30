@@ -2,7 +2,7 @@ import requests
 import os
 from dotenv import load_dotenv
 # from config import API_URL
-API_URL = os.getenv('API_URL', 'http://192.168.5.200:9999')
+API_URL = os.getenv('API_URL', 'http://192.168.5.204:9999')
 
 load_dotenv()
 
