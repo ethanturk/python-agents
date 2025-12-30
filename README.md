@@ -69,3 +69,37 @@ docker-compose -f docker-compose.frontend.yml up -d --build
 
 *   **Shared Volumes**: Data is persisted in docker volumes mapping to local directories (check `docker-compose.yml` volumes explicitly if you need to change storage paths).
 *   **Networking**: Services communicate via the Docker network. The Frontend (running in browser) connects to the Backend URL configured via `VITE_API_BASE`.
+
+## Testing
+
+### Backend Tests
+The backend uses `pytest` for unit testing. Tests cover API endpoints, agents, summarization logic, and async tasks.
+
+1.  Navigate to the backend directory:
+    ```bash
+    cd backend
+    ```
+2.  Install dependencies (if running locally):
+    ```bash
+    pip install -r requirements.txt
+    ```
+3.  Run tests:
+    ```bash
+    pytest tests/
+    ```
+
+### Frontend Tests
+The frontend uses `Vitest` and `React Testing Library`.
+
+1.  Navigate to the frontend directory:
+    ```bash
+    cd frontend
+    ```
+2.  Install dependencies:
+    ```bash
+    npm install
+    ```
+3.  Run tests:
+    ```bash
+    npm test
+    ```

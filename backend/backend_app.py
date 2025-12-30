@@ -28,7 +28,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Directory to monitor
-MONITORED_DIR = "/data/monitored"
+MONITORED_DIR = os.getenv("MONITORED_DIR", "/data/monitored")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
