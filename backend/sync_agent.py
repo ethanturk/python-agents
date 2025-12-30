@@ -55,6 +55,7 @@ def search_documents(query: str, limit: int = 10) -> list:
 
     print(f"DEBUG: Qdrant module file: {qdrant_client.__file__}")
     print(f"DEBUG: Has search_groups: {hasattr(qdrant_client.QdrantClient, 'search_groups')}")
+    print(f"DEBUG: QdrantClient dir: {dir(qdrant_client.QdrantClient)}")
 
     if not config.OPENAI_API_KEY:
         return []
