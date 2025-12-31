@@ -457,6 +457,30 @@ function App() {
     }
   };
 
+  // Handle Search Chat
+  const handleSendSearchChat = async (question) => {
+    if (!searchData.results || searchData.results.length === 0) return;
+
+    const newMsg = { role: 'user', text: question };
+    setSearchChatHistory(prev => [...prev, newMsg]);
+    setSearchChatLoading(true);
+
+    try {
+      const res = await axios.post(`${API_BASE}/agent/search_qa`, {
+        question: question,
+        context_results: searchData.results
+      });
+      const answerMsg = { role: 'ai', text: res.data.answer };
+      setSearchChatHistory(prev => [...prev, answerMsg]);
+    } catch (error) {
+      console.error("Search Chat error:", error);
+      const errorMsg = { role: 'ai', text: "Sorry, I encountered an error." };
+      setSearchChatHistory(prev => [...prev, errorMsg]);
+    } finally {
+      setSearchChatLoading(false);
+    }
+  };
+
   // Handle manual selection from dropdown
   const handleManualDocumentSelection = (filename) => {
     setSelectedDoc(filename);
