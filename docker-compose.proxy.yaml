@@ -8,10 +8,10 @@ services:
     volumes:
       - type: volume
         source: nas
-        target: /etc/nginx
+        target: /etc/nginx/nginx.conf
         read_only: true
         volume:
-          subpath: configs
+          subpath: configs/nginx.conf
       - type: volume
         source: nas
         target: /etc/nginx/certs
