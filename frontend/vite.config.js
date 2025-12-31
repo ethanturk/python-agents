@@ -7,8 +7,6 @@ export default defineConfig(({ mode }) => {
   const appBase = process.env.VITE_BASE_PATH || env.VITE_BASE_PATH || '/'
   
   console.log("DEBUG: All Env Keys:", Object.keys(process.env).filter(k => k.startsWith('VITE_')))
-  console.log("DEBUG: process.env.VITE_BASE_PATH:", process.env.VITE_BASE_PATH)
-  console.log("DEBUG: env.VITE_BASE_PATH:", env.VITE_BASE_PATH)
   console.log("DEBUG: Resolved Base:", appBase)
   
   return {
