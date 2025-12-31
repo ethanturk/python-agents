@@ -18,6 +18,7 @@ services:
       QDRANT_COLLECTION_NAME: ${QDRANT_COLLECTION_NAME:-documents}
       CELERY_QUEUE_NAME: ${CELERY_QUEUE_NAME:-celery}
       GOOGLE_APPLICATION_CREDENTIALS: /app/service-account.json
+      API_URL: ${API_URL}
     volumes:
       - type: volume
         source: nas
