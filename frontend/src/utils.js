@@ -21,4 +21,15 @@ export const getFilenameOnly = (filepath) => {
     return parts[parts.length - 1];
 };
 
+export const formatDocumentSetName = (name) => {
+    if (!name) return "";
+    if (name === 'default') return 'Default';
+    if (name === 'all') return 'All';
+    return name
+        .split(/[_\-]/)
+        .filter(part => part.length > 0)
+        .map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+        .join(' ');
+};
+
 export { API_BASE };

@@ -12,6 +12,7 @@ import SummarizeView from './components/SummarizeView';
 import DeleteConfirmDialog from './components/DeleteConfirmDialog';
 import NotificationSidebar from './components/NotificationSidebar';
 import { useAuth } from './contexts/AuthContext';
+import { useDocumentSet } from './contexts/DocumentSetContext';
 import { API_BASE } from './config';
 
 // Determine WS URL
@@ -53,6 +54,7 @@ const darkTheme = createTheme({
 
 function App() {
   const { currentUser, loginWithGoogle } = useAuth();
+  const { selectedSet } = useDocumentSet();
   const [searchData, setSearchData] = useState({ answer: null, results: [] });
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
@@ -464,7 +466,11 @@ function App() {
     if (!query) return;
     setLoading(true);
     try {
-      const response = await axios.post(`${API_BASE}/agent/search`, { prompt: query, limit: searchLimit });
+      const response = await axios.post(`${API_BASE}/agent/search`, { 
+        prompt: query, 
+        limit: searchLimit,
+        document_set: selectedSet
+      });
       const data = response.data;
       setSearchChatHistory([]); // Reset chat on new search
       if (data.answer) {

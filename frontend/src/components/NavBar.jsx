@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import AppBar from '@mui/material/AppBar';
 import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
@@ -6,16 +6,25 @@ import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
 import MenuIcon from '@mui/icons-material/Menu';
 import Badge from '@mui/material/Badge';
-import { Box, CircularProgress, Menu, MenuItem, useTheme, useMediaQuery } from '@mui/material';
+import { Box, CircularProgress, Menu, MenuItem, useTheme, useMediaQuery, Select, FormControl, InputLabel } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import { Notifications, Logout } from '@mui/icons-material'; // Added Logout and consolidated Notifications
-import { useAuth } from '../contexts/AuthContext'; // Added useAuth import
+import { Notifications, Logout } from '@mui/icons-material';
+import { useAuth } from '../contexts/AuthContext';
+import { useDocumentSet } from '../contexts/DocumentSetContext';
+import { formatDocumentSetName } from '../utils';
 
 function NavBar({ onShowSearch, onShowDocuments, onShowSummarize, onShowNotifications, unreadCount, loading, showSuccess }) {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
     const [anchorEl, setAnchorEl] = useState(null);
-    const { logout, currentUser } = useAuth(); // Integrated useAuth hook
+    const { logout, currentUser } = useAuth();
+    const { documentSets, selectedSet, setSelectedSet, fetchDocumentSets } = useDocumentSet();
+
+    useEffect(() => {
+        if (currentUser) {
+            fetchDocumentSets();
+        }
+    }, [currentUser]);
 
     const handleMenu = (event) => {
         setAnchorEl(event.currentTarget);
@@ -38,6 +47,24 @@ function NavBar({ onShowSearch, onShowDocuments, onShowSummarize, onShowNotifica
                 </Typography>
 
                 <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                    {/* Document Set Selector */}
+                    <FormControl size="small" sx={{ minWidth: 120, mr: 2 }}>
+                        <InputLabel id="doc-set-select-label">Doc Set</InputLabel>
+                        <Select
+                            labelId="doc-set-select-label"
+                            id="doc-set-select"
+                            value={selectedSet}
+                            label="Doc Set"
+                            onChange={(e) => setSelectedSet(e.target.value)}
+                        >
+                            <MenuItem value="default">Default</MenuItem>
+                            <MenuItem value="all">All</MenuItem>
+                            {documentSets.map((ds) => (
+                                ds !== 'default' && <MenuItem key={ds} value={ds}>{formatDocumentSetName(ds)}</MenuItem>
+                            ))}
+                        </Select>
+                    </FormControl>
+
                     {/* Status Indicators remain visible */}
                     {loading && <CircularProgress size={24} color="inherit" />}
                     {!loading && showSuccess && <CheckCircleIcon color="success" />}
@@ -75,7 +102,7 @@ function NavBar({ onShowSearch, onShowDocuments, onShowSummarize, onShowNotifica
                                     Notifications
                                     {unreadCount > 0 && ` (${unreadCount})`}
                                 </MenuItem>
-                                <MenuItem onClick={logout}>Logout</MenuItem> {/* Added Logout to mobile menu */}
+                                <MenuItem onClick={logout}>Logout</MenuItem>
                             </Menu>
                         </>
                     ) : (

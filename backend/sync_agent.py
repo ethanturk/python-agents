@@ -40,7 +40,7 @@ def run_sync_agent(user_input: str) -> str:
     except Exception as e:
         return f"Error running sync agent: {str(e)}"
 
-def search_documents(query: str, limit: int = 10) -> list:
+def search_documents(query: str, limit: int = 10, document_set: str = None) -> list:
     """
     Search documents in Qdrant (Synchronous).
     Uses search_groups to limit by unique documents (group_by filename) rather than chunks.
@@ -68,12 +68,26 @@ def search_documents(query: str, limit: int = 10) -> list:
     # Use query_points_groups (new API) to group by filename
     # limit = number of groups (documents)
     # group_size = number of chunks per document to retrieve
+    
+    query_filter = None
+    if document_set and document_set != "all":
+        from qdrant_client.http.models import Filter, FieldCondition, MatchValue
+        query_filter = Filter(
+            must=[
+                FieldCondition(
+                    key="document_set",
+                    match=MatchValue(value=document_set)
+                )
+            ]
+        )
+
     response = qdrant_client.query_points_groups(
         collection_name=config.QDRANT_COLLECTION_NAME,
         query=vector,
         group_by="filename",
         limit=limit,
-        group_size=3
+        group_size=3,
+        query_filter=query_filter
     )
     
     # Flatten the grouped results
@@ -82,19 +96,19 @@ def search_documents(query: str, limit: int = 10) -> list:
         for hit in group.hits:
             results.append({
                 "content": hit.payload.get("content"), 
-                "metadata": {"filename": hit.payload.get("filename")}
+                "metadata": {"filename": hit.payload.get("filename"), "document_set": hit.payload.get("document_set")}
             })
     
     return results
 
-def perform_rag(query: str, limit: int = 10) -> dict:
+def perform_rag(query: str, limit: int = 10, document_set: str = None) -> dict:
     """
     Perform RAG: Search -> Context -> LLM Answer.
     """
     if not config.OPENAI_API_KEY:
         return {"answer": "Error: Missing API Key", "results": []}
 
-    results = search_documents(query, limit)
+    results = search_documents(query, limit, document_set)
     
     if not results:
         return {

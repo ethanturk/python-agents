@@ -77,6 +77,7 @@ class IngestRequest(BaseModel):
 class SearchRequest(BaseModel):
     prompt: str
     limit: int = 10
+    document_set: str | None = None
 
 class SummarizeRequest(BaseModel):
     filename: str
@@ -170,9 +171,9 @@ def ingest_documents(request: IngestRequest):
 
 @app.post("/agent/search", dependencies=[Depends(get_current_user)])
 def search_documents_endpoint(request: SearchRequest):
-    logger.info(f"Received search request: {request.prompt} (limit={request.limit})")
+    logger.info(f"Received search request: {request.prompt} (limit={request.limit}, set={request.document_set})")
     try:
-        result = perform_rag(request.prompt, request.limit)
+        result = perform_rag(request.prompt, request.limit, request.document_set)
         return result
     except Exception as e:
         logger.error(f"Error executing search: {e}")
@@ -211,6 +212,49 @@ def list_documents():
         # Collection might not exist yet
         logger.warning(f"Error fetching documents (likely empty): {e}")
         return {"documents": []}
+
+@app.get("/agent/documentsets", dependencies=[Depends(get_current_user)])
+def list_document_sets():
+    """
+    List distinct document sets.
+    """
+    try:
+        # We can use qdrant scroll to get all and unique them, or just rely on what we have.
+        # Since we might have many docs, scrolling all is expensive.
+        # Ideally Qdrant has a faceted search or unique value, but for now scrolling "filename" payload with a limit 
+        # or just iterating might be okay if dataset is small.
+        # A better approach for scalability would be to keep a separate set or use Qdrant group by?
+        # Qdrant doesn't have a "get all unique values for field" API efficiently without iterating.
+        
+        # Let's iterate but with a high limit, assuming reasonable number of docs for this agent.
+        
+        sets = set()
+        offset = None
+        while True:
+            # We only need the payload
+            result, offset = qdrant_client.scroll(
+                collection_name=config.QDRANT_COLLECTION_NAME,
+                limit=1000,
+                with_payload=["document_set"],
+                with_vectors=False,
+                offset=offset
+            )
+            for point in result:
+                ds = point.payload.get("document_set")
+                if ds:
+                    sets.add(ds)
+            
+            if offset is None:
+                break
+        
+        # Ensure "default" is always there if nothing else?
+        # Or just return what we found.
+        
+        sorted_sets = sorted(list(sets))
+        return {"document_sets": sorted_sets}
+    except Exception as e:
+        logger.warning(f"Error fetching document sets: {e}")
+        return {"document_sets": []}
 
 @app.delete("/agent/documents/{filename:path}", dependencies=[Depends(get_current_user)])
 def delete_document_endpoint(filename: str):
