@@ -43,7 +43,7 @@ function NavBar({ onShowSearch, onShowDocuments, onShowSummarize, onShowNotifica
         <AppBar position="static" color="transparent" elevation={0} sx={{ borderBottom: '1px solid rgba(255, 255, 255, 0.12)' }}>
             <Toolbar>
                 <Typography variant="h6" component="div" sx={{ flexGrow: 1, fontWeight: 'bold' }}>
-                    Agent Workspace
+                    AI Doc Search
                 </Typography>
 
                 <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>

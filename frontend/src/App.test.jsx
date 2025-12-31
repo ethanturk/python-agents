@@ -5,6 +5,6 @@ import { describe, it, expect } from 'vitest';
 describe('App', () => {
     it('renders without crashing', () => {
         render(<App />);
-        expect(screen.getByText('Agent Workspace')).toBeInTheDocument();
+        expect(screen.getByText('AI Doc Search')).toBeInTheDocument();
     });
 });

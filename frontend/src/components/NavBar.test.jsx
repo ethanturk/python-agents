@@ -15,7 +15,7 @@ const WrappedNavBar = (props) => (
 describe('NavBar', () => {
     it('renders title', () => {
         render(<WrappedNavBar />);
-        expect(screen.getByText('Agent Workspace')).toBeInTheDocument();
+        expect(screen.getByText('AI Doc Search')).toBeInTheDocument();
     });
 
     it('renders navigation buttons (desktop)', () => {
