@@ -211,16 +211,17 @@ def ingest_docs_task(files_data):
                     continue
                 # Docling stream from bytes
                 source = DocumentStream(name=filename, stream=BytesIO(content))
-            elif filepath:
-                # Calculate Document Set
-                document_set = file_item.get('document_set')
-                
-                if not document_set:
-                     document_set = "default"
+
+            # Calculate Document Set
+            document_set = file_item.get('document_set')
+            
+            if not document_set:
+                 document_set = "default"
+                 if filepath:
                      try:
                          # Clean up paths to ensure consistent comparison
                          monitored_path = Path(config.MONITORED_DIR).resolve()
-                         file_path_obj = Path(filepath).resolve()
+                         file_path_obj = Path(config.MONITORED_DIR).joinpath(filepath).resolve() if not os.path.isabs(filepath) else Path(filepath).resolve()
                          
                          # Check if file is inside monitored_path
                          if monitored_path in file_path_obj.parents:
@@ -231,6 +232,13 @@ def ingest_docs_task(files_data):
                      except Exception as e:
                          print(f"Error determining document set for {filepath}: {e}")
 
+            if content:
+                if len(content) == 0:
+                    results.append(f"Skipped {filename}: Content is empty/0 bytes.")
+                    continue
+                # Docling stream from bytes
+                source = DocumentStream(name=filename, stream=BytesIO(content))
+            elif filepath:
                 if not os.path.exists(filepath):
                     results.append(f"Failed {filename}: File not found at {filepath}")
                     continue
