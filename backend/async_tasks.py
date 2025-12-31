@@ -15,7 +15,7 @@ from docling.datamodel.base_models import InputFormat, DocumentStream
 from docling.datamodel.pipeline_options import PdfPipelineOptions
 from docling.backend.pypdfium2_backend import PyPdfiumDocumentBackend
 from qdrant_client import QdrantClient
-from qdrant_client.http.models import VectorParams, Distance, PointStruct, Filter, FieldCondition, MatchValue
+from qdrant_client.http.models import VectorParams, Distance, PointStruct, Filter, FieldCondition, MatchValue, HnswConfigDiff
 from openai import OpenAI
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 import pandas as pd
@@ -163,7 +163,8 @@ def ingest_docs_task(files_data):
         try:
             qdrant_client.create_collection(
                 collection_name="documents",
-                vectors_config=VectorParams(size=config.OPENAI_EMBEDDING_DIMENSIONS, distance=Distance.COSINE)
+                vectors_config=VectorParams(size=config.OPENAI_EMBEDDING_DIMENSIONS, distance=Distance.COSINE),
+                hnsw_config=HnswConfigDiff(m=16, ef_construct=100)
             )
         except Exception as e:
             if "Conflict" in str(e) or "409" in str(e):
