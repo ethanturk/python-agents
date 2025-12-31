@@ -5,6 +5,7 @@ from watchdog.events import FileSystemEventHandler
 import threading
 import logging
 from async_tasks import qdrant_client
+from config import config
 
 
 logger = logging.getLogger(__name__)
@@ -45,12 +46,12 @@ def get_indexed_filenames():
     offset = None
     try:
         # Check if collection exists first
-        qdrant_client.get_collection("documents")
+        qdrant_client.get_collection(config.QDRANT_COLLECTION_NAME)
         
         while True:
             # Scroll through all points, fetching only the 'filename' from payload
             records, next_offset = qdrant_client.scroll(
-                collection_name="documents",
+                collection_name=config.QDRANT_COLLECTION_NAME,
                 scroll_filter=None,
                 limit=100,
                 with_payload=["filename"],

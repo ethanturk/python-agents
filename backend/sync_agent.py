@@ -59,7 +59,7 @@ def search_documents(query: str, limit: int = 10) -> list:
     )
 
     try:
-        qdrant_client.get_collection("documents")
+        qdrant_client.get_collection(config.QDRANT_COLLECTION_NAME)
     except:
         return []
 
@@ -69,7 +69,7 @@ def search_documents(query: str, limit: int = 10) -> list:
     # limit = number of groups (documents)
     # group_size = number of chunks per document to retrieve
     response = qdrant_client.query_points_groups(
-        collection_name="documents",
+        collection_name=config.QDRANT_COLLECTION_NAME,
         query=vector,
         group_by="filename",
         limit=limit,
