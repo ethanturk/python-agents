@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 # Mock OPENAI_API_KEY before importing config
-with patch.dict(os.environ, {"OPENAI_API_KEY": "sk-mock-key", "OPENAI_API_BASE": "https://api.mock.com/v1", "OPENAI_MODEL": "mock-model"}):
+with patch.dict(os.environ, {"OPENAI_API_KEY": "sk-mock-key", "OPENAI_API_BASE": "https://api.mock.com/v1", "OPENAI_MODEL": "mock-model", "QDRANT_COLLECTION_NAME": "test", "CELERY_QUEUE_NAME": "test"}):
     import config
     # Mock QdrantClient inside imports if needed, or patch where used
     with patch('qdrant_client.QdrantClient'):

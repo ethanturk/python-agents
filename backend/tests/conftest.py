@@ -9,15 +9,23 @@ import tempfile
 os.environ["MONITORED_DIR"] = tempfile.mkdtemp()
 os.environ["QDRANT_HOST"] = "localhost"
 os.environ["OPENAI_API_KEY"] = "sk-test-key"
+os.environ["QDRANT_COLLECTION_NAME"] = "test-documents"
+os.environ["CELERY_QUEUE_NAME"] = "test-queue"
 
 # Mock nest_asyncio to prevent conflict with TestClient
 sys.modules["nest_asyncio"] = MagicMock()
+sys.modules["firebase_admin"] = MagicMock()
+sys.modules["auth"] = MagicMock() # Mock the whole auth module initially if needed, but we rely on importing the dependency function
 
 # Add backend to path so we can import modules
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from backend_app import app
 from sync_agent import QdrantClient
+from auth import get_current_user
+
+# Mock Authentication
+app.dependency_overrides[get_current_user] = lambda: {"uid": "test-user", "email": "test@example.com"}
 
 @pytest.fixture
 def mock_qdrant_client(mocker):
