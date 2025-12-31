@@ -13,12 +13,18 @@ services:
       USE_NNPACK: "0"
       QDRANT_COLLECTION_NAME: ${QDRANT_COLLECTION_NAME:-documents}
       CELERY_QUEUE_NAME: ${CELERY_QUEUE_NAME:-celery}
+      GOOGLE_APPLICATION_CREDENTIALS: /app/service-account.json
     volumes:
       - type: volume
         source: nas
         target: /data/monitored
         volume:
           subpath: ${NAS_SUBPATH:-documents/searchable}
+      - type: volume
+        source: nas
+        target: /app/service-account.json
+        volume:
+          subpath: configs/aidocsearch/service-account.json
 
 volumes:
   nas:
