@@ -39,7 +39,6 @@ def get_model():
 app = Celery('langchain_agent_sample', broker=config.CELERY_BROKER_URL, backend=config.CELERY_RESULT_BACKEND)
 app.conf.task_default_queue = config.CELERY_QUEUE_NAME
 
-
 # Initialize Qdrant and OpenAI Client
 # Robust extraction of the host from config or hardcoded for docker
 qdrant_client = QdrantClient(host=os.getenv("QDRANT_HOST", "qdrant"), port=6333, timeout=60)
@@ -155,8 +154,13 @@ def get_docling_converter():
         }
     )
 
-def ensure_collection_exists():
-    """Checks if collection exists and creates it if not."""
+@app.task
+def ingest_docs_task(files_data):
+    """
+    Ingest a list of files.
+    files_data: list of dicts {'filename': str, 'content': str, 'filepath': str (optional)}
+    """
+    # Ensure collection exists
     try:
         qdrant_client.get_collection(config.QDRANT_COLLECTION_NAME)
     except Exception:
@@ -171,15 +175,6 @@ def ensure_collection_exists():
                 pass
             else:
                 raise e
-
-@app.task
-def ingest_docs_task(files_data):
-    """
-    Ingest a list of files.
-    files_data: list of dicts {'filename': str, 'content': str, 'filepath': str (optional)}
-    """
-    # Ensure collection exists
-    ensure_collection_exists()
 
     results = []
     splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
