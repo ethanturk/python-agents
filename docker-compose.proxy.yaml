@@ -1,0 +1,18 @@
+services:
+  nginx:
+    image: nginx:latest
+    hostname: nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - type: volume
+        source: nas
+        target: /etc/nginx/nginx.conf
+        read_only: true
+        volume:
+          subpath: configs/nginx.conf
+
+volumes:
+  nas:
+    external: true

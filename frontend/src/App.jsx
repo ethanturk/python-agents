@@ -15,7 +15,14 @@ import { useAuth } from './contexts/AuthContext';
 import { API_BASE } from './config';
 
 // Determine WS URL
-const WS_BASE = API_BASE.replace('http', 'ws') + '/ws';
+const determineWsUrl = () => {
+  let url = API_BASE.replace('http', 'ws');
+  if (typeof window !== 'undefined' && window.location.protocol === 'https:' && url.startsWith('ws://')) {
+    url = url.replace('ws://', 'wss://');
+  }
+  return url + '/ws';
+};
+const WS_BASE = determineWsUrl();
 
 // Dark Theme Configuration (unchanged)
 const darkTheme = createTheme({
