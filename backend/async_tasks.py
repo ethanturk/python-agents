@@ -154,13 +154,8 @@ def get_docling_converter():
         }
     )
 
-@app.task
-def ingest_docs_task(files_data):
-    """
-    Ingest a list of files.
-    files_data: list of dicts {'filename': str, 'content': str, 'filepath': str (optional)}
-    """
-    # Ensure collection exists
+def ensure_collection_exists():
+    """Checks if collection exists and creates it if not."""
     try:
         qdrant_client.get_collection(config.QDRANT_COLLECTION_NAME)
     except Exception:
@@ -175,6 +170,15 @@ def ingest_docs_task(files_data):
                 pass
             else:
                 raise e
+
+@app.task
+def ingest_docs_task(files_data):
+    """
+    Ingest a list of files.
+    files_data: list of dicts {'filename': str, 'content': str, 'filepath': str (optional)}
+    """
+    # Ensure collection exists
+    ensure_collection_exists()
 
     results = []
     splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
