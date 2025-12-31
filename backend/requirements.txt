@@ -2,6 +2,7 @@ langchain-openai
 pydantic-ai
 nest_asyncio
 celery
+firebase-admin
 python-dotenv
 fastapi
 uvicorn

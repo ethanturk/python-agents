@@ -20,6 +20,8 @@ from summarizer import summarize_document
 from database import init_db, get_summary, get_all_summaries, save_summary
 import config 
 import base64 
+from fastapi import Depends
+from auth import init_firebase, get_current_user
 
 os.environ["USE_NNPACK"] = "0"
 
@@ -35,6 +37,7 @@ async def lifespan(app: FastAPI):
     # Startup
     logger.info("Starting up...")
     init_db()
+    init_firebase()
     observer = start_watching(MONITORED_DIR, lambda files: ingest_docs_task.delay(files))
     yield
     # Shutdown
@@ -116,7 +119,7 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 
-@app.post("/agent/sync")
+@app.post("/agent/sync", dependencies=[Depends(get_current_user)])
 def run_sync(request: AgentRequest):
     logger.info(f"Received sync agent request with prompt: {request.prompt}")
     try:
@@ -126,7 +129,7 @@ def run_sync(request: AgentRequest):
         logger.error(f"Error in sync agent: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/agent/async")
+@app.post("/agent/async", dependencies=[Depends(get_current_user)])
 def run_async(request: AgentRequest):
     logger.info(f"Received async agent request with prompt: {request.prompt}")
     try:
@@ -154,7 +157,7 @@ def health_check():
     return {"status": "ok"}
 
 
-@app.post("/agent/ingest")
+@app.post("/agent/ingest", dependencies=[Depends(get_current_user)])
 def ingest_documents(request: IngestRequest):
     logger.info(f"Received ingest request for {len(request.files)} files")
     try:
@@ -164,7 +167,7 @@ def ingest_documents(request: IngestRequest):
         logger.error(f"Error triggering ingest: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/agent/search")
+@app.post("/agent/search", dependencies=[Depends(get_current_user)])
 def search_documents_endpoint(request: SearchRequest):
     logger.info(f"Received search request: {request.prompt} (limit={request.limit})")
     try:
@@ -174,7 +177,7 @@ def search_documents_endpoint(request: SearchRequest):
         logger.error(f"Error executing search: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/agent/documents")
+@app.get("/agent/documents", dependencies=[Depends(get_current_user)])
 def list_documents():
     """
     List all documents in the Qdrant collection.
@@ -184,7 +187,7 @@ def list_documents():
         offset = None
         while True:
             result, offset = qdrant_client.scroll(
-                collection_name="documents",
+                collection_name=config.QDRANT_COLLECTION_NAME,
                 limit=100,
                 with_payload=True,
                 with_vectors=False,
@@ -207,12 +210,12 @@ def list_documents():
         logger.warning(f"Error fetching documents (likely empty): {e}")
         return {"documents": []}
 
-@app.delete("/agent/documents/{filename:path}")
+@app.delete("/agent/documents/{filename:path}", dependencies=[Depends(get_current_user)])
 def delete_document_endpoint(filename: str):
     logger.info(f"Received delete request for document: {filename}")
     try:
         qdrant_client.delete(
-            collection_name="documents",
+            collection_name=config.QDRANT_COLLECTION_NAME,
             points_selector=Filter(
                 must=[
                     FieldCondition(
@@ -227,7 +230,7 @@ def delete_document_endpoint(filename: str):
         logger.error(f"Error deleting document {filename}: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/agent/summarize")
+@app.post("/agent/summarize", dependencies=[Depends(get_current_user)])
 def summarize_document_endpoint(request: SummarizeRequest):
     logger.info(f"Received async summarization request for: {request.filename}")
     try:
@@ -294,7 +297,7 @@ async def notify_endpoint(notification: NotificationRequest):
     await manager.broadcast(notification.dict())
     return {"status": "ok"}
 
-@app.get("/agent/summaries")
+@app.get("/agent/summaries", dependencies=[Depends(get_current_user)])
 def get_summaries_history():
     try:
         data = get_all_summaries()
@@ -312,7 +315,7 @@ def get_model():
         )
     )
 
-@app.post("/agent/summary_qa")
+@app.post("/agent/summary_qa", dependencies=[Depends(get_current_user)])
 def summary_qa_endpoint(request: SummaryQARequest):
     """
     Answer questions based on a specific summary history.
@@ -345,7 +348,7 @@ def summary_qa_endpoint(request: SummaryQARequest):
         logger.error(f"Error in Summary QA: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/agent/search_qa")
+@app.post("/agent/search_qa", dependencies=[Depends(get_current_user)])
 def search_qa_endpoint(request: SearchQARequest):
     """
     Answer questions based on provided search results context.

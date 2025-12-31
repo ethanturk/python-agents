@@ -4,16 +4,18 @@ import Toolbar from '@mui/material/Toolbar';
 import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
-import NotificationsIcon from '@mui/icons-material/Notifications';
 import MenuIcon from '@mui/icons-material/Menu';
 import Badge from '@mui/material/Badge';
 import { Box, CircularProgress, Menu, MenuItem, useTheme, useMediaQuery } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import { Notifications, Logout } from '@mui/icons-material'; // Added Logout and consolidated Notifications
+import { useAuth } from '../contexts/AuthContext'; // Added useAuth import
 
 function NavBar({ onShowSearch, onShowDocuments, onShowSummarize, onShowNotifications, unreadCount, loading, showSuccess }) {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
     const [anchorEl, setAnchorEl] = useState(null);
+    const { logout, currentUser } = useAuth(); // Integrated useAuth hook
 
     const handleMenu = (event) => {
         setAnchorEl(event.currentTarget);
@@ -73,6 +75,7 @@ function NavBar({ onShowSearch, onShowDocuments, onShowSummarize, onShowNotifica
                                     Notifications
                                     {unreadCount > 0 && ` (${unreadCount})`}
                                 </MenuItem>
+                                <MenuItem onClick={logout}>Logout</MenuItem> {/* Added Logout to mobile menu */}
                             </Menu>
                         </>
                     ) : (
@@ -82,9 +85,16 @@ function NavBar({ onShowSearch, onShowDocuments, onShowSummarize, onShowNotifica
                             <Button color="inherit" onClick={onShowSummarize}>Summarize</Button>
                             <IconButton color="inherit" onClick={onShowNotifications}>
                                 <Badge badgeContent={unreadCount} color="error">
-                                    <NotificationsIcon />
+                                    {loading ? <CircularProgress size={24} color="inherit" /> : (showSuccess ? <CheckCircleIcon color="success" /> : <Notifications />)}
                                 </Badge>
                             </IconButton>
+
+                            <Box sx={{ ml: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <Typography variant="caption" sx={{ opacity: 0.7 }}>{currentUser?.email}</Typography>
+                                <IconButton color="inherit" onClick={logout} title="Logout">
+                                    <Logout />
+                                </IconButton>
+                            </Box>
                         </Box>
                     )}
                 </Box>

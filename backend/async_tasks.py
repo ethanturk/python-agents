@@ -36,6 +36,8 @@ def get_model():
 
 # Initialize Celery
 app = Celery('langchain_agent_sample', broker=config.CELERY_BROKER_URL, backend=config.CELERY_RESULT_BACKEND)
+app.conf.task_default_queue = config.CELERY_QUEUE_NAME
+
 
 # Initialize Qdrant and OpenAI Client
 # Robust extraction of the host from config or hardcoded for docker
@@ -158,11 +160,11 @@ def ingest_docs_task(files_data):
     """
     # Ensure collection exists
     try:
-        qdrant_client.get_collection("documents")
+        qdrant_client.get_collection(config.QDRANT_COLLECTION_NAME)
     except Exception:
         try:
             qdrant_client.create_collection(
-                collection_name="documents",
+                collection_name=config.QDRANT_COLLECTION_NAME,
                 vectors_config=VectorParams(size=config.OPENAI_EMBEDDING_DIMENSIONS, distance=Distance.COSINE),
                 hnsw_config=HnswConfigDiff(m=16, ef_construct=100)
             )
@@ -185,7 +187,7 @@ def ingest_docs_task(files_data):
         # Check existing index
         try:
             count_result = qdrant_client.count(
-                collection_name="documents",
+                collection_name=config.QDRANT_COLLECTION_NAME,
                 count_filter=Filter(must=[FieldCondition(key="filename", match=MatchValue(value=filename))])
             )
             if count_result.count > 0:
@@ -298,7 +300,7 @@ def ingest_docs_task(files_data):
             for i in range(0, len(points), batch_size):
                 try:
                     batch_points = points[i : i + batch_size]
-                    qdrant_client.upsert(collection_name="documents", points=batch_points)
+                    qdrant_client.upsert(collection_name=config.QDRANT_COLLECTION_NAME, points=batch_points)
                 except Exception as batch_error:
                     print(f"Error upserting batch {i//batch_size}: {batch_error}")
                     if i == 0: # If the first batch fails, it might be a bigger issue, but we try to continue or raise

@@ -18,4 +18,8 @@ OPENAI_MODEL = os.getenv('OPENAI_MODEL') or 'gpt-oss-20b'
 OPENAI_EMBEDDING_MODEL = os.getenv('OPENAI_EMBEDDING_MODEL') or 'text-embedding-nomic-embed-text-v1.5-embedding'
 OPENAI_EMBEDDING_DIMENSIONS = int(os.getenv('OPENAI_EMBEDDING_DIMENSIONS') or '768')
 
-API_URL = os.getenv('API_URL', f"http://{BASE_URL}:9999")
+API_URL = os.getenv('API_URL') or f"http://{BASE_URL}:9999"
+
+# Multi-tenancy Configuration
+QDRANT_COLLECTION_NAME = os.getenv('QDRANT_COLLECTION_NAME') or 'documents'
+CELERY_QUEUE_NAME = os.getenv('CELERY_QUEUE_NAME') or 'celery'

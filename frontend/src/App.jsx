@@ -11,6 +11,7 @@ import SearchView from './components/SearchView';
 import SummarizeView from './components/SummarizeView';
 import DeleteConfirmDialog from './components/DeleteConfirmDialog';
 import NotificationSidebar from './components/NotificationSidebar';
+import { useAuth } from './contexts/AuthContext';
 import { API_BASE } from './config';
 
 // Determine WS URL
@@ -44,6 +45,7 @@ const darkTheme = createTheme({
 });
 
 function App() {
+  const { currentUser, loginWithGoogle } = useAuth();
   const [searchData, setSearchData] = useState({ answer: null, results: [] });
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
@@ -154,15 +156,28 @@ function App() {
     };
 
     connect();
-
-    // Load History (DISABLED - Using Local Cache only)
-    // fetchSummaries();
-
     return () => {
       if (ws.current) ws.current.close();
       if (timeoutId) clearTimeout(timeoutId);
     }
   }, []);
+
+  // Axios Interceptor for Auth Token
+  useEffect(() => {
+    const interceptor = axios.interceptors.request.use(async (config) => {
+      if (currentUser) {
+        const token = await currentUser.getIdToken();
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+      return config;
+    }, (error) => {
+      return Promise.reject(error);
+    });
+
+    return () => {
+       axios.interceptors.request.eject(interceptor);
+    }
+  }, [currentUser]);
 
   // --- Persistence Logic ---
   const STORAGE_KEY = 'summarization_cache_v2';
@@ -499,6 +514,23 @@ function App() {
     // Let's call the requester directly.
     await handleSummarizeRequest(filename);
   };
+
+  if (!currentUser) {
+    return (
+      <ThemeProvider theme={darkTheme}>
+        <CssBaseline />
+        <Container maxWidth="sm" sx={{ mt: 8, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+           <Box sx={{ p: 4, bgcolor: 'background.paper', borderRadius: 2, textAlign: 'center' }}>
+             <h2>Please Sign In</h2>
+             <p>You need to be signed in to access the agent.</p>
+             <button onClick={loginWithGoogle} style={{ padding: '10px 20px', fontSize: '16px', cursor: 'pointer' }}>
+               Sign In with Google
+             </button>
+           </Box>
+        </Container>
+      </ThemeProvider>
+    );
+  }
 
   return (
     <ThemeProvider theme={darkTheme}>

@@ -11,12 +11,14 @@ services:
       OPENAI_API_BASE: ${OPENAI_API_BASE}
       OPENAI_MODEL: ${OPENAI_MODEL}
       USE_NNPACK: "0"
+      QDRANT_COLLECTION_NAME: ${QDRANT_COLLECTION_NAME:-documents}
+      CELERY_QUEUE_NAME: ${CELERY_QUEUE_NAME:-celery}
     volumes:
       - type: volume
         source: nas
         target: /data/monitored
         volume:
-          subpath: documents/searchable
+          subpath: ${NAS_SUBPATH:-documents/searchable}
 
 volumes:
   nas:
