@@ -6,6 +6,7 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   const appBase = process.env.VITE_APP_BASE || env.VITE_APP_BASE || '/'
   
+  console.log("DEBUG: All Env Keys:", Object.keys(process.env).sort())
   console.log("DEBUG: process.env.VITE_APP_BASE:", process.env.VITE_APP_BASE)
   console.log("DEBUG: env.VITE_APP_BASE:", env.VITE_APP_BASE)
   console.log("DEBUG: Resolved Base:", appBase)
