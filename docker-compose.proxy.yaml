@@ -12,6 +12,12 @@ services:
         read_only: true
         volume:
           subpath: configs/nginx.conf
+      - type: volume
+        source: nas
+        target: /etc/nginx/certs
+        read_only: true
+        volume:
+          subpath: certs/apps.ethanturk.com
 
 volumes:
   nas:
