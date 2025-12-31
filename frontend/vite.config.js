@@ -6,9 +6,6 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   const appBase = process.env.VITE_BASE_PATH || env.VITE_BASE_PATH || '/'
   
-  console.log("DEBUG: All Env Keys:", Object.keys(process.env).filter(k => k.startsWith('VITE_')))
-  console.log("DEBUG: Resolved Base:", appBase)
-  
   return {
     base: appBase,
     plugins: [react()],
