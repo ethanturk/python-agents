@@ -4,11 +4,11 @@ import react from '@vitejs/plugin-react'
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
-  const appBase = process.env.VITE_APP_BASE || env.VITE_APP_BASE || '/'
+  const appBase = process.env.VITE_BASE_PATH || env.VITE_BASE_PATH || '/'
   
-  console.log("DEBUG: All Env Keys:", Object.keys(process.env).sort())
-  console.log("DEBUG: process.env.VITE_APP_BASE:", process.env.VITE_APP_BASE)
-  console.log("DEBUG: env.VITE_APP_BASE:", env.VITE_APP_BASE)
+  console.log("DEBUG: All Env Keys:", Object.keys(process.env).filter(k => k.startsWith('VITE_')))
+  console.log("DEBUG: process.env.VITE_BASE_PATH:", process.env.VITE_BASE_PATH)
+  console.log("DEBUG: env.VITE_BASE_PATH:", env.VITE_BASE_PATH)
   console.log("DEBUG: Resolved Base:", appBase)
   
   return {
