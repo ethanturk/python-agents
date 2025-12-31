@@ -4,7 +4,7 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 import threading
 import logging
-from async_tasks import qdrant_client
+from async_tasks import qdrant_client, ensure_collection_exists
 import config
 
 
@@ -166,6 +166,13 @@ def start_watching(path, callback, process_existing=True):
     if not os.path.exists(path):
         os.makedirs(path, exist_ok=True)
         
+    # Ensure collection exists before starting monitors
+    try:
+        ensure_collection_exists()
+        logger.info(f"Verified/Created Qdrant collection: {config.QDRANT_COLLECTION_NAME}")
+    except Exception as e:
+        logger.error(f"Failed to ensure collection exists: {e}")
+
     if process_existing:
         # Run initial scan in a separate thread
         threading.Thread(target=process_existing_files, args=(path, callback), daemon=True).start()
