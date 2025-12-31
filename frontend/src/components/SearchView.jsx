@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Paper, Typography, Accordion, AccordionSummary, AccordionDetails, Alert, List, ListItem, ListItemText, Button, Divider, TextField, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
+import { Box, Paper, Typography, Accordion, AccordionSummary, AccordionDetails, Alert, List, ListItem, ListItemText, Button, Divider, TextField, FormControl, InputLabel, Select, MenuItem, CircularProgress } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import DescriptionIcon from '@mui/icons-material/Description';
 import SearchIcon from '@mui/icons-material/Search';
@@ -7,7 +7,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { getWebLink, getFilenameOnly } from '../utils';
 
-export default function SearchView({ query, setQuery, onSearch, searchData, searchLimit, setSearchLimit }) {
+export default function SearchView({ query, setQuery, onSearch, searchData, searchLimit, setSearchLimit, loading }) {
     // Calculate unique filenames for display
     const uniqueFiles = [...new Set(searchData.results.map(r => r.metadata.filename))];
 
@@ -41,11 +41,18 @@ export default function SearchView({ query, setQuery, onSearch, searchData, sear
                     variant="contained"
                     className="search-button"
                     onClick={onSearch}
-                    startIcon={<SearchIcon />}
+                    startIcon={!loading && <SearchIcon />}
+                    disabled={loading}
                 >
-                    Search
+                    {loading ? <CircularProgress size={24} color="inherit" /> : "Search"}
                 </Button>
             </Paper>
+
+            {loading && (
+                <Box className="flex-justify-center my-4">
+                    <CircularProgress />
+                </Box>
+            )}
 
             {searchData.answer && (
                 <Paper className="answer-paper">

@@ -496,8 +496,8 @@ function App() {
       />
 
       <Container maxWidth="xl" className={['mt-4', 'mb-2'].join(' ')}>
-        {/* Global Loading for initial data or search */}
-        {loading && <Box className="flex-justify-center my-4"><CircularProgress /></Box>}
+        {/* Global Loading for initial data or search (except when in search view which handles its own loading) */}
+        {loading && view !== 'search' && <Box className="flex-justify-center my-4"><CircularProgress /></Box>}
 
         {/* Connection Status Indicator */}
         {!isConnected && (
@@ -507,7 +507,7 @@ function App() {
         )}
 
         {/* View: Search View (Default) */}
-        {!loading && view === 'search' && (
+        {view === 'search' && (
           <SearchView
             query={query}
             setQuery={setQuery}
@@ -515,6 +515,7 @@ function App() {
             searchData={searchData}
             searchLimit={searchLimit}
             setSearchLimit={setSearchLimit}
+            loading={loading}
           />
         )}
 
