@@ -3,9 +3,10 @@ services:
     build: ./backend
     hostname: backend
     ports:
-      - "${BACKEND_PORT:-9999}:8000"
+      - "${BACKEND_PORT}:8000"
     environment:
-      CELERY_BROKER_URL: ${CELERY_BROKER_URL:-amqp://guest:guest@192.168.5.204:5672//}
+      BASE_URL: ${BASE_URL:-192.168.5.204}
+      CELERY_BROKER_URL: ${CELERY_BROKER_URL:-amqp://guest:guest@${BASE_URL}:5672//}
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       OPENAI_API_BASE: ${OPENAI_API_BASE}
       OPENAI_MODEL: ${OPENAI_MODEL}
