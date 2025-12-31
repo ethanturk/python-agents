@@ -1,5 +1,6 @@
 import React from 'react';
-import { Box, Paper, Typography, Accordion, AccordionSummary, AccordionDetails, Alert, List, ListItem, ListItemText, Button, Divider, TextField, FormControl, InputLabel, Select, MenuItem, CircularProgress } from '@mui/material';
+import { Box, Paper, Typography, Accordion, AccordionSummary, AccordionDetails, Alert, List, ListItem, ListItemText, Button, Divider, TextField, FormControl, InputLabel, Select, MenuItem, CircularProgress, IconButton } from '@mui/material';
+import SendIcon from '@mui/icons-material/Send';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import DescriptionIcon from '@mui/icons-material/Description';
 import SearchIcon from '@mui/icons-material/Search';
@@ -7,9 +8,18 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { getWebLink, getFilenameOnly } from '../utils';
 
-export default function SearchView({ query, setQuery, onSearch, searchData, searchLimit, setSearchLimit, loading }) {
+export default function SearchView({ query, setQuery, onSearch, searchData, searchLimit, setSearchLimit, loading, searchChatHistory, onSendSearchChat, searchChatLoading }) {
     // Calculate unique filenames for display
     const uniqueFiles = [...new Set(searchData.results.map(r => r.metadata.filename))];
+
+    const [question, setQuestion] = React.useState('');
+
+    const handleChatSubmit = (e) => {
+        e.preventDefault();
+        if (!question.trim()) return;
+        onSendSearchChat(question);
+        setQuestion('');
+    };
 
     return (
         <Box>
@@ -98,7 +108,42 @@ export default function SearchView({ query, setQuery, onSearch, searchData, sear
                         )}
                     </AccordionDetails>
                 </Accordion>
-            )}
-        </Box>
+
+            )
+            }
+
+            {
+                searchData.results && searchData.results.length > 0 && (
+                    <Box className="search-chat-container mt-4">
+                        <Typography variant="h6">Chat with Search Results</Typography>
+
+                        <Box className="summary-chat-history">
+                            {searchChatHistory.map((msg, i) => (
+                                <Box key={i} className={msg.role === 'user' ? 'chat-bubble-user' : 'chat-bubble-ai'}>
+                                    <Box className="markdown-body">
+                                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.text}</ReactMarkdown>
+                                    </Box>
+                                </Box>
+                            ))}
+                            {searchChatLoading && <Box className="chat-bubble-ai"><Typography variant="body2">Thinking...</Typography></Box>}
+                        </Box>
+
+                        <form onSubmit={handleChatSubmit} style={{ display: 'flex', gap: '8px', marginTop: '16px' }}>
+                            <TextField
+                                fullWidth
+                                variant="outlined"
+                                placeholder="Ask a follow-up question..."
+                                value={question}
+                                onChange={(e) => setQuestion(e.target.value)}
+                                disabled={searchChatLoading}
+                            />
+                            <IconButton type="submit" color="primary" size="large" disabled={searchChatLoading || !question.trim()}>
+                                <SendIcon />
+                            </IconButton>
+                        </form>
+                    </Box>
+                )
+            }
+        </Box >
     );
 }

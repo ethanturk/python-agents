@@ -61,6 +61,8 @@ function App() {
   // Chat State
   const [chatHistory, setChatHistory] = useState([]);
   const [chatLoading, setChatLoading] = useState(false);
+  const [searchChatHistory, setSearchChatHistory] = useState([]);
+  const [searchChatLoading, setSearchChatLoading] = useState(false);
 
   // Grouped Documents State
   const [groupedDocs, setGroupedDocs] = useState({});
@@ -442,6 +444,7 @@ function App() {
     try {
       const response = await axios.post(`${API_BASE}/agent/search`, { prompt: query, limit: searchLimit });
       const data = response.data;
+      setSearchChatHistory([]); // Reset chat on new search
       if (data.answer) {
         setSearchData({ answer: data.answer, results: data.results || [] });
       } else {
@@ -516,6 +519,9 @@ function App() {
             searchLimit={searchLimit}
             setSearchLimit={setSearchLimit}
             loading={loading}
+            searchChatHistory={searchChatHistory}
+            onSendSearchChat={handleSendSearchChat}
+            searchChatLoading={searchChatLoading}
           />
         )}
 

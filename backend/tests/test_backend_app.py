@@ -45,6 +45,16 @@ def test_search_documents(client, mock_qdrant_client, mock_openai_agent):
     assert response.status_code == 200
     assert "answer" in response.json()
     assert "results" in response.json()
-    
-# Import MagicMock for the test above
+
+def test_search_qa_endpoint(client, mock_openai_agent):
+    payload = {
+        "question": "What is the capital?",
+        "context_results": [
+            {"metadata": {"filename": "doc1.txt"}, "content": "The capital of France is Paris."}
+        ]
+    }
+    response = client.post("/agent/search_qa", json=payload)
+    assert response.status_code == 200
+    assert response.json() == {"answer": "Mocked LLM response"}
+
 from unittest.mock import MagicMock

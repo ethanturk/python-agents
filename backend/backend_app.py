@@ -83,9 +83,10 @@ class NotificationRequest(BaseModel):
     status: str
     result: str
 
-class SummaryQARequest(BaseModel):
-    filename: str
+class SearchQARequest(BaseModel):
     question: str
+    context_results: List[dict] # List of results from the search response
+
 
 # WebSocket Connection Manager
 class ConnectionManager:
@@ -338,4 +339,36 @@ def summary_qa_endpoint(request: SummaryQARequest):
 
     except Exception as e:
         logger.error(f"Error in Summary QA: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/agent/search_qa")
+def search_qa_endpoint(request: SearchQARequest):
+    """
+    Answer questions based on provided search results context.
+    """
+    logger.info(f"QA on Search Results: {request.question}")
+    try:
+        # Construct context from the provided results
+        context_str = "\n\n".join([
+            f"Source '{r['metadata'].get('filename', 'Unknown')}':\n{r.get('content', '')}" 
+            for r in request.context_results
+        ])
+        
+        # PydanticAI Agent
+        agent = Agent(
+            get_model(),
+            system_prompt=(
+                "You are a helpful assistant. Answer the user's question based ONLY on the following context. "
+                "If the answer is not in the context, say so.\n\n"
+            )
+        )
+        
+        user_prompt = f"Context:\n{context_str}\n\nQuestion: {request.question}"
+        
+        result = agent.run_sync(user_prompt)
+        
+        return {"answer": result.output}
+
+    except Exception as e:
+        logger.error(f"Error in Search QA: {e}")
         raise HTTPException(status_code=500, detail=str(e))
