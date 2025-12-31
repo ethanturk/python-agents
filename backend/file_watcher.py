@@ -1,5 +1,6 @@
 import os
 import time
+from pathlib import Path
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 import threading
@@ -9,6 +10,22 @@ import config
 
 
 logger = logging.getLogger(__name__)
+
+def get_document_set(filepath):
+    try:
+        monitored_path = Path(config.MONITORED_DIR).resolve()
+        file_path_obj = Path(filepath).resolve()
+        
+        # Check if file is inside monitored_path
+        if monitored_path in file_path_obj.parents:
+            rel_path = file_path_obj.relative_to(monitored_path)
+            # If there are parent directories in the relative path, the first one is the doc set
+            if len(rel_path.parts) > 1:
+                return rel_path.parts[0]
+    except Exception as e:
+        logger.error(f"Error determining document set for {filepath}: {e}")
+    return "default"
+
 
 class DocumentHandler(FileSystemEventHandler):
     def __init__(self, callback):
@@ -34,7 +51,8 @@ class DocumentHandler(FileSystemEventHandler):
             with open(filepath, "rb") as f:
                 content = f.read()
                 
-            self.callback([{"filename": filename, "filepath": filepath, "content": content}])
+            document_set = get_document_set(filepath)
+            self.callback([{"filename": filename, "filepath": filepath, "content": content, "document_set": document_set}])
         except Exception as e:
             logger.error(f"Error reading {filename}: {e}")
 
@@ -105,7 +123,7 @@ def check_unindexed_files_loop(path, callback, interval=600):
                         try:
                             with open(filepath, "rb") as f:
                                 content = f.read()
-                            files_to_index.append({"filename": filepath, "filepath": filepath, "content": content})
+                            files_to_index.append({"filename": filepath, "filepath": filepath, "content": content, "document_set": get_document_set(filepath)})
                         except Exception as e:
                             logger.error(f"Error reading unindexed file {filepath}: {e}")
 
@@ -151,7 +169,7 @@ def process_existing_files(path, callback):
                     with open(filepath, "rb") as f:
                         content = f.read()
                     # Pass full path as filename
-                    callback([{"filename": filepath, "filepath": filepath, "content": content}])
+                    callback([{"filename": filepath, "filepath": filepath, "content": content, "document_set": get_document_set(filepath)}])
                     time.sleep(0.5) # Throttle slightly less
                 except Exception as e:
                     logger.error(f"Error reading existing file {filepath}: {e}")

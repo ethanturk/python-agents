@@ -1,5 +1,6 @@
 import os
 import time
+from pathlib import Path
 from celery import Celery
 from pydantic_ai import Agent
 from pydantic_ai.models.openai import OpenAIChatModel
@@ -140,7 +141,9 @@ def get_docling_converter():
     pipeline_options.do_table_structure = True
     pipeline_options.table_structure_options.do_cell_matching = False
     pipeline_options.generate_page_images = False
+    pipeline_options.generate_page_images = False
     pipeline_options.generate_picture_images = False
+
 
     
     return DocumentConverter(
@@ -210,6 +213,25 @@ def ingest_docs_task(files_data):
                 # Docling stream from bytes
                 source = DocumentStream(name=filename, stream=BytesIO(content))
             elif filepath:
+                # Calculate Document Set
+                document_set = file_item.get('document_set')
+                
+                if not document_set:
+                     document_set = "default"
+                     try:
+                         # Clean up paths to ensure consistent comparison
+                         monitored_path = Path(config.MONITORED_DIR).resolve()
+                         file_path_obj = Path(filepath).resolve()
+                         
+                         # Check if file is inside monitored_path
+                         if monitored_path in file_path_obj.parents:
+                             rel_path = file_path_obj.relative_to(monitored_path)
+                             # If there are parent directories in the relative path, the first one is the doc set
+                             if len(rel_path.parts) > 1:
+                                 document_set = rel_path.parts[0]
+                     except Exception as e:
+                         print(f"Error determining document set for {filepath}: {e}")
+
                 if not os.path.exists(filepath):
                     results.append(f"Failed {filename}: File not found at {filepath}")
                     continue
@@ -296,7 +318,7 @@ def ingest_docs_task(files_data):
                 points.append(PointStruct(
                     id=str(uuid.uuid4()),
                     vector=vectors[i],
-                    payload={"filename": filename, "content": chunk}
+                    payload={"filename": filename, "content": chunk, "document_set": document_set}
                 ))
                 
             # Batch upsert to avoid payload limits

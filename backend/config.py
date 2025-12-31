@@ -23,3 +23,7 @@ API_URL = os.getenv('API_URL') or f"http://{BASE_URL}:9999"
 # Multi-tenancy Configuration
 QDRANT_COLLECTION_NAME = os.getenv('QDRANT_COLLECTION_NAME') or 'documents'
 CELERY_QUEUE_NAME = os.getenv('CELERY_QUEUE_NAME') or 'celery'
+
+# File Monitoring
+MONITORED_DIR = os.getenv("MONITORED_DIR", "/data/monitored")
+

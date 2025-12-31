@@ -30,7 +30,8 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Directory to monitor
-MONITORED_DIR = os.getenv("MONITORED_DIR", "/data/monitored")
+# Directory to monitor
+MONITORED_DIR = config.MONITORED_DIR
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -202,6 +203,7 @@ def list_documents():
              docs.append({
                  "id": point.id,
                  "filename": point.payload.get("filename", "unknown"),
+                 "document_set": point.payload.get("document_set", "default"),
                  "content_snippet": point.payload.get("content", "")[:200]
              })
         return {"documents": docs}
