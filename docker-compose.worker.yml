@@ -10,8 +10,8 @@ services:
       CELERY_BROKER_URL: ${CELERY_BROKER_URL:-amqp://guest:guest@192.168.5.204:5672//}
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       OPENAI_API_BASE: ${OPENAI_API_BASE}
-      OPENAI_MODEL: 'gpt-oss-20b'
-      QDRANT_HOST: 192.168.5.204
+      OPENAI_MODEL: ${OPENAI_MODEL}
+      QDRANT_HOST: ${QDRANT_HOST:-192.168.5.204}
       USE_NNPACK: "0"
       QDRANT_COLLECTION_NAME: ${QDRANT_COLLECTION_NAME:-documents}
       CELERY_QUEUE_NAME: ${CELERY_QUEUE_NAME:-celery}
@@ -21,7 +21,7 @@ services:
         source: nas
         target: /data/monitored
         volume:
-          subpath: ${NAS_SUBPATH:-documents/searchable}
+          subpath: ${NAS_SUBPATH}
       - type: volume
         source: nas
         target: /app/service-account.json
