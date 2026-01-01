@@ -1,17 +1,31 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Paper, Typography, Box, Alert, Accordion, AccordionSummary, AccordionDetails, Button, IconButton, List, ListItem, ListItemText, Divider } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import DeleteIcon from '@mui/icons-material/Delete';
 import DescriptionIcon from '@mui/icons-material/Description';
 import SummarizeIcon from '@mui/icons-material/Summarize';
+import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import { getWebLink, getFilenameOnly } from '../utils';
+import UploadDialog from './UploadDialog';
 
-export default function DocumentListView({ groupedDocs, onDelete, onSummarize }) {
+export default function DocumentListView({ groupedDocs, onDelete, onSummarize, onRefresh }) {
+    const [uploadOpen, setUploadOpen] = useState(false);
+
     return (
         <Paper className="p-2">
-            <Typography variant="h5" gutterBottom>Ingested Documents ({Object.keys(groupedDocs).length})</Typography>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="h5">Ingested Documents ({Object.keys(groupedDocs).length})</Typography>
+                <Button 
+                    variant="contained" 
+                    startIcon={<CloudUploadIcon />}
+                    onClick={() => setUploadOpen(true)}
+                >
+                    Upload Documents
+                </Button>
+            </Box>
+
             {Object.keys(groupedDocs).length === 0 ? (
-                <Alert severity="info">No documents found. Drop files into 'monitored_data' folder.</Alert>
+                <Alert severity="info">No documents found. Upload some documents to get started.</Alert>
             ) : (
                 <Box>
                     {Object.entries(groupedDocs).map(([filename, chunks]) => (
@@ -78,6 +92,14 @@ export default function DocumentListView({ groupedDocs, onDelete, onSummarize })
                     ))}
                 </Box>
             )}
+
+            <UploadDialog 
+                open={uploadOpen} 
+                onClose={() => setUploadOpen(false)}
+                onUploadComplete={() => {
+                    if (onRefresh) onRefresh();
+                }}
+            />
         </Paper>
     );
 }

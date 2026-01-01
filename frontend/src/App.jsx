@@ -600,6 +600,7 @@ function App() {
             groupedDocs={groupedDocs}
             onDelete={handlePromptDelete}
             onSummarize={handleSummarizeFromList}
+            onRefresh={fetchDocuments}
           />
         )}
 

@@ -1,5 +1,5 @@
 import os
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, File, UploadFile, Form
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from pydantic_ai import Agent
@@ -422,6 +422,53 @@ def search_qa_endpoint(request: SearchQARequest):
         
         return {"answer": result.output}
 
+@app.post("/agent/upload", dependencies=[Depends(get_current_user)])
+async def upload_files(
+    files: List[UploadFile] = File(...),
+    document_set: str = Form(...)
+):
+    """
+    Upload one or more files to a specific document set (folder).
+    """
+    logger.info(f"Received upload request for {len(files)} files to document set: {document_set}")
+    
+    # Sanitize document set name
+    import re
+    import shutil
+    from pathlib import Path
+
+    sanitized_set = re.sub(r'[^a-z0-9_]', '_', document_set.lower().strip())
+    # Ensure no leading/trailing underscores from replacement
+    sanitized_set = sanitized_set.strip('_')
+    
+    if not sanitized_set:
+        raise HTTPException(status_code=400, detail="Invalid document set name")
+
+    target_dir = Path(MONITORED_DIR) / sanitized_set
+    
+    # Create directory if not exists
+    try:
+        if not target_dir.exists():
+            target_dir.mkdir(parents=True, exist_ok=True)
     except Exception as e:
-        logger.error(f"Error in Search QA: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Failed to create directory {target_dir}: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to create document set directory: {str(e)}")
+
+    uploaded_files = []
+    
+    try:
+        for file in files:
+            # Secure filename logic? For now assume trusted input or basic basename
+            filename = Path(file.filename).name
+            file_path = target_dir / filename
+            
+            with open(file_path, "wb") as buffer:
+                shutil.copyfileobj(file.file, buffer)
+            
+            uploaded_files.append(filename)
+            
+    except Exception as e:
+        logger.error(f"Error saving uploaded file: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to save file: {str(e)}")
+
+    return {"status": "success", "uploaded": uploaded_files, "document_set": sanitized_set}
