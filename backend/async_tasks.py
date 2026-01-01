@@ -205,140 +205,144 @@ def ingest_docs_task(files_data):
         try:
             # Prepare source stream
             source = None
-            if content:
-                if len(content) == 0:
-                    results.append(f"Skipped {filename}: Content is empty/0 bytes.")
-                    continue
-                # Docling stream from bytes
-                source = DocumentStream(name=filename, stream=BytesIO(content))
+            temp_file_to_cleanup = None
+            try:
+                if content:
+                    if len(content) == 0:
+                        results.append(f"Skipped {filename}: Content is empty/0 bytes.")
+                        continue
+                    # Docling stream from bytes
+                    source = DocumentStream(name=filename, stream=BytesIO(content))
 
-            # Calculate Document Set
-            document_set = file_item.get('document_set')
-            
-            if not document_set:
-                 document_set = "default"
-                 if filepath:
-                     try:
-                         # Clean up paths to ensure consistent comparison
-                         monitored_path = Path(config.MONITORED_DIR).resolve()
-                         file_path_obj = Path(config.MONITORED_DIR).joinpath(filepath).resolve() if not os.path.isabs(filepath) else Path(filepath).resolve()
-                         
-                         # Check if file is inside monitored_path
-                         if monitored_path in file_path_obj.parents:
-                             rel_path = file_path_obj.relative_to(monitored_path)
-                             # If there are parent directories in the relative path, the first one is the doc set
-                             if len(rel_path.parts) > 1:
-                                 document_set = rel_path.parts[0]
-                     except Exception as e:
-                         print(f"Error determining document set for {filepath}: {e}")
-
-            if content:
-                if len(content) == 0:
-                    results.append(f"Skipped {filename}: Content is empty/0 bytes.")
-                    continue
-                # Docling stream from bytes
-                source = DocumentStream(name=filename, stream=BytesIO(content))
-            elif filepath:
-                if not os.path.exists(filepath):
-                    results.append(f"Failed {filename}: File not found at {filepath}")
-                    continue
-                if os.path.getsize(filepath) == 0:
-                     results.append(f"Skipped {filename}: 0-byte file at {filepath}")
-                     continue
-                source = filepath
-            else:
-                results.append(f"Skipped {filename}: No content or filepath provided.")
-                continue
-
-            # Handle .xls files by converting to .xlsx
-            if filename.lower().endswith('.xls'):
-                try:
-                    # Read the .xls file (from bytes if available, else from path)
-                    if content:
-                        df_dict = pd.read_excel(BytesIO(content), sheet_name=None)
-                    else:
-                        df_dict = pd.read_excel(filepath, sheet_name=None)
-                        
-                    # Create a temporary .xlsx file
-                    temp_xlsx = tempfile.NamedTemporaryFile(suffix='.xlsx', delete=False)
-                    temp_xlsx_path = temp_xlsx.name
-                    temp_xlsx.close()
-                    
-                    # Write all sheets to the new .xlsx file
-                    with pd.ExcelWriter(temp_xlsx_path, engine='openpyxl') as writer:
-                         for sheet_name, df in df_dict.items():
-                             df.to_excel(writer, sheet_name=sheet_name, index=False)
-                             
-                    # Update source to point to the new temp file
-                    source = temp_xlsx_path
-                    # We will need to clean this up later
-                except Exception as e:
-                     results.append(f"Failed to convert .xls {filename}: {str(e)}")
-                     continue
-
-            # Convert
-            doc_result = converter.convert(source)
-            markdown_content = doc_result.document.export_to_markdown()
-            
-            # Cleanup temporary xlsx file if it was created
-            if filename.lower().endswith('.xls') and source and isinstance(source, str) and os.path.exists(source) and 'temp' in source:
-                 try:
-                     os.remove(source)
-                 except:
-                     pass
-
-            # Explicit resource cleanup for memory safety
-            if hasattr(doc_result.input, '_backend') and doc_result.input._backend:
-                try:
-                    doc_result.input._backend.unload()
-                except Exception as e:
-                    # Ignore specific error related to cleaning up already closed/None resources
-                    if "'NoneType' object has no attribute 'close'" not in str(e):
-                         print(f"Warning: Error unloading backend for {filename}: {e}")
-
-            # Chunking
-            chunks = splitter.split_text(markdown_content)
-            chunks = [str(c) for c in chunks if c and str(c).strip()]
-            
-            if not chunks:
-                 results.append(f"Skipped {filename}: No content extracted.")
-                 continue
-
-            # Embed and Index
-            vectors = []
-            for attempt in range(3):
-                try:
-                    # Native OpenAI embedding call
-                    response = openai_client.embeddings.create(
-                        input=chunks,
-                        model=config.OPENAI_EMBEDDING_MODEL
-                    )
-                    vectors = [d.embedding for d in response.data]
-                    break
-                except Exception as e:
-                    if attempt == 2:
-                        raise e
-                    time.sleep(2 * (attempt + 1))
-            
-            points = []
-            for i, chunk in enumerate(chunks):
-                points.append(PointStruct(
-                    id=str(uuid.uuid4()),
-                    vector=vectors[i],
-                    payload={"filename": filename, "content": chunk, "document_set": document_set}
-                ))
+                # Calculate Document Set
+                document_set = file_item.get('document_set')
                 
-            # Batch upsert to avoid payload limits
-            batch_size = 64
-            for i in range(0, len(points), batch_size):
-                try:
-                    batch_points = points[i : i + batch_size]
-                    qdrant_client.upsert(collection_name=config.QDRANT_COLLECTION_NAME, points=batch_points)
-                except Exception as batch_error:
-                    print(f"Error upserting batch {i//batch_size}: {batch_error}")
-                    if i == 0: # If the first batch fails, it might be a bigger issue, but we try to continue or raise
-                         raise batch_error
-            results.append(f"Indexed {filename}: {len(chunks)} chunks.")
+                if not document_set:
+                     document_set = "default"
+                     if filepath:
+                         try:
+                             # Clean up paths to ensure consistent comparison
+                             monitored_path = Path(config.MONITORED_DIR).resolve()
+                             file_path_obj = Path(config.MONITORED_DIR).joinpath(filepath).resolve() if not os.path.isabs(filepath) else Path(filepath).resolve()
+                             
+                             # Check if file is inside monitored_path
+                             if monitored_path in file_path_obj.parents:
+                                 rel_path = file_path_obj.relative_to(monitored_path)
+                                 # If there are parent directories in the relative path, the first one is the doc set
+                                 if len(rel_path.parts) > 1:
+                                     document_set = rel_path.parts[0]
+                         except Exception as e:
+                             print(f"Error determining document set for {filepath}: {e}")
+
+                if content:
+                    if len(content) == 0:
+                        results.append(f"Skipped {filename}: Content is empty/0 bytes.")
+                        continue
+                    # Docling stream from bytes
+                    source = DocumentStream(name=filename, stream=BytesIO(content))
+                elif filepath:
+                    if not os.path.exists(filepath):
+                        results.append(f"Failed {filename}: File not found at {filepath}")
+                        continue
+                    if os.path.getsize(filepath) == 0:
+                         results.append(f"Skipped {filename}: 0-byte file at {filepath}")
+                         continue
+                    source = filepath
+                else:
+                    results.append(f"Skipped {filename}: No content or filepath provided.")
+                    continue
+
+                # Handle .xls files by converting to .xlsx
+                if filename.lower().endswith('.xls'):
+                    try:
+                        # Read the .xls file (from bytes if available, else from path)
+                        if content:
+                            df_dict = pd.read_excel(BytesIO(content), sheet_name=None)
+                        else:
+                            df_dict = pd.read_excel(filepath, sheet_name=None)
+                            
+                        # Create a temporary .xlsx file
+                        temp_xlsx = tempfile.NamedTemporaryFile(suffix='.xlsx', delete=False)
+                        temp_xlsx_path = temp_xlsx.name
+                        temp_xlsx.close()
+                        
+                        # Write all sheets to the new .xlsx file
+                        with pd.ExcelWriter(temp_xlsx_path, engine='openpyxl') as writer:
+                             for sheet_name, df in df_dict.items():
+                                 df.to_excel(writer, sheet_name=sheet_name, index=False)
+                                 
+                        # Update source to point to the new temp file
+                        source = temp_xlsx_path
+                        temp_file_to_cleanup = temp_xlsx_path
+                    except Exception as e:
+                         results.append(f"Failed to convert .xls {filename}: {str(e)}")
+                         continue
+
+                # Convert
+                doc_result = converter.convert(source)
+                markdown_content = doc_result.document.export_to_markdown()
+                
+                # Explicit resource cleanup for memory safety
+                if hasattr(doc_result.input, '_backend') and doc_result.input._backend:
+                    try:
+                        doc_result.input._backend.unload()
+                    except Exception as e:
+                        # Ignore specific error related to cleaning up already closed/None resources
+                        if "'NoneType' object has no attribute 'close'" not in str(e):
+                             print(f"Warning: Error unloading backend for {filename}: {e}")
+
+                # Chunking
+                chunks = splitter.split_text(markdown_content)
+                chunks = [str(c) for c in chunks if c and str(c).strip()]
+                
+                if not chunks:
+                     results.append(f"Skipped {filename}: No content extracted.")
+                     continue
+
+                # Embed and Index
+                vectors = []
+                for attempt in range(3):
+                    try:
+                        # Native OpenAI embedding call
+                        response = openai_client.embeddings.create(
+                            input=chunks,
+                            model=config.OPENAI_EMBEDDING_MODEL
+                        )
+                        vectors = [d.embedding for d in response.data]
+                        break
+                    except Exception as e:
+                        if attempt == 2:
+                            raise e
+                        time.sleep(2 * (attempt + 1))
+                
+                points = []
+                for i, chunk in enumerate(chunks):
+                    points.append(PointStruct(
+                        id=str(uuid.uuid4()),
+                        vector=vectors[i],
+                        payload={"filename": filename, "content": chunk, "document_set": document_set}
+                    ))
+                    
+                # Batch upsert to avoid payload limits
+                batch_size = 64
+                for i in range(0, len(points), batch_size):
+                    try:
+                        batch_points = points[i : i + batch_size]
+                        qdrant_client.upsert(collection_name=config.QDRANT_COLLECTION_NAME, points=batch_points)
+                    except Exception as batch_error:
+                        print(f"Error upserting batch {i//batch_size}: {batch_error}")
+                        if i == 0: # If the first batch fails, it might be a bigger issue, but we try to continue or raise
+                             raise batch_error
+                results.append(f"Indexed {filename}: {len(chunks)} chunks.")
+            
+            finally:
+                # Cleanup temporary file if it was created
+                if temp_file_to_cleanup and os.path.exists(temp_file_to_cleanup):
+                    try:
+                        os.remove(temp_file_to_cleanup)
+                    except Exception as e:
+                        print(f"Warning: Failed to cleanup temp file {temp_file_to_cleanup}: {e}")
+
             
         except Exception as e:
             results.append(f"Failed {filename}: {str(e)}")
