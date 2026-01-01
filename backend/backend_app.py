@@ -422,6 +422,11 @@ def search_qa_endpoint(request: SearchQARequest):
         
         return {"answer": result.output}
 
+
+    except Exception as e:
+        logger.error(f"Error in Search QA: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.post("/agent/upload", dependencies=[Depends(get_current_user)])
 async def upload_files(
     files: List[UploadFile] = File(...),
