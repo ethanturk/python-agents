@@ -57,10 +57,9 @@ function NavBar({ onShowSearch, onShowDocuments, onShowSummarize, onShowNotifica
                             label="Doc Set"
                             onChange={(e) => setSelectedSet(e.target.value)}
                         >
-                            <MenuItem value="default">Default</MenuItem>
                             <MenuItem value="all">All</MenuItem>
                             {documentSets.map((ds) => (
-                                ds !== 'default' && <MenuItem key={ds} value={ds}>{formatDocumentSetName(ds)}</MenuItem>
+                                <MenuItem key={ds} value={ds}>{formatDocumentSetName(ds)}</MenuItem>
                             ))}
                         </Select>
                     </FormControl>
