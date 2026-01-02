@@ -119,6 +119,18 @@ def list_documents():
         logger.warning(f"Error listing documents: {e}")
         return {"documents": []}
 
+@app.get("/agent/documentsets", dependencies=[Depends(get_current_user)])
+def list_document_sets():
+    try:
+        all_docs = db_service.list_documents()
+        sets = set()
+        for point in all_docs:
+            sets.add(point.payload.get("document_set", "default"))
+        return {"document_sets": list(sets)}
+    except Exception as e:
+        logger.warning(f"Error listing document sets: {e}")
+        return {"document_sets": []}
+
 @app.delete("/agent/documents/{filename:path}", dependencies=[Depends(get_current_user)])
 def delete_document_endpoint(filename: str):
     try:
