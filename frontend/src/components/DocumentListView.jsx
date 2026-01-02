@@ -1,5 +1,5 @@
 import React, { useState, useMemo, memo } from 'react';
-import { Paper, Typography, Box, Alert, Accordion, AccordionSummary, AccordionDetails, Button, IconButton } from '@mui/material';
+import { Paper, Typography, Box, Alert, Accordion, AccordionSummary, AccordionDetails, Button, IconButton, Collapse } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import DeleteIcon from '@mui/icons-material/Delete';
 import DescriptionIcon from '@mui/icons-material/Description';
@@ -10,13 +10,33 @@ import UploadDialog from './UploadDialog';
 import { useDocumentSet } from '../contexts/DocumentSetContext';
 
 const DocumentRow = memo(({ filename, chunks, onSummarize, onDelete }) => {
+    const [expanded, setExpanded] = useState(false);
+
     return (
-        <Accordion variant="outlined" sx={{ mb: 1 }}>
-            <AccordionSummary
-                expandIcon={<ExpandMoreIcon />}
-                className="custom-accordion-summary"
+        <Paper variant="outlined" sx={{ mb: 1 }}>
+            <Box
+                sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    p: 1,
+                    pr: 2,
+                    cursor: 'pointer',
+                    '&:hover': { bgcolor: 'action.hover' }
+                }}
+                onClick={() => setExpanded(!expanded)}
             >
-                <Box className="document-row" sx={{ alignItems: 'center', width: '100%' }}>
+                <IconButton
+                    size="small"
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        setExpanded(!expanded);
+                    }}
+                    sx={{ mr: 10 }}
+                >
+                    <ExpandMoreIcon sx={{ transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)', transition: '0.3s' }} />
+                </IconButton>
+
+                <Box className="document-row" sx={{ display: 'flex', alignItems: 'center', width: '100%', overflow: 'hidden' }}>
                     <Typography
                         variant="body1"
                         noWrap
@@ -26,7 +46,7 @@ const DocumentRow = memo(({ filename, chunks, onSummarize, onDelete }) => {
                     >
                         {getFilenameOnly(filename)}
                     </Typography>
-                    <Box className="document-actions">
+                    <Box className="document-actions" sx={{ display: 'flex', flexShrink: 0 }}>
                         <Button
                             variant="outlined"
                             size="small"
@@ -66,12 +86,14 @@ const DocumentRow = memo(({ filename, chunks, onSummarize, onDelete }) => {
                         </IconButton>
                     </Box>
                 </Box>
-            </AccordionSummary>
-            <AccordionDetails>
-                <Typography variant="subtitle2" className="mb-1 text-secondary">Full Path: {filename}</Typography>
-                <Typography variant="body2">{chunks.length} chunks indexed.</Typography>
-            </AccordionDetails>
-        </Accordion>
+            </Box>
+            <Collapse in={expanded}>
+                <Box sx={{ p: 2, borderTop: 1, borderColor: 'divider' }}>
+                    <Typography variant="subtitle2" className="mb-1 text-secondary">Full Path: {filename}</Typography>
+                    <Typography variant="body2">{chunks.length} chunks indexed.</Typography>
+                </Box>
+            </Collapse>
+        </Paper>
     );
 });
 
