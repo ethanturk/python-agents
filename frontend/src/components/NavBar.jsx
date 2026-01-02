@@ -16,7 +16,7 @@ import { formatDocumentSetName } from '../utils';
 
 function NavBar({ onShowSearch, onShowDocuments, onShowSummarize, onShowNotifications, unreadCount, loading, showSuccess }) {
     const theme = useTheme();
-    const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+    const isMobile = useMediaQuery(theme.breakpoints.down('md'));
     const [anchorEl, setAnchorEl] = useState(null);
     const { logout, currentUser } = useAuth();
     const { documentSets, selectedSet, setSelectedSet, fetchDocumentSets } = useDocumentSet();

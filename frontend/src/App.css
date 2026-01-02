@@ -326,7 +326,7 @@
 }
 
 /* --- Responsive Design --- */
-@media (max-width: 1200px) {
+@media (max-width: 768px) {
 
   /* Layout adjustments */
   .p-4 {
