@@ -3,6 +3,14 @@ import NavBar from './NavBar';
 import { describe, it, expect, vi } from 'vitest';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 
+vi.mock('../contexts/AuthContext', () => ({
+    useAuth: () => ({ currentUser: { email: 'test@test.com' }, logout: vi.fn() })
+}));
+
+vi.mock('../contexts/DocumentSetContext', () => ({
+    useDocumentSet: () => ({ selectedSet: 'all', documentSets: [], setSelectedSet: vi.fn(), fetchDocumentSets: vi.fn() })
+}));
+
 const theme = createTheme();
 
 // Wrapper to provide Theme context

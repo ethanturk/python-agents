@@ -1,7 +1,14 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import DocumentListView from './DocumentListView';
 import { describe, it, expect, vi } from 'vitest';
+
+// Mock the context hook
+vi.mock('../contexts/DocumentSetContext', () => ({
+    useDocumentSet: () => ({
+        selectedSet: 'all'
+    })
+}));
 
 describe('DocumentListView', () => {
     const mockGroupedDocs = {
@@ -41,14 +48,9 @@ describe('DocumentListView', () => {
         const onDelete = vi.fn();
         render(<DocumentListView groupedDocs={mockGroupedDocs} onDelete={onDelete} onSummarize={() => { }} />);
 
-        const deleteButtons = screen.getAllByRole('button').filter(b => b.querySelector('svg[data-testid="DeleteIcon"]') || b.querySelector('svg'));
-
-        if (deleteButtons.length > 0) {
-            const actualDeleteBtn = deleteButtons.find(b => !b.textContent.includes('View') && !b.textContent.includes('Summarize'));
-            if (actualDeleteBtn) {
-                await user.click(actualDeleteBtn);
-                expect(onDelete).toHaveBeenCalledWith('/path/to/test1.txt');
-            }
-        }
+        // Find specific delete button for test1
+        const deleteBtn = screen.getByTestId('delete-btn-/path/to/test1.txt');
+        fireEvent.click(deleteBtn);
+        expect(onDelete).toHaveBeenCalledWith('/path/to/test1.txt');
     });
 });
