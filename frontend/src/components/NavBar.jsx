@@ -64,10 +64,6 @@ function NavBar({ onShowSearch, onShowDocuments, onShowSummarize, onShowNotifica
                         </Select>
                     </FormControl>
 
-                    {/* Status Indicators remain visible */}
-                    {loading && <CircularProgress size={24} color="inherit" />}
-                    {!loading && showSuccess && <CheckCircleIcon color="success" />}
-
                     {isMobile ? (
                         <>
                             <IconButton
