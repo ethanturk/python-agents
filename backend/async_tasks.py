@@ -41,7 +41,7 @@ app.conf.task_default_queue = config.CELERY_QUEUE_NAME
 
 # Initialize Qdrant and OpenAI Client
 # Robust extraction of the host from config or hardcoded for docker
-qdrant_client = QdrantClient(host=os.getenv("QDRANT_HOST", "qdrant"), port=6333, timeout=60)
+from clients import qdrant_client
 
 openai_client = OpenAI(
     api_key=config.OPENAI_API_KEY,

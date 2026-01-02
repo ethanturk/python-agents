@@ -7,24 +7,10 @@ from qdrant_client import QdrantClient
 from langchain_openai import OpenAIEmbeddings
 import os
 import config
-from async_tasks import qdrant_client
+from clients import qdrant_client, embeddings_model
 
 # Apply nest_asyncio to allow nested event loops if necessary
 nest_asyncio.apply()
-
-# Global Embeddings Model to reuse client
-_embeddings_model = None
-
-def get_embeddings_model():
-    global _embeddings_model
-    if _embeddings_model is None:
-        _embeddings_model = OpenAIEmbeddings(
-            api_key=config.OPENAI_API_KEY, 
-            base_url=config.OPENAI_API_BASE,
-            model=config.OPENAI_EMBEDDING_MODEL,
-            check_embedding_ctx_length=False
-        )
-    return _embeddings_model
 
 def get_model():
     return OpenAIModel(
@@ -62,12 +48,8 @@ def search_documents(query: str, limit: int = 10, document_set: str = None) -> l
     """
     if not config.OPENAI_API_KEY:
         return []
-
-    # Reuse global embeddings model
-    embeddings_model = get_embeddings_model()
-
+    
     try:
-        # Check if collection exists (lightweight check using the shared client)
         qdrant_client.get_collection(config.QDRANT_COLLECTION_NAME)
     except:
         return []

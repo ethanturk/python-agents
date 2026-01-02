@@ -14,7 +14,7 @@ import logging
 from contextlib import asynccontextmanager
 from file_watcher import start_watching
 import os
-from async_tasks import qdrant_client
+from clients import qdrant_client
 from qdrant_client.http.models import Filter, FieldCondition, MatchValue 
 from summarizer import summarize_document 
 from database import init_db, get_summary, get_all_summaries, save_summary
