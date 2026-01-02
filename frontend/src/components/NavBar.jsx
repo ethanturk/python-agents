@@ -9,6 +9,7 @@ import Badge from '@mui/material/Badge';
 import { Box, CircularProgress, Menu, MenuItem, useTheme, useMediaQuery, Select, FormControl, InputLabel } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { Notifications, Logout } from '@mui/icons-material';
+import RefreshIcon from '@mui/icons-material/Refresh';
 import { useAuth } from '../contexts/AuthContext';
 import { useDocumentSet } from '../contexts/DocumentSetContext';
 import { formatDocumentSetName } from '../utils';
@@ -48,21 +49,26 @@ function NavBar({ onShowSearch, onShowDocuments, onShowSummarize, onShowNotifica
 
                 <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
                     {/* Document Set Selector */}
-                    <FormControl size="small" sx={{ minWidth: 120, mr: 2 }}>
-                        <InputLabel id="doc-set-select-label">Doc Set</InputLabel>
-                        <Select
-                            labelId="doc-set-select-label"
-                            id="doc-set-select"
-                            value={selectedSet}
-                            label="Doc Set"
-                            onChange={(e) => setSelectedSet(e.target.value)}
-                        >
-                            <MenuItem value="all">All</MenuItem>
-                            {documentSets.map((ds) => (
-                                <MenuItem key={ds} value={ds}>{formatDocumentSetName(ds)}</MenuItem>
-                            ))}
-                        </Select>
-                    </FormControl>
+                    <Box sx={{ display: 'flex', alignItems: 'center', mr: 2 }}>
+                        <FormControl size="small" sx={{ minWidth: 120 }}>
+                            <InputLabel id="doc-set-select-label">Doc Set</InputLabel>
+                            <Select
+                                labelId="doc-set-select-label"
+                                id="doc-set-select"
+                                value={selectedSet}
+                                label="Doc Set"
+                                onChange={(e) => setSelectedSet(e.target.value)}
+                            >
+                                <MenuItem value="all">All</MenuItem>
+                                {documentSets.map((ds) => (
+                                    <MenuItem key={ds} value={ds}>{formatDocumentSetName(ds)}</MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                        <IconButton size="small" onClick={fetchDocumentSets} sx={{ ml: 0.5 }} title="Refresh">
+                            <RefreshIcon fontSize="small" />
+                        </IconButton>
+                    </Box>
 
                     {isMobile ? (
                         <>
