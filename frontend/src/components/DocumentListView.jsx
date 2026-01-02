@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Paper, Typography, Box, Alert, Accordion, AccordionSummary, AccordionDetails, Button, IconButton, Chip } from '@mui/material';
+import React, { useState, useMemo } from 'react';
+import { Paper, Typography, Box, Alert, Accordion, AccordionSummary, AccordionDetails, Button, IconButton } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import DeleteIcon from '@mui/icons-material/Delete';
 import DescriptionIcon from '@mui/icons-material/Description';
@@ -7,37 +7,27 @@ import SummarizeIcon from '@mui/icons-material/Summarize';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import { getWebLink, getFilenameOnly } from '../utils';
 import UploadDialog from './UploadDialog';
-
-function stringToColor(string) {
-  let hash = 0;
-  let i;
-
-  /* eslint-disable no-bitwise */
-  for (i = 0; i < string.length; i += 1) {
-    hash = string.charCodeAt(i) + ((hash << 5) - hash);
-  }
-
-  let color = '#';
-
-  for (i = 0; i < 3; i += 1) {
-    const value = (hash >> (i * 8)) & 0xff;
-    color += `00${value.toString(16)}`.slice(-2);
-  }
-  /* eslint-enable no-bitwise */
-
-  return color;
-}
+import { useDocumentSet } from '../contexts/DocumentSetContext';
 
 export default function DocumentListView({ groupedDocs, onDelete, onSummarize, onRefresh }) {
     const [uploadOpen, setUploadOpen] = useState(false);
+    const { selectedSet } = useDocumentSet();
 
-    // Sort documents by document_set then filename
-    const sortedEntries = Object.entries(groupedDocs).sort((a, b) => {
-        const setA = a[1][0]?.document_set || 'default';
-        const setB = b[1][0]?.document_set || 'default';
-        if (setA !== setB) return setA.localeCompare(setB);
-        return a[0].localeCompare(b[0]);
-    });
+    // Group documents by document_set
+    const docsBySet = useMemo(() => {
+        const groups = {};
+        Object.entries(groupedDocs).forEach(([filename, chunks]) => {
+            const docSet = chunks[0]?.document_set || 'default';
+            if (!groups[docSet]) groups[docSet] = [];
+            groups[docSet].push({ filename, chunks });
+        });
+        
+        // Sort sets alphabetically
+        return Object.keys(groups).sort().reduce((acc, key) => {
+            acc[key] = groups[key].sort((a, b) => a.filename.localeCompare(b.filename));
+            return acc;
+        }, {});
+    }, [groupedDocs]);
 
     return (
         <Paper className="p-2">
@@ -56,85 +46,81 @@ export default function DocumentListView({ groupedDocs, onDelete, onSummarize, o
                 <Alert severity="info">No documents found. Upload some documents to get started.</Alert>
             ) : (
                 <Box>
-                    {sortedEntries.map(([filename, chunks]) => {
-                        const docSet = chunks[0]?.document_set || 'default';
-                        const chipColor = stringToColor(docSet);
-                        
-                        return (
-                        <Accordion key={filename}>
+                    {Object.entries(docsBySet).map(([set, docs]) => (
+                        <Accordion key={set} defaultExpanded={selectedSet === set || selectedSet === 'all'}>
                             <AccordionSummary
                                 expandIcon={<ExpandMoreIcon />}
-                                className="custom-accordion-summary"
-                                component="div"
+                                sx={{ bgcolor: 'action.hover' }}
                             >
-                                <Box className="document-row" sx={{ alignItems: 'center' }}>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', flex: 1, overflow: 'hidden' }}>
-                                        <Chip 
-                                            label={docSet} 
-                                            size="small" 
-                                            sx={{ 
-                                                mr: 2, 
-                                                bgcolor: chipColor, 
-                                                color: '#fff',
-                                                fontWeight: 'bold',
-                                                textShadow: '0 0 2px rgba(0,0,0,0.5)'
-                                            }} 
-                                        />
-                                        <Typography
-                                            variant="body1"
-                                            noWrap
-                                            className="document-filename"
-                                            title={filename}
-                                        >
-                                            {getFilenameOnly(filename)}
-                                        </Typography>
-                                    </Box>
-                                    <Box className="document-actions">
-                                        <Button
-                                            variant="outlined"
-                                            size="small"
-                                            href={getWebLink(filename)}
-                                            target="_blank"
-                                            onClick={(e) => e.stopPropagation()}
-                                            startIcon={<DescriptionIcon />}
-                                            className="action-button-view"
-                                        >
-                                            View
-                                        </Button>
-                                        <Button
-                                            variant="outlined"
-                                            size="small"
-                                            color="secondary"
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                onSummarize(filename);
-                                            }}
-                                            startIcon={<SummarizeIcon />}
-                                            className="action-button-summarize"
-                                            sx={{ ml: 1 }}
-                                            data-testid={`summarize-btn-${filename}`}
-                                        >
-                                            Summarize
-                                        </Button>
-                                        <IconButton
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                onDelete(filename);
-                                            }}
-                                            color="error"
-                                            size="small"
-                                        >
-                                            <DeleteIcon />
-                                        </IconButton>
-                                    </Box>
-                                </Box>
+                                <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                                    {set} ({docs.length})
+                                </Typography>
                             </AccordionSummary>
                             <AccordionDetails>
-                                <Typography variant="subtitle2" className="mb-1 text-secondary">Full Path: {filename}</Typography>
-                                <Typography variant="body2">{chunks.length} chunks indexed.</Typography>
+                                {docs.map(({ filename, chunks }) => (
+                                    <Accordion key={filename} variant="outlined" sx={{ mb: 1 }}>
+                                        <AccordionSummary
+                                            expandIcon={<ExpandMoreIcon />}
+                                            className="custom-accordion-summary"
+                                        >
+                                            <Box className="document-row" sx={{ alignItems: 'center', width: '100%' }}>
+                                                <Typography
+                                                    variant="body1"
+                                                    noWrap
+                                                    className="document-filename"
+                                                    title={filename}
+                                                    sx={{ flexGrow: 1, mr: 2 }}
+                                                >
+                                                    {getFilenameOnly(filename)}
+                                                </Typography>
+                                                <Box className="document-actions">
+                                                    <Button
+                                                        variant="outlined"
+                                                        size="small"
+                                                        href={getWebLink(filename)}
+                                                        target="_blank"
+                                                        onClick={(e) => e.stopPropagation()}
+                                                        startIcon={<DescriptionIcon />}
+                                                        className="action-button-view"
+                                                    >
+                                                        View
+                                                    </Button>
+                                                    <Button
+                                                        variant="outlined"
+                                                        size="small"
+                                                        color="secondary"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            onSummarize(filename);
+                                                        }}
+                                                        startIcon={<SummarizeIcon />}
+                                                        className="action-button-summarize"
+                                                        sx={{ ml: 1 }}
+                                                    >
+                                                        Summarize
+                                                    </Button>
+                                                    <IconButton
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            onDelete(filename);
+                                                        }}
+                                                        color="error"
+                                                        size="small"
+                                                    >
+                                                        <DeleteIcon />
+                                                    </IconButton>
+                                                </Box>
+                                            </Box>
+                                        </AccordionSummary>
+                                        <AccordionDetails>
+                                            <Typography variant="subtitle2" className="mb-1 text-secondary">Full Path: {filename}</Typography>
+                                            <Typography variant="body2">{chunks.length} chunks indexed.</Typography>
+                                        </AccordionDetails>
+                                    </Accordion>
+                                ))}
                             </AccordionDetails>
                         </Accordion>
-                    )})}
+                    ))}
                 </Box>
             )}
 
