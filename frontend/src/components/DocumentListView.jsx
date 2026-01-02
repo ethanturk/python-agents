@@ -32,7 +32,7 @@ export default function DocumentListView({ groupedDocs, onDelete, onSummarize, o
     return (
         <Paper className="p-2">
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                <Typography variant="h5">Ingested Documents ({Object.keys(groupedDocs).length})</Typography>
+                <Typography variant="h5">Your Documents ({Object.keys(groupedDocs).length})</Typography>
                 <Button 
                     variant="contained" 
                     startIcon={<CloudUploadIcon />}
