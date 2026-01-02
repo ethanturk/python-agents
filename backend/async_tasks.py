@@ -155,7 +155,7 @@ def get_docling_converter():
     )
 
 def ensure_collection_exists():
-    """Checks if collection exists and creates it if not."""
+    """Checks if collection exists and creates it if not. Also ensures indices exist."""
     try:
         qdrant_client.get_collection(config.QDRANT_COLLECTION_NAME)
     except Exception:
@@ -170,6 +170,22 @@ def ensure_collection_exists():
                 pass
             else:
                 raise e
+    
+    # Ensure payload indexes
+    try:
+        qdrant_client.create_payload_index(
+            collection_name=config.QDRANT_COLLECTION_NAME,
+            field_name="filename",
+            field_schema="keyword"
+        )
+        qdrant_client.create_payload_index(
+            collection_name=config.QDRANT_COLLECTION_NAME,
+            field_name="document_set",
+            field_schema="keyword"
+        )
+    except Exception as e:
+        # Ignore if already exists or other non-critical errors during check
+        print(f"Warning: Index creation: {e}")
 
 @app.task
 def ingest_docs_task(files_data):

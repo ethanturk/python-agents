@@ -8,7 +8,7 @@ from pydantic_ai.providers.openai import OpenAIProvider
 from typing import List
 from celery.result import AsyncResult
 from sync_agent import run_sync_agent, search_documents, perform_rag
-from async_tasks import check_knowledge_base, answer_question, ingest_docs_task, summarize_document_task, app as celery_app
+from async_tasks import check_knowledge_base, answer_question, ingest_docs_task, summarize_document_task, app as celery_app, ensure_collection_exists
 from celery import chain
 import logging
 from contextlib import asynccontextmanager
@@ -39,6 +39,13 @@ async def lifespan(app: FastAPI):
     logger.info("Starting up...")
     init_db()
     init_firebase()
+    
+    # Ensure Qdrant collection and indices
+    try:
+        ensure_collection_exists()
+    except Exception as e:
+        logger.error(f"Failed to ensure collection exists: {e}")
+
     observer = start_watching(MONITORED_DIR, lambda files: ingest_docs_task.delay(files))
     yield
     # Shutdown
