@@ -13,14 +13,17 @@ const WS_BASE = determineWsUrl();
 
 export default function useWebSocket({ onMessage }) {
   const [isConnected, setIsConnected] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(true); // Start as true
   const ws = useRef(null);
 
   const connect = useCallback(() => {
+    setIsConnecting(true);
     ws.current = new WebSocket(WS_BASE);
 
     ws.current.onopen = () => {
       console.log("WebSocket Connected");
       setIsConnected(true);
+      setIsConnecting(false);
     };
 
     ws.current.onmessage = (event) => {
@@ -32,12 +35,15 @@ export default function useWebSocket({ onMessage }) {
     ws.current.onclose = () => {
       console.log("WebSocket Disconnected. Reconnecting...");
       setIsConnected(false);
+      setIsConnecting(false); // Connection attempt finished (failed/closed)
       setTimeout(connect, 3000); // Retry every 3 seconds
     };
 
     ws.current.onerror = (err) => {
       console.error("WebSocket Error:", err);
-      ws.current.close();
+      // onerror usually precedes onclose, so we rely on onclose to reset state/retry
+      // but strictly handling it here:
+      ws.current.close(); 
     };
   }, [onMessage]);
 
@@ -51,5 +57,5 @@ export default function useWebSocket({ onMessage }) {
     };
   }, [connect]);
 
-  return { isConnected, ws };
+  return { isConnected, isConnecting, ws };
 }

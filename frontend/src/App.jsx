@@ -83,7 +83,7 @@ function App() {
       }
   }, [handleNewNotification, setActiveSummaries]);
 
-  const { isConnected } = useWebSocket({ onMessage: handleWsMessage });
+  const { isConnected, isConnecting } = useWebSocket({ onMessage: handleWsMessage });
 
   // --- Effects ---
 
@@ -199,7 +199,7 @@ function App() {
         {docsLoading && view === 'list' && <Box className="flex-justify-center my-4"><CircularProgress /></Box>}
 
         {/* Connection Status Indicator */}
-        {!isConnected && (
+        {!isConnected && !isConnecting && (
           <Alert severity="warning" className="mb-2">
             WebSocket disconnected. Attempting to reconnect...
           </Alert>
