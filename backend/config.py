@@ -7,7 +7,7 @@ BASE_URL = os.getenv('BASE_URL') or '192.168.5.204'
 
 # Celery Configuration
 # RabbitMQ Broker URL
-CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', f"amqp://guest:guest@{BASE_URL}:5672//")
+CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', f"amqp://agent:agent_pass@{BASE_URL}:5672//")
 CELERY_RESULT_BACKEND = 'rpc://'
 
 # OpenAI / Local LLM Configuration
