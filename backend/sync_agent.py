@@ -7,9 +7,24 @@ from qdrant_client import QdrantClient
 from langchain_openai import OpenAIEmbeddings
 import os
 import config
+from async_tasks import qdrant_client
 
 # Apply nest_asyncio to allow nested event loops if necessary
 nest_asyncio.apply()
+
+# Global Embeddings Model to reuse client
+_embeddings_model = None
+
+def get_embeddings_model():
+    global _embeddings_model
+    if _embeddings_model is None:
+        _embeddings_model = OpenAIEmbeddings(
+            api_key=config.OPENAI_API_KEY, 
+            base_url=config.OPENAI_API_BASE,
+            model=config.OPENAI_EMBEDDING_MODEL,
+            check_embedding_ctx_length=False
+        )
+    return _embeddings_model
 
 def get_model():
     return OpenAIModel(
@@ -48,22 +63,20 @@ def search_documents(query: str, limit: int = 10, document_set: str = None) -> l
     if not config.OPENAI_API_KEY:
         return []
 
-    # Initialize Qdrant and Embeddings
-    # Using hardcoded host "qdrant" as per existing pattern for Docker
-    qdrant_client = QdrantClient(host=os.getenv("QDRANT_HOST", "qdrant"), port=6333, timeout=60)
-    embeddings_model = OpenAIEmbeddings(
-        api_key=config.OPENAI_API_KEY, 
-        base_url=config.OPENAI_API_BASE,
-        model=config.OPENAI_EMBEDDING_MODEL,
-        check_embedding_ctx_length=False
-    )
+    # Reuse global embeddings model
+    embeddings_model = get_embeddings_model()
 
     try:
+        # Check if collection exists (lightweight check using the shared client)
         qdrant_client.get_collection(config.QDRANT_COLLECTION_NAME)
     except:
         return []
 
-    vector = embeddings_model.embed_query(query)
+    try:
+        vector = embeddings_model.embed_query(query)
+    except Exception as e:
+        print(f"Error generating embeddings: {e}")
+        return []
     
     # Use query_points_groups (new API) to group by filename
     # limit = number of groups (documents)
@@ -81,23 +94,28 @@ def search_documents(query: str, limit: int = 10, document_set: str = None) -> l
             ]
         )
 
-    response = qdrant_client.query_points_groups(
-        collection_name=config.QDRANT_COLLECTION_NAME,
-        query=vector,
-        group_by="filename",
-        limit=limit,
-        group_size=3,
-        query_filter=query_filter
-    )
+    try:
+        response = qdrant_client.query_points_groups(
+            collection_name=config.QDRANT_COLLECTION_NAME,
+            query=vector,
+            group_by="filename",
+            limit=limit,
+            group_size=3,
+            query_filter=query_filter
+        )
+    except Exception as e:
+        print(f"Error querying Qdrant: {e}")
+        return []
     
     # Flatten the grouped results
     results = []
-    for group in response.groups:
-        for hit in group.hits:
-            results.append({
-                "content": hit.payload.get("content"), 
-                "metadata": {"filename": hit.payload.get("filename"), "document_set": hit.payload.get("document_set")}
-            })
+    if response and response.groups:
+        for group in response.groups:
+            for hit in group.hits:
+                results.append({
+                    "content": hit.payload.get("content"), 
+                    "metadata": {"filename": hit.payload.get("filename"), "document_set": hit.payload.get("document_set")}
+                })
     
     return results
 
