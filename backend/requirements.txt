@@ -19,3 +19,4 @@ websockets
 pytest
 pytest-asyncio
 pytest-mock
+litellm
