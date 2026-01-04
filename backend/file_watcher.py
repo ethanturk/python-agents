@@ -20,7 +20,7 @@ def get_document_set(filepath):
                 return rel_path.parts[0]
     except Exception:
         pass
-    return "default"
+    return "all"
 
 class DocumentHandler(FileSystemEventHandler):
     def __init__(self, callback):

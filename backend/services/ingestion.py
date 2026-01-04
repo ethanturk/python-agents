@@ -42,7 +42,7 @@ class IngestionService:
             }
         )
 
-    def process_file(self, filename, content=None, filepath=None, document_set="default"):
+    def process_file(self, filename, content=None, filepath=None, document_set="all"):
         """Process a single file: Convert -> Chunk -> Embed -> Index."""
         logger.info(f"Processing file: {filename}")
         

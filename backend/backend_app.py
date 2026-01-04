@@ -111,7 +111,7 @@ def list_documents():
              docs.append({
                  "id": point.id,
                  "filename": point.payload.get("filename", "unknown"),
-                 "document_set": point.payload.get("document_set", "default"),
+                 "document_set": point.payload.get("document_set", "all"),
                  "content_snippet": point.payload.get("content", "")[:200]
              })
         return {"documents": docs}
@@ -125,7 +125,7 @@ def list_document_sets():
         all_docs = db_service.list_documents()
         sets = set()
         for point in all_docs:
-            sets.add(point.payload.get("document_set", "default"))
+            sets.add(point.payload.get("document_set", "all"))
         return {"document_sets": list(sets)}
     except Exception as e:
         logger.warning(f"Error listing document sets: {e}")
