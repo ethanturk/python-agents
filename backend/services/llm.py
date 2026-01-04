@@ -17,8 +17,12 @@ class LiteLLMEmbeddings:
         self.api_base = api_base
 
     def embed_documents(self, texts):
+        model_name = self.model
+        if not model_name.startswith("openai/"):
+             model_name = f"openai/{model_name}"
+
         response = litellm.embedding(
-            model=self.model,
+            model=model_name,
             input=texts,
             api_key=self.api_key,
             api_base=self.api_base,
@@ -27,8 +31,12 @@ class LiteLLMEmbeddings:
         return [r['embedding'] for r in response.data]
 
     def embed_query(self, text):
+        model_name = self.model
+        if not model_name.startswith("openai/"):
+             model_name = f"openai/{model_name}"
+
         response = litellm.embedding(
-            model=self.model,
+            model=model_name,
             input=[text],
             api_key=self.api_key,
             api_base=self.api_base,
