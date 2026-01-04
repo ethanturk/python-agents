@@ -3,8 +3,12 @@ from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.openai import OpenAIProvider
 from langchain_openai import OpenAIEmbeddings
 import logging
+import litellm
 
 logger = logging.getLogger(__name__)
+
+# Configure LiteLLM to drop unsupported parameters (fixes LM Studio issues)
+litellm.drop_params = True
 
 class LLMService:
     _instance = None
