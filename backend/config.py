@@ -27,3 +27,6 @@ CELERY_QUEUE_NAME = os.getenv('CELERY_QUEUE_NAME') or 'celery'
 # File Monitoring
 MONITORED_DIR = os.getenv("MONITORED_DIR", "/data/monitored")
 
+
+# Deployment Configuration
+RUN_WORKER_EMBEDDED = os.getenv("RUN_WORKER_EMBEDDED", "false").lower() == "true"

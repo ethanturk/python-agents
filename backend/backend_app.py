@@ -42,8 +42,37 @@ async def lifespan(app: FastAPI):
     db_service.ensure_collection_exists()
 
     observer = start_watching(MONITORED_DIR, lambda files: ingest_docs_task.delay(files))
+    
+    # Embedded Worker Logic
+    worker_process = None
+    if config.RUN_WORKER_EMBEDDED:
+        import subprocess
+        import sys
+        logger.info("Starting embedded Celery worker...")
+        # Use sys.executable to ensure we use the same python interpreter/env
+        cmd = [
+            sys.executable, "-m", "celery", 
+            "-A", "async_tasks", "worker", 
+            "--loglevel=info", 
+            "-Q", config.CELERY_QUEUE_NAME
+        ]
+        try:
+            worker_process = subprocess.Popen(cmd)
+            logger.info(f"Embedded worker started with PID {worker_process.pid}")
+        except Exception as e:
+            logger.error(f"Failed to start embedded worker: {e}")
+
     yield
     # Shutdown
+    if worker_process:
+        logger.info("Stopping embedded worker...")
+        worker_process.terminate()
+        try:
+            worker_process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            worker_process.kill()
+        logger.info("Embedded worker stopped.")
+
     observer.stop()
     observer.join()
     logger.info("Shutting down...")
