@@ -135,29 +135,46 @@ export default function DocumentListView({ groupedDocs, onDelete, onSummarize, o
                 <Alert severity="info">No documents found. Upload some documents to get started.</Alert>
             ) : (
                 <Box>
-                    {Object.entries(docsBySet).map(([set, docs]) => (
-                        <Accordion key={set} defaultExpanded={selectedSet === set || selectedSet === 'all'}>
-                            <AccordionSummary
-                                expandIcon={<ExpandMoreIcon />}
-                                sx={{ bgcolor: 'action.hover' }}
+                    {Object.entries(docsBySet).map(([set, docs]) => {
+                        // Controlled expansion: Expand if selectedSet matches this set OR 'all'
+                        const isExpanded = selectedSet === 'all' || selectedSet === set;
+
+                        return (
+                            <Accordion
+                                key={set}
+                                expanded={isExpanded}
+                                // We don't provide onChange here because the expansion is driven by the global filter (selectedSet)
+                                // If we want to allow manual toggling while keeping it controlled, we'd need local state overrides.
+                                // But based on the warning "changing default expanded state", simply fully controlling it 
+                                // via props (without defaultExpanded) solves the ambiguity.
+                                // If interactive collapsing is required even when filtered, we need more complex state.
+                                // For now, let's assume the filter drives visibility to fix the bug simply.
+                                sx={{ bgcolor: isExpanded ? 'background.paper' : 'default' }}
                             >
-                                <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                                    {set} ({docs.length})
-                                </Typography>
-                            </AccordionSummary>
-                            <AccordionDetails>
-                                {docs.map(({ filename, chunks }) => (
-                                    <DocumentRow
-                                        key={filename}
-                                        filename={filename}
-                                        chunks={chunks}
-                                        onSummarize={onSummarize}
-                                        onDelete={onDelete}
-                                    />
-                                ))}
-                            </AccordionDetails>
-                        </Accordion>
-                    ))}
+                                <AccordionSummary
+                                    expandIcon={<ExpandMoreIcon />}
+                                    sx={{ bgcolor: 'action.hover' }}
+                                // Optional: If we want to allow toggling, we need to wire this up to change selectedSet or local state
+                                // For this fix, let's stick to the filter-driven logic which seems to be the intent of "selectedSet"
+                                >
+                                    <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                                        {set} ({docs.length})
+                                    </Typography>
+                                </AccordionSummary>
+                                <AccordionDetails>
+                                    {docs.map(({ filename, chunks }) => (
+                                        <DocumentRow
+                                            key={filename}
+                                            filename={filename}
+                                            chunks={chunks}
+                                            onSummarize={onSummarize}
+                                            onDelete={onDelete}
+                                        />
+                                    ))}
+                                </AccordionDetails>
+                            </Accordion>
+                        );
+                    })}
                 </Box>
             )}
 

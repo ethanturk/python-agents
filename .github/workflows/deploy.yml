@@ -1,0 +1,101 @@
+name: Deploy to AKS with OpenTofu
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+  ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+  ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+  ARM_USE_OIDC: true
+
+jobs:
+  deploy-infra:
+    name: Provision Infrastructure
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./infra
+    outputs:
+      acr_login_server: ${{ steps.tofu-output.outputs.acr_login_server }}
+      kuberenetes_cluster_name: ${{ steps.tofu-output.outputs.kubernetes_cluster_name }}
+      resource_group_name: ${{ steps.tofu-output.outputs.resource_group_name }}
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Setup OpenTofu
+        uses: opentofu/setup-opentofu@v1
+        with:
+          tofu_version: 1.6.0
+
+      - name: OpenTofu Init
+        run: tofu init
+
+      - name: OpenTofu Plan
+        run: tofu plan -out=tfplan
+
+      - name: OpenTofu Apply
+        run: tofu apply -auto-approve tfplan
+
+      - name: Get Outputs
+        id: tofu-output
+        run: |
+          echo "acr_login_server=$(tofu output -raw acr_login_server)" >> $GITHUB_OUTPUT
+          echo "kubernetes_cluster_name=$(tofu output -raw kubernetes_cluster_name)" >> $GITHUB_OUTPUT
+          echo "resource_group_name=$(tofu output -raw resource_group_name)" >> $GITHUB_OUTPUT
+
+  build-and-deploy:
+    name: Build and Deploy to AKS
+    needs: deploy-infra
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Login to ACR
+        run: |
+          az acr login --name ${{ needs.deploy-infra.outputs.acr_login_server }}
+
+      - name: Build and Push Backend
+        run: |
+          docker build -t ${{ needs.deploy-infra.outputs.acr_login_server }}/backend:${{ github.sha }} ./backend
+          docker push ${{ needs.deploy-infra.outputs.acr_login_server }}/backend:${{ github.sha }}
+
+      - name: Build and Push Frontend
+        run: |
+          docker build -t ${{ needs.deploy-infra.outputs.acr_login_server }}/frontend:${{ github.sha }} ./frontend
+          docker push ${{ needs.deploy-infra.outputs.acr_login_server }}/frontend:${{ github.sha }}
+
+      - name: Set AKS Context
+        uses: azure/aks-set-context@v3
+        with:
+          resource-group: ${{ needs.deploy-infra.outputs.resource_group_name }}
+          cluster-name: ${{ needs.deploy-infra.outputs.kuberenetes_cluster_name }}
+
+      - name: Deploy to AKS
+        run: |
+          # Replace placeholders with actual image tags
+          sed -i "s|pythonagents.azurecr.io/backend:latest|${{ needs.deploy-infra.outputs.acr_login_server }}/backend:${{ github.sha }}|g" k8s/backend.yaml
+          sed -i "s|pythonagents.azurecr.io/frontend:latest|${{ needs.deploy-infra.outputs.acr_login_server }}/frontend:${{ github.sha }}|g" k8s/frontend.yaml
+          
+          kubectl apply -f k8s/backend.yaml
+          kubectl apply -f k8s/frontend.yaml
