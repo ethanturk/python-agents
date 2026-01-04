@@ -173,7 +173,8 @@ def delete_document_endpoint(filename: str, document_set: str = "all"):
              if root.exists():
                  for item in root.iterdir():
                      if item.is_dir():
-                         target = item / filename
+                         # filename might be a full path or relative path from DB, so strictly use .name
+                         target = item / Path(filename).name
                          if target.exists() and target.is_file():
                              try:
                                  os.remove(target)
@@ -183,7 +184,8 @@ def delete_document_endpoint(filename: str, document_set: str = "all"):
 
         elif document_set:
             sanitized_set = re.sub(r'[^a-z0-9_]', '_', document_set.lower().strip()).strip('_')
-            file_path = Path(MONITORED_DIR) / sanitized_set / filename
+            # filename might be a full path or relative path from DB, so strictly use .name
+            file_path = Path(MONITORED_DIR) / sanitized_set / Path(filename).name
             if file_path.exists():
                 try:
                     os.remove(file_path)
