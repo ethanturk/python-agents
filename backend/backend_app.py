@@ -194,7 +194,14 @@ def delete_document_endpoint(filename: str, document_set: str = "all"):
                     logger.error(f"Failed to delete file {file_path}: {e}")
                     # Continue to delete from DB even if FS delete fails (or maybe it was already gone)
 
-        db_service.delete_document(filename, document_set)
+        # Normalize filename for DB deletion
+        # The DB likely stores absolute paths (e.g. /data/monitored/...), but the URL param might be relative (data/monitored/...)
+        db_filename = filename
+        if not filename.startswith('/') and MONITORED_DIR.startswith('/'):
+             db_filename = '/' + filename
+        
+        logger.info(f"Deleting from Vector DB: {db_filename} (set={document_set})")
+        db_service.delete_document(db_filename, document_set)
         return {"status": "success", "message": f"Deleted {filename}"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
