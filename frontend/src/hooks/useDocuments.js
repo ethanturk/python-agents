@@ -8,6 +8,8 @@ export default function useDocuments() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [docToDelete, setDocToDelete] = useState(null);
 
+  const [docSetToDelete, setDocSetToDelete] = useState(null);
+
   const fetchDocuments = useCallback(async () => {
     setLoading(true);
     try {
@@ -40,24 +42,28 @@ export default function useDocuments() {
     }
   }, [groupedDocs, fetchDocuments]);
 
-  const handlePromptDelete = useCallback((filename) => {
+  const handlePromptDelete = useCallback((filename, documentSet) => {
     setDocToDelete(filename);
+    setDocSetToDelete(documentSet);
     setDeleteDialogOpen(true);
   }, []);
 
   const confirmDelete = useCallback(async () => {
     if (!docToDelete) return;
     try {
-      await axios.delete(`${API_BASE}/agent/documents/${docToDelete}`);
+      await axios.delete(`${API_BASE}/agent/documents/${docToDelete}`, {
+        params: { document_set: docSetToDelete }
+      });
       // Refresh list
       await fetchDocuments();
       setDeleteDialogOpen(false);
       setDocToDelete(null);
+      setDocSetToDelete(null);
     } catch (error) {
       console.error("Error deleting document:", error);
       alert("Failed to delete document");
     }
-  }, [docToDelete, fetchDocuments]);
+  }, [docToDelete, docSetToDelete, fetchDocuments]);
 
   return {
     groupedDocs,

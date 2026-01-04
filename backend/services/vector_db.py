@@ -111,11 +111,16 @@ class VectorDBService:
     def upsert_vectors(self, points: list[PointStruct]):
         self.client.upsert(collection_name=self.collection_name, points=points)
 
-    def delete_document(self, filename: str):
+    def delete_document(self, filename: str, document_set: str = None):
+         must_conditions = [FieldCondition(key="filename", match=MatchValue(value=filename))]
+         
+         if document_set and document_set != "all":
+             must_conditions.append(FieldCondition(key="document_set", match=MatchValue(value=document_set)))
+
          self.client.delete(
             collection_name=self.collection_name,
             points_selector=Filter(
-                must=[FieldCondition(key="filename", match=MatchValue(value=filename))]
+                must=must_conditions
             )
         )
 

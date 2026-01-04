@@ -132,9 +132,38 @@ def list_document_sets():
         return {"document_sets": []}
 
 @app.delete("/agent/documents/{filename:path}", dependencies=[Depends(get_current_user)])
-def delete_document_endpoint(filename: str):
+def delete_document_endpoint(filename: str, document_set: str = "all"):
+    import re
+    from pathlib import Path
+
     try:
-        db_service.delete_document(filename)
+        # Delete from filesystem if a specific set is provided or mapped
+        if document_set == "all":
+             # If "all", we need to find the file in any of the document set folders
+             root = Path(MONITORED_DIR)
+             if root.exists():
+                 for item in root.iterdir():
+                     if item.is_dir():
+                         target = item / filename
+                         if target.exists() and target.is_file():
+                             try:
+                                 os.remove(target)
+                                 logger.info(f"Deleted file from filesystem (set='{item.name}'): {target}")
+                             except Exception as e:
+                                 logger.error(f"Failed to delete file {target}: {e}")
+
+        elif document_set:
+            sanitized_set = re.sub(r'[^a-z0-9_]', '_', document_set.lower().strip()).strip('_')
+            file_path = Path(MONITORED_DIR) / sanitized_set / filename
+            if file_path.exists():
+                try:
+                    os.remove(file_path)
+                    logger.info(f"Deleted file from filesystem: {file_path}")
+                except Exception as e:
+                    logger.error(f"Failed to delete file {file_path}: {e}")
+                    # Continue to delete from DB even if FS delete fails (or maybe it was already gone)
+
+        db_service.delete_document(filename, document_set)
         return {"status": "success", "message": f"Deleted {filename}"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

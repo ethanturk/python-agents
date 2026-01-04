@@ -76,7 +76,8 @@ const DocumentRow = memo(({ filename, chunks, onSummarize, onDelete }) => {
                         <IconButton
                             onClick={(e) => {
                                 e.stopPropagation();
-                                onDelete(filename);
+                                const docSet = chunks[0]?.document_set;
+                                onDelete(filename, docSet);
                             }}
                             color="error"
                             size="small"
@@ -109,7 +110,7 @@ export default function DocumentListView({ groupedDocs, onDelete, onSummarize, o
             if (!groups[docSet]) groups[docSet] = [];
             groups[docSet].push({ filename, chunks });
         });
-        
+
         // Sort sets alphabetically
         return Object.keys(groups).sort().reduce((acc, key) => {
             acc[key] = groups[key].sort((a, b) => a.filename.localeCompare(b.filename));
@@ -121,8 +122,8 @@ export default function DocumentListView({ groupedDocs, onDelete, onSummarize, o
         <Paper className="p-2">
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                 <Typography variant="h5">Your Documents ({Object.keys(groupedDocs).length})</Typography>
-                <Button 
-                    variant="contained" 
+                <Button
+                    variant="contained"
                     startIcon={<CloudUploadIcon />}
                     onClick={() => setUploadOpen(true)}
                 >
@@ -160,8 +161,8 @@ export default function DocumentListView({ groupedDocs, onDelete, onSummarize, o
                 </Box>
             )}
 
-            <UploadDialog 
-                open={uploadOpen} 
+            <UploadDialog
+                open={uploadOpen}
                 onClose={() => setUploadOpen(false)}
                 onUploadComplete={() => {
                     if (onRefresh) onRefresh();
