@@ -16,11 +16,16 @@ export default function useDocuments() {
       const response = await axios.get(`${API_BASE}/agent/documents`);
       const docs = response.data.documents;
 
-      // Group by filename
+      // Backend now returns distinct files with chunk_count, so we convert to the expected format
       const groups = docs.reduce((acc, doc) => {
         const file = doc.filename || "Unknown";
-        if (!acc[file]) acc[file] = [];
-        acc[file].push(doc);
+        // Create a single entry with the chunk count
+        acc[file] = [{
+          id: doc.id,
+          filename: doc.filename,
+          document_set: doc.document_set,
+          chunk_count: doc.chunk_count
+        }];
         return acc;
       }, {});
 

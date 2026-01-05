@@ -95,7 +95,7 @@ const DocumentRow = memo(({ filename, chunks, onSummarize, onDelete }) => {
             <Collapse in={expanded}>
                 <Box sx={{ p: 2, borderTop: 1, borderColor: 'divider' }}>
                     <Typography variant="subtitle2" className="mb-1 text-secondary">Full Path: {filename}</Typography>
-                    <Typography variant="body2">{chunks.length} chunks indexed.</Typography>
+                    <Typography variant="body2">{chunks[0]?.chunk_count || chunks.length} chunks indexed.</Typography>
                 </Box>
             </Collapse>
         </Paper>

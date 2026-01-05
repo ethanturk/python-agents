@@ -111,19 +111,20 @@ class VectorDBService:
             logger.error(f"Delete failed: {e}")
             raise e
 
-    async def list_documents(self, limit=100, offset=0):
+    async def list_documents(self, limit=1000, offset=0):
         if not self.supabase.is_available():
              return []
 
         try:
             response = self.supabase.select(
-                self.table_name, 
+                self.table_name,
                 columns="id, content, filename, document_set, metadata",
                 range_start=offset,
                 range_end=offset + limit - 1
             )
-            
+
             rows = response.data
+            logger.info(f"list_documents returned {len(rows)} rows (limit={limit}, offset={offset})")
             results = []
             for row in rows:
                  payload = {
@@ -136,6 +137,58 @@ class VectorDBService:
             return results
         except Exception as e:
             logger.error(f"List documents failed: {e}")
+            return []
+
+    async def get_distinct_document_sets(self) -> List[str]:
+        """Get distinct document_set values from the database."""
+        if not self.supabase.is_available():
+            return []
+
+        try:
+            sets = self.supabase.select_distinct(self.table_name, "document_set")
+            logger.info(f"Found {len(sets)} distinct document sets")
+            return sorted(sets)
+        except Exception as e:
+            logger.error(f"Get distinct document sets failed: {e}")
+            return []
+
+    async def get_distinct_filenames(self) -> List[Dict[str, Any]]:
+        """Get distinct filenames with their document_set and a sample chunk count."""
+        if not self.supabase.is_available():
+            return []
+
+        try:
+            # Get all distinct filename and document_set combinations
+            response = self.supabase.select(
+                self.table_name,
+                columns="filename, document_set",
+                range_start=0,
+                range_end=9999  # Large range to get all unique files
+            )
+
+            rows = response.data
+            logger.info(f"Retrieved {len(rows)} rows for filename grouping")
+
+            # Group by filename to count chunks
+            file_groups = {}
+            for row in rows:
+                filename = row.get('filename')
+                document_set = row.get('document_set', 'all')
+
+                if filename:
+                    if filename not in file_groups:
+                        file_groups[filename] = {
+                            'filename': filename,
+                            'document_set': document_set,
+                            'chunk_count': 0
+                        }
+                    file_groups[filename]['chunk_count'] += 1
+
+            result = list(file_groups.values())
+            logger.info(f"Found {len(result)} distinct filenames")
+            return result
+        except Exception as e:
+            logger.error(f"Get distinct filenames failed: {e}")
             return []
 
     async def close(self):

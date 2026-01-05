@@ -179,15 +179,16 @@ def search_documents_endpoint(request: SearchRequest):
 @app.get("/agent/documents", dependencies=[Depends(get_current_user)])
 async def list_documents():
     try:
-        all_docs = await db_service.list_documents()
+        # Use efficient distinct filename query instead of fetching all rows
+        file_data = await db_service.get_distinct_filenames()
         docs = []
-        for point in all_docs:
-             docs.append({
-                 "id": point.id,
-                 "filename": point.payload.get("filename", "unknown"),
-                 "document_set": point.payload.get("document_set", "all"),
-                 "content_snippet": point.payload.get("content", "")[:200]
-             })
+        for file_info in file_data:
+            docs.append({
+                "id": file_info['filename'],  # Use filename as ID for grouping
+                "filename": file_info['filename'],
+                "document_set": file_info['document_set'],
+                "chunk_count": file_info['chunk_count']
+            })
         return {"documents": docs}
     except Exception as e:
         logger.warning(f"Error listing documents: {e}")
@@ -196,11 +197,9 @@ async def list_documents():
 @app.get("/agent/documentsets", dependencies=[Depends(get_current_user)])
 async def list_document_sets():
     try:
-        all_docs = await db_service.list_documents()
-        sets = set()
-        for point in all_docs:
-            sets.add(point.payload.get("document_set", "all"))
-        return {"document_sets": list(sets)}
+        # Use efficient distinct query instead of fetching all rows
+        sets = await db_service.get_distinct_document_sets()
+        return {"document_sets": sets}
     except Exception as e:
         logger.warning(f"Error listing document sets: {e}")
         return {"document_sets": []}

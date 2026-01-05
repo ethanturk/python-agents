@@ -149,6 +149,36 @@ class SupabaseService:
             logger.error(f"Select from {table} failed: {e}")
             raise
 
+    def select_distinct(self, table: str, column: str) -> Any:
+        """
+        Select distinct values from a specific column.
+
+        Args:
+            table: Table name
+            column: Column to get distinct values from
+
+        Returns:
+            Response with distinct values
+
+        Raises:
+            RuntimeError: If client is not initialized
+            Exception: If select fails
+        """
+        try:
+            client = self._ensure_client()
+            # Use select with distinct - PostgREST syntax
+            query = client.table(table).select(column).limit(1000)
+            response = query.execute()
+
+            # Extract unique values from the response
+            if response.data:
+                unique_values = list(set(row[column] for row in response.data if row.get(column)))
+                return unique_values
+            return []
+        except Exception as e:
+            logger.error(f"Select distinct from {table}.{column} failed: {e}")
+            raise
+
     def close(self):
         """
         Close the Supabase client and cleanup resources.
