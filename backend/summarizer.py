@@ -13,24 +13,15 @@ from docling.document_converter import DocumentConverter, PdfFormatOption
 
 # PydanticAI imports
 from pydantic_ai import Agent
-from pydantic_ai.models.openai import OpenAIChatModel
-from pydantic_ai.providers.openai import OpenAIProvider
 
 # LangChain Text Splitter (still used)
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 import config
+from utils.file_conversion import FileConversionUtils
+from services.llm import LLMService
 
 logger = logging.getLogger(__name__)
-
-def get_model():
-    return OpenAIChatModel(
-        config.OPENAI_MODEL,
-        provider=OpenAIProvider(
-            base_url=config.OPENAI_API_BASE,
-            api_key=config.OPENAI_API_KEY
-        )
-    )
 
 def summarize_document(source: Union[str, BytesIO], filename: str = "document") -> str:
     """
@@ -52,31 +43,17 @@ def summarize_document(source: Union[str, BytesIO], filename: str = "document") 
             is_xls = True
 
         if is_xls:
-            try:
-                # Read the .xls file
-                if isinstance(source, BytesIO):
-                    df_dict = pd.read_excel(source, sheet_name=None)
-                else: # source is a filepath
-                    df_dict = pd.read_excel(source, sheet_name=None)
-                
-                # Create a temporary .xlsx file
-                temp_xlsx = tempfile.NamedTemporaryFile(suffix='.xlsx', delete=False)
-                temp_xlsx_path = temp_xlsx.name
-                temp_xlsx.close()
-                
-                # Write all sheets to the new .xlsx file
-                with pd.ExcelWriter(temp_xlsx_path, engine='openpyxl') as writer:
-                        for sheet_name, df in df_dict.items():
-                            df.to_excel(writer, sheet_name=sheet_name, index=False)
-                
-                # Update source to point to the new temp file
-                # Docling works best with file paths for Excel usually, or streams. 
-                # Let's use the file path of the converted file.
-                input_source = temp_xlsx_path
-                
-            except Exception as e:
-                logger.error(f"Failed to convert .xls {filename}: {str(e)}")
-                return f"Error: Failed to convert .xls file: {str(e)}"
+            temp_xlsx_path = None
+            if isinstance(source, BytesIO):
+                temp_xlsx_path = FileConversionUtils.convert_xls_to_xlsx(source, filename)
+            else:
+                 temp_xlsx_path = FileConversionUtils.convert_xls_to_xlsx(source, filename)
+            
+            if not temp_xlsx_path:
+                return f"Error: Failed to convert .xls file"
+            
+            # Update source to point to the new temp file
+            input_source = temp_xlsx_path
 
         # Convert using Docling
         try:
@@ -110,11 +87,8 @@ def summarize_document(source: Union[str, BytesIO], filename: str = "document") 
             logger.error(f"Error converting document {filename}: {e}")
             return f"Error reading document: {str(e)}"
 
-        if temp_xlsx_path and os.path.exists(temp_xlsx_path):
-            try:
-                os.remove(temp_xlsx_path)
-            except:
-                pass
+        if temp_xlsx_path:
+            FileConversionUtils.cleanup_temp_file(temp_xlsx_path)
 
         if not content.strip():
             return "Error: Document is empty or could not be read."
@@ -135,7 +109,7 @@ def summarize_document(source: Union[str, BytesIO], filename: str = "document") 
         if len(chunks) == 1:
             # Single chunk - standard summary
             agent = Agent(
-                get_model(),
+                LLMService.get_model(),
                 system_prompt="You are a helpful assistant that summarizes documents."
             )
             user_msg = f"Please provide a concise summary of the following document content (converted to markdown):\n\n{chunks[0]}"
@@ -148,7 +122,7 @@ def summarize_document(source: Union[str, BytesIO], filename: str = "document") 
             
             # Map Step
             map_agent = Agent(
-                get_model(),
+                LLMService.get_model(),
                 system_prompt="You are a helpful assistant reading a part of a larger document."
             )
             
@@ -166,7 +140,7 @@ def summarize_document(source: Union[str, BytesIO], filename: str = "document") 
             combined_summaries = "\n\n".join(chunk_summaries)
             
             reduce_agent = Agent(
-                get_model(),
+                LLMService.get_model(),
                 system_prompt="You are a helpful assistant that consolidates summaries."
             )
             
@@ -177,11 +151,8 @@ def summarize_document(source: Union[str, BytesIO], filename: str = "document") 
 
     except Exception as e:
         # Cleanup in case of outer error
-        if temp_xlsx_path and os.path.exists(temp_xlsx_path):
-            try:
-                os.remove(temp_xlsx_path)
-            except:
-                pass
+        if temp_xlsx_path:
+             FileConversionUtils.cleanup_temp_file(temp_xlsx_path)
 
         logger.error(f"Summarization failed: {e}")
         return f"Summarization failed: {str(e)}"

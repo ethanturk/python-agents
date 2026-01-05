@@ -17,7 +17,9 @@ import gc
 from io import BytesIO
 from pathlib import Path
 import config
+import config
 from services.llm import LLMService
+from utils.file_conversion import FileConversionUtils
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +27,7 @@ class IngestionService:
     def __init__(self):
         self.splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
         self.converter = self._get_docling_converter()
+        self._vlm_converter_instance = None
 
     def _get_docling_converter(self):
         pipeline_options = PdfPipelineOptions()
@@ -43,14 +46,21 @@ class IngestionService:
             }
         )
 
-    def _get_vlm_converter(self):
-        return DocumentConverter(
-            format_options={
-                InputFormat.PDF: PdfFormatOption(
-                    pipeline_cls=VlmPipeline,
-                )
-            }
-        )
+
+
+    @property
+    def _vlm_converter(self):
+        """Singleton accessor for VLM converter to avoid heavy re-initialization."""
+        if self._vlm_converter_instance is None:
+            logger.info("Initializing Singleton VLM Converter...")
+            self._vlm_converter_instance = DocumentConverter(
+                format_options={
+                    InputFormat.PDF: PdfFormatOption(
+                        pipeline_cls=VlmPipeline,
+                    )
+                }
+            )
+        return self._vlm_converter_instance
 
     def process_file(self, filename, content=None, filepath=None, document_set="all"):
         """Process a single file: Convert -> Chunk -> Embed -> Index."""
@@ -63,22 +73,16 @@ class IngestionService:
             
             # Handle .xls -> .xlsx conversion
             if filename.lower().endswith('.xls'):
-                try:
-                    if content:
-                        df_dict = pd.read_excel(BytesIO(content), sheet_name=None)
-                    else:
-                        df_dict = pd.read_excel(filepath, sheet_name=None)
-                    
-                    temp_xlsx = tempfile.NamedTemporaryFile(suffix='.xlsx', delete=False)
-                    temp_file_to_cleanup = temp_xlsx.name
-                    temp_xlsx.close()
-                    
-                    with pd.ExcelWriter(temp_file_to_cleanup, engine='openpyxl') as writer:
-                         for sheet_name, df in df_dict.items():
-                             df.to_excel(writer, sheet_name=sheet_name, index=False)
-                    source = temp_file_to_cleanup
-                except Exception as e:
-                    return f"Failed to convert .xls {filename}: {str(e)}"
+                if content:
+                    temp_xlsx = FileConversionUtils.convert_xls_to_xlsx(BytesIO(content), filename)
+                else:
+                    temp_xlsx = FileConversionUtils.convert_xls_to_xlsx(filepath, filename)
+                
+                if not temp_xlsx:
+                    return f"Failed to convert .xls {filename}"
+                
+                temp_file_to_cleanup = temp_xlsx
+                source = temp_xlsx
             
             elif content:
                  source = DocumentStream(name=filename, stream=BytesIO(content))
@@ -98,11 +102,7 @@ class IngestionService:
                     pass
             
             # Cleanup temp file
-            if temp_file_to_cleanup and os.path.exists(temp_file_to_cleanup):
-                try:
-                    os.remove(temp_file_to_cleanup)
-                except:
-                    pass
+            FileConversionUtils.cleanup_temp_file(temp_file_to_cleanup)
 
         except Exception as e:
             return f"Conversion failed for {filename}: {e}"
@@ -159,9 +159,8 @@ class IngestionService:
             else:
                  return "No content or filepath provided."
 
-            # Use a fresh VLM converter (heavy initialization might happen here)
-            vlm_converter = self._get_vlm_converter()
-            doc_result = vlm_converter.convert(source)
+            # Use Singleton VLM converter
+            doc_result = self._vlm_converter.convert(source)
             markdown_content = doc_result.document.export_to_markdown()
             
             # Cleanup backend resources
