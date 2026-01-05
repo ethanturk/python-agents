@@ -19,6 +19,9 @@ services:
       DATABASE_CONN_STRING: ${DATABASE_CONN_STRING}
       API_URL: ${API_URL}
       GOOGLE_APPLICATION_CREDENTIALS: /app/service-account.json
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
     volumes:
       - type: volume
         source: nas
