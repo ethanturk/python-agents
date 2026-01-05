@@ -49,13 +49,12 @@ def get_indexed_filenames():
     from services.vector_db import VectorDBService
     
     async def fetch_ids():
-        # Create a local service instance to avoid pool conflicts in this thread
+        # Use the global service instance (singleton pattern)
+        # DO NOT close it - it's shared across the application
         temp_service = VectorDBService()
-        try:
-             docs = await temp_service.list_documents(limit=10000)
-             return {d.payload.get("filename") for d in docs if d.payload}
-        finally:
-             await temp_service.close()
+        docs = await temp_service.list_documents(limit=10000)
+        return {d.payload.get("filename") for d in docs if d.payload}
+        # Note: No close() call - the singleton is managed by the app lifecycle
 
     try:
         return asyncio.run(fetch_ids())

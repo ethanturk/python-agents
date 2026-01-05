@@ -74,8 +74,11 @@ async def _ingest_docs_async(files_data, use_vlm=False):
                 results.append(f"Failed {filename}: {e}")
                 
         return "\n".join(results)
-    finally:
-        await db_service.close()
+    except Exception as e:
+        logger.error(f"Ingestion task failed: {e}")
+        raise
+    # Note: DO NOT close db_service - it's a global singleton shared across tasks
+    # In Celery workers, each process has its own copy, managed by worker lifecycle
 
 @app.task
 def ingest_docs_task(files_data):
