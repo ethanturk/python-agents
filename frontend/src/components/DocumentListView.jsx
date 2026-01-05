@@ -32,6 +32,8 @@ const DocumentRow = memo(({ filename, chunks, onSummarize, onDelete }) => {
                         setExpanded(!expanded);
                     }}
                     sx={{ mr: 10 }}
+                    aria-label={expanded ? 'Collapse document details' : 'Expand document details'}
+                    aria-expanded={expanded}
                 >
                     <ExpandMoreIcon sx={{ transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)', transition: '0.3s' }} />
                 </IconButton>
@@ -82,6 +84,8 @@ const DocumentRow = memo(({ filename, chunks, onSummarize, onDelete }) => {
                             color="error"
                             size="small"
                             data-testid={`delete-btn-${filename}`}
+                            aria-label={`Delete ${getFilenameOnly(filename)}`}
+                            title={`Delete ${getFilenameOnly(filename)}`}
                         >
                             <DeleteIcon />
                         </IconButton>

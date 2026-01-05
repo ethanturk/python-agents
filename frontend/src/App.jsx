@@ -1,24 +1,28 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { Container, Box, CircularProgress, Snackbar, Alert } from '@mui/material';
 import axios from 'axios';
 import './App.css';
+import { auth } from './firebase';
 
 import NavBar from './components/NavBar';
-import DocumentListView from './components/DocumentListView';
-import SearchView from './components/SearchView';
-import SummarizeView from './components/SummarizeView';
 import DeleteConfirmDialog from './components/DeleteConfirmDialog';
 import NotificationSidebar from './components/NotificationSidebar';
 import { useAuth } from './contexts/AuthContext';
 import darkTheme from './theme';
+
+// Lazy load view components for code splitting
+const SearchView = lazy(() => import('./components/SearchView'));
+const DocumentListView = lazy(() => import('./components/DocumentListView'));
+const SummarizeView = lazy(() => import('./components/SummarizeView'));
 
 // Hooks
 import useWebSocket from './hooks/useWebSocket';
 import useDocuments from './hooks/useDocuments';
 import useSearch from './hooks/useSearch';
 import useSummarization from './hooks/useSummarization';
+import useOnlineStatus from './hooks/useOnlineStatus';
 
 function App() {
   const { currentUser, loginWithGoogle } = useAuth();
@@ -56,6 +60,7 @@ function App() {
       query, setQuery, searchData, searchLimit, setSearchLimit,
       loading: searchLoading,
       searchChatHistory, searchChatLoading,
+      validationError: searchValidationError,
       handleSearch, handleSendSearchChat
   } = useSearch();
 
@@ -84,14 +89,28 @@ function App() {
   }, [handleNewNotification, setActiveSummaries]);
 
   const { isConnected, isConnecting } = useWebSocket({ onMessage: handleWsMessage });
+  const isOnline = useOnlineStatus();
+  const [showWsWarning, setShowWsWarning] = useState(false);
+
+  // Show WebSocket warning only after 5 seconds of disconnection
+  useEffect(() => {
+    if (!isConnected && !isConnecting && isOnline) {
+      const timer = setTimeout(() => setShowWsWarning(true), 5000);
+      return () => clearTimeout(timer);
+    } else {
+      setShowWsWarning(false);
+    }
+  }, [isConnected, isConnecting, isOnline]);
 
   // --- Effects ---
 
-  // Axios Interceptor for Auth Token
+  // Axios Interceptor for Auth Token - Only set up once
   useEffect(() => {
     const interceptor = axios.interceptors.request.use(async (config) => {
-      if (currentUser) {
-        const token = await currentUser.getIdToken();
+      // Get fresh user from auth context each request
+      const user = auth.currentUser;
+      if (user) {
+        const token = await user.getIdToken();
         config.headers.Authorization = `Bearer ${token}`;
       }
       return config;
@@ -99,10 +118,11 @@ function App() {
       return Promise.reject(error);
     });
 
+    // Only eject on component unmount, not on currentUser change
     return () => {
        axios.interceptors.request.eject(interceptor);
     }
-  }, [currentUser]);
+  }, []); // Empty dependency array - only run once
 
   // Initial Data Fetch
   useEffect(() => {
@@ -175,6 +195,31 @@ function App() {
   return (
     <ThemeProvider theme={darkTheme}>
       <CssBaseline />
+
+      {/* Skip to main content link for accessibility */}
+      <a
+        href="#main-content"
+        style={{
+          position: 'absolute',
+          left: '-9999px',
+          zIndex: 999,
+          padding: '1em',
+          backgroundColor: '#000',
+          color: '#fff',
+          textDecoration: 'none',
+          border: '2px solid #fff',
+        }}
+        onFocus={(e) => {
+          e.target.style.left = '0';
+          e.target.style.top = '0';
+        }}
+        onBlur={(e) => {
+          e.target.style.left = '-9999px';
+        }}
+      >
+        Skip to main content
+      </a>
+
       <NavBar
         onShowSearch={handleSwitchToSearch}
         onShowDocuments={handleSwitchToDocs}
@@ -194,46 +239,59 @@ function App() {
         onDeleteCachedSummary={handleDeleteCachedSummary}
       />
 
-      <Container maxWidth="xl" className={['mt-4', 'mb-2'].join(' ')}>
+      <Container maxWidth="xl" className={['mt-4', 'mb-2'].join(' ')} id="main-content">
         {/* Global Loading (except search view) */}
         {docsLoading && view === 'list' && <Box className="flex-justify-center my-4"><CircularProgress /></Box>}
 
-        {/* Connection Status Indicator */}
-        {!isConnected && !isConnecting && (
-          <Alert severity="warning" className="mb-2">
-            WebSocket disconnected. Attempting to reconnect...
+        {/* Offline Status Indicator */}
+        {!isOnline && (
+          <Alert severity="error" className="mb-2">
+            No internet connection. Please check your network.
+          </Alert>
+        )}
+
+        {/* Connection Status Indicator - Only show after 5 seconds */}
+        {showWsWarning && (
+          <Alert severity="info" className="mb-2">
+            Real-time updates temporarily unavailable. Reconnecting...
           </Alert>
         )}
 
         {/* View: Search View (Default) */}
         {view === 'search' && (
-          <SearchView
-            query={query}
-            setQuery={setQuery}
-            onSearch={handleSearch}
-            searchData={searchData}
-            searchLimit={searchLimit}
-            setSearchLimit={setSearchLimit}
-            loading={searchLoading}
-            searchChatHistory={searchChatHistory}
-            onSendSearchChat={handleSendSearchChat}
-            searchChatLoading={searchChatLoading}
-          />
+          <Suspense fallback={<Box className="flex-justify-center my-4"><CircularProgress /></Box>}>
+            <SearchView
+              query={query}
+              setQuery={setQuery}
+              onSearch={handleSearch}
+              searchData={searchData}
+              searchLimit={searchLimit}
+              setSearchLimit={setSearchLimit}
+              loading={searchLoading}
+              searchChatHistory={searchChatHistory}
+              onSendSearchChat={handleSendSearchChat}
+              searchChatLoading={searchChatLoading}
+              validationError={searchValidationError}
+            />
+          </Suspense>
         )}
 
         {/* View: Document List */}
         {!docsLoading && view === 'list' && (
-          <DocumentListView
-            groupedDocs={groupedDocs}
-            onDelete={handlePromptDelete}
-            onSummarize={handleSummarizeFromList}
-            onRefresh={fetchDocuments}
-          />
+          <Suspense fallback={<Box className="flex-justify-center my-4"><CircularProgress /></Box>}>
+            <DocumentListView
+              groupedDocs={groupedDocs}
+              onDelete={handlePromptDelete}
+              onSummarize={handleSummarizeFromList}
+              onRefresh={fetchDocuments}
+            />
+          </Suspense>
         )}
 
         {/* View: Summarize */}
         {view === 'summarize' && (
-          <SummarizeView
+          <Suspense fallback={<Box className="flex-justify-center my-4"><CircularProgress /></Box>}>
+            <SummarizeView
             groupedDocs={groupedDocs}
             onSummarize={handleSummarizeRequest}
             summaryResult={summaryResult}
@@ -248,6 +306,7 @@ function App() {
             onDeleteCachedSummary={handleDeleteCachedSummary}
             activeSummaries={activeSummaries}
           />
+          </Suspense>
         )}
 
         {/* Delete Confirmation Dialog */}

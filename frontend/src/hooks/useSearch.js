@@ -2,18 +2,31 @@ import { useState, useCallback } from 'react';
 import axios from 'axios';
 import { API_BASE } from '../config';
 import { useDocumentSet } from '../contexts/DocumentSetContext';
+import { SEARCH } from '../constants';
 
 export default function useSearch() {
   const { selectedSet } = useDocumentSet();
   const [searchData, setSearchData] = useState({ answer: null, results: [] });
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
-  const [searchLimit, setSearchLimit] = useState(10);
+  const [searchLimit, setSearchLimit] = useState(SEARCH.DEFAULT_LIMIT);
   const [searchChatHistory, setSearchChatHistory] = useState([]);
   const [searchChatLoading, setSearchChatLoading] = useState(false);
+  const [validationError, setValidationError] = useState('');
 
   const handleSearch = useCallback(async () => {
-    if (!query) return;
+    // Validate query
+    if (!query || !query.trim()) {
+      setValidationError('Please enter a search query');
+      return;
+    }
+
+    if (query.trim().length < SEARCH.MIN_QUERY_LENGTH) {
+      setValidationError(`Search query must be at least ${SEARCH.MIN_QUERY_LENGTH} characters`);
+      return;
+    }
+
+    setValidationError('');
     setLoading(true);
     try {
       const response = await axios.post(`${API_BASE}/agent/search`, { 
@@ -67,6 +80,7 @@ export default function useSearch() {
     loading,
     searchChatHistory,
     searchChatLoading,
+    validationError,
     handleSearch,
     handleSendSearchChat
   };

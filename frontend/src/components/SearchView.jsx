@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo, useState, useCallback, memo } from 'react';
 import { Box, Paper, Typography, Accordion, AccordionSummary, AccordionDetails, Alert, List, ListItem, ListItemText, Button, Divider, TextField, FormControl, InputLabel, Select, MenuItem, CircularProgress, IconButton } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
@@ -8,11 +8,22 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { getWebLink, getFilenameOnly } from '../utils';
 
-export default function SearchView({ query, setQuery, onSearch, searchData, searchLimit, setSearchLimit, loading, searchChatHistory, onSendSearchChat, searchChatLoading }) {
-    // Calculate unique filenames for display
-    const uniqueFiles = [...new Set(searchData.results.map(r => r.metadata.filename))];
+const SearchView = memo(function SearchView({ query, setQuery, onSearch, searchData, searchLimit, setSearchLimit, loading, searchChatHistory, onSendSearchChat, searchChatLoading, validationError }) {
+    // Memoize unique filenames calculation
+    const uniqueFiles = useMemo(
+        () => [...new Set(searchData.results.map(r => r.metadata.filename))],
+        [searchData.results]
+    );
 
-    const [question, setQuestion] = React.useState('');
+    // Memoize ReactMarkdown rendering for answer
+    const renderedAnswer = useMemo(
+        () => searchData.answer ? (
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>{searchData.answer}</ReactMarkdown>
+        ) : null,
+        [searchData.answer]
+    );
+
+    const [question, setQuestion] = useState('');
 
     const handleChatSubmit = (e) => {
         e.preventDefault();
@@ -31,6 +42,8 @@ export default function SearchView({ query, setQuery, onSearch, searchData, sear
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && onSearch()}
+                    error={!!validationError}
+                    helperText={validationError}
                 />
                 <FormControl className="ml-2" variant="outlined" style={{ minWidth: 100 }}>
                     <InputLabel id="limit-select-label">Limit</InputLabel>
@@ -68,7 +81,7 @@ export default function SearchView({ query, setQuery, onSearch, searchData, sear
                 <Paper className="answer-paper">
                     <Typography variant="h5" gutterBottom className="answer-title">Generative Answer</Typography>
                     <Box className="markdown-body markdown-search">
-                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{searchData.answer}</ReactMarkdown>
+                        {renderedAnswer}
                     </Box>
                 </Paper>
             )}
@@ -146,4 +159,6 @@ export default function SearchView({ query, setQuery, onSearch, searchData, sear
             }
         </Box >
     );
-}
+});
+
+export default SearchView;

@@ -65,7 +65,13 @@ function NavBar({ onShowSearch, onShowDocuments, onShowSummarize, onShowNotifica
                                 ))}
                             </Select>
                         </FormControl>
-                        <IconButton size="small" onClick={fetchDocumentSets} sx={{ ml: 0.5 }} title="Refresh">
+                        <IconButton
+                            size="small"
+                            onClick={fetchDocumentSets}
+                            sx={{ ml: 0.5 }}
+                            title="Refresh document sets"
+                            aria-label="Refresh document sets"
+                        >
                             <RefreshIcon fontSize="small" />
                         </IconButton>
                     </Box>
@@ -111,15 +117,38 @@ function NavBar({ onShowSearch, onShowDocuments, onShowSummarize, onShowNotifica
                             <Button color="inherit" onClick={onShowSearch}>Search</Button>
                             <Button color="inherit" onClick={onShowDocuments}>Documents</Button>
                             <Button color="inherit" onClick={onShowSummarize}>Summarize</Button>
-                            <IconButton color="inherit" onClick={onShowNotifications}>
+                            <IconButton
+                                color="inherit"
+                                onClick={onShowNotifications}
+                                aria-label={`Show notifications${unreadCount > 0 ? `, ${unreadCount} unread` : ''}`}
+                            >
                                 <Badge badgeContent={unreadCount} color="error">
-                                    {loading ? <CircularProgress size={24} color="inherit" /> : (showSuccess ? <CheckCircleIcon color="success" /> : <Notifications />)}
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                        {loading ? (
+                                            <>
+                                                <CircularProgress size={20} color="inherit" aria-label="Loading notifications" />
+                                                <Typography variant="caption" sx={{ fontSize: '0.7rem' }}>Loading</Typography>
+                                            </>
+                                        ) : showSuccess ? (
+                                            <>
+                                                <CheckCircleIcon color="success" aria-label="Notifications loaded successfully" />
+                                                <Typography variant="caption" sx={{ fontSize: '0.7rem', color: 'success.main' }}>Done</Typography>
+                                            </>
+                                        ) : (
+                                            <Notifications />
+                                        )}
+                                    </Box>
                                 </Badge>
                             </IconButton>
 
                             <Box sx={{ ml: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
                                 <Typography variant="caption" sx={{ opacity: 0.7 }}>{currentUser?.email}</Typography>
-                                <IconButton color="inherit" onClick={logout} title="Logout">
+                                <IconButton
+                                    color="inherit"
+                                    onClick={logout}
+                                    title="Logout"
+                                    aria-label="Logout"
+                                >
                                     <Logout />
                                 </IconButton>
                             </Box>

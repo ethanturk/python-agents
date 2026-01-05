@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { API_BASE } from '../config';
+import { STORAGE_KEYS, SUMMARIZATION } from '../constants';
 
-const STORAGE_KEY = 'summarization_cache_v2';
-const EXPIRY_TIME = 24 * 60 * 60 * 1000; // 24 hours
+const STORAGE_KEY = STORAGE_KEYS.SUMMARIZATION_STATE;
 
 export default function useSummarization({ onShowSnackbar }) {
   // Summarize Result State
@@ -39,7 +39,7 @@ export default function useSummarization({ onShowSnackbar }) {
 
           if (data.cache) {
             Object.entries(data.cache).forEach(([key, value]) => {
-              if (now - value.timestamp < EXPIRY_TIME) {
+              if (now - value.timestamp < SUMMARIZATION.CACHE_EXPIRY_TIME) {
                 validCache[key] = value;
                 initialNotifications.push({
                   filename: key,
@@ -142,7 +142,7 @@ export default function useSummarization({ onShowSnackbar }) {
           }
           return prev;
         });
-      }, 5 * 60 * 1000); // 5m timeout
+      }, SUMMARIZATION.REQUEST_TIMEOUT);
 
     } catch (error) {
       console.error("Error summarizing:", error);
