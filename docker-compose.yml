@@ -2,10 +2,8 @@ services:
   backend:
     build: ./backend
     hostname: backend
-    ports:
     network_mode: "host"
     command: [ "uvicorn", "backend_app:app", "--host", "0.0.0.0", "--port", "${BACKEND_PORT:-8000}", "--loop", "asyncio" ]
-    # ports: - "${BACKEND_PORT}:8000" (Removed for host mode)
     environment:
       BASE_URL: ${BASE_URL:-192.168.5.204}
       CELERY_BROKER_URL: ${CELERY_BROKER_URL:-amqp://guest:guest@${BASE_URL}:5672//}
