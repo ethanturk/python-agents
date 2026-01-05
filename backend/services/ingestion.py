@@ -4,9 +4,9 @@ from docling.datamodel.pipeline_options import PdfPipelineOptions
 from docling.pipeline.vlm_pipeline import VlmPipeline
 from docling.backend.pypdfium2_backend import PyPdfiumDocumentBackend
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from services.llm import get_embeddings_model
+from services.llm import get_embeddings_model, LLMService # ensure imports match existing patterns
 from services.vector_db import db_service
-from qdrant_client.http.models import PointStruct
+
 import pandas as pd
 import tempfile
 import os
@@ -17,8 +17,6 @@ import gc
 from io import BytesIO
 from pathlib import Path
 import config
-import config
-from services.llm import LLMService
 from utils.file_conversion import FileConversionUtils
 
 logger = logging.getLogger(__name__)
@@ -46,8 +44,6 @@ class IngestionService:
             }
         )
 
-
-
     @property
     def _vlm_converter(self):
         """Singleton accessor for VLM converter to avoid heavy re-initialization."""
@@ -62,17 +58,21 @@ class IngestionService:
             )
         return self._vlm_converter_instance
 
-    def process_file(self, filename, content=None, filepath=None, document_set="all"):
-        """Process a single file: Convert -> Chunk -> Embed -> Index."""
-        logger.info(f"Processing file: {filename}")
+    async def _process_content_flow(self, filename, content=None, filepath=None, document_set="all", use_vlm=False):
+        """Internal shared flow for processing content."""
+        pipeline_type = "vlm" if use_vlm else "standard"
+        logger.info(f"Processing file: {filename} (Pipeline: {pipeline_type})")
         
         # 1. Convert to Markdown
+        chunk_source_failed = False
+        markdown_content = ""
+        
         try:
             source = None
             temp_file_to_cleanup = None
             
-            # Handle .xls -> .xlsx conversion
-            if filename.lower().endswith('.xls'):
+            # Handle .xls -> .xlsx conversion (Standard only, VLM unlikely to take XLS unless converted to PDF/Image, but keeping valid logic)
+            if filename.lower().endswith('.xls') and not use_vlm:
                 if content:
                     temp_xlsx = FileConversionUtils.convert_xls_to_xlsx(BytesIO(content), filename)
                 else:
@@ -91,7 +91,14 @@ class IngestionService:
             else:
                  return "No content or filepath provided."
 
-            doc_result = self.converter.convert(source)
+            # Select converter
+            converter = self._vlm_converter if use_vlm else self.converter
+            
+            # Convert
+            # Docling conversion is sync (CPU bound). In a real async app, we might want to run this in a threadpool.
+            # strict async: loop.run_in_executor(...)
+            # For now, keeping it sync blocking in the worker (assuming worker is threaded or separate process)
+            doc_result = converter.convert(source)
             markdown_content = doc_result.document.export_to_markdown()
             
             # Cleanup backend resources
@@ -117,96 +124,48 @@ class IngestionService:
         # 3. Embedding
         vectors = []
         embeddings_model = LLMService.get_embeddings()
-        # The langchain embeddings model doesn't expose 'client' directly in a way that matches the openai client usage in async_tasks
-        # But we can use embed_documents
         
         try:
-            vectors = embeddings_model.embed_documents(chunks)
-        except Exception as e:
-            return f"Embedding failed for {filename}: {e}"
-
-        # 4. Upsert (Indexing)
-        points = []
-        for i, chunk in enumerate(chunks):
-            points.append(PointStruct(
-                id=str(uuid.uuid4()),
-                vector=vectors[i],
-                payload={"filename": filename, "content": chunk, "document_set": document_set}
-            ))
-        
-        batch_size = 64
-        for i in range(0, len(points), batch_size):
-            try:
-                batch_points = points[i : i + batch_size]
-                db_service.upsert_vectors(batch_points)
-            except Exception as e:
-                return f"Upsert failed for batch {i}: {e}"
-        
-        gc.collect()
-        return f"Indexed {filename}: {len(chunks)} chunks."
-
-    def process_file_vlm(self, filename, content=None, filepath=None, document_set="all"):
-        """Process a single file using VLM pipeline: Convert -> Chunk -> Embed -> Index."""
-        logger.info(f"Processing file with VLM: {filename}")
-        
-        # 1. Convert to Markdown using VLM
-        try:
-            source = None
-            if content:
-                 source = DocumentStream(name=filename, stream=BytesIO(content))
-            elif filepath:
-                 source = filepath
+            # Prefer async embedding if available
+            if hasattr(embeddings_model, 'aembed_documents'):
+                vectors = await embeddings_model.aembed_documents(chunks)
             else:
-                 return "No content or filepath provided."
-
-            # Use Singleton VLM converter
-            doc_result = self._vlm_converter.convert(source)
-            markdown_content = doc_result.document.export_to_markdown()
-            
-            # Cleanup backend resources
-            if hasattr(doc_result.input, '_backend') and doc_result.input._backend:
-                try:
-                    doc_result.input._backend.unload()
-                except:
-                    pass
-
-        except Exception as e:
-            return f"VLM Conversion failed for {filename}: {e}"
-
-        # 2. Chunking (Reuse existing splitter)
-        chunks = self.splitter.split_text(markdown_content)
-        chunks = [str(c) for c in chunks if c and str(c).strip()]
-        
-        if not chunks:
-            return f"Skipped {filename}: No content extracted via VLM."
-
-        # 3. Embedding
-        vectors = []
-        embeddings_model = LLMService.get_embeddings()
-        
-        try:
-            vectors = embeddings_model.embed_documents(chunks)
+                vectors = embeddings_model.embed_documents(chunks)
         except Exception as e:
             return f"Embedding failed for {filename}: {e}"
 
         # 4. Upsert (Indexing)
         points = []
         for i, chunk in enumerate(chunks):
-            points.append(PointStruct(
-                id=str(uuid.uuid4()),
-                vector=vectors[i],
-                payload={"filename": filename, "content": chunk, "document_set": document_set, "pipeline": "vlm"}
-            ))
+            points.append({
+                "id": str(uuid.uuid4()),
+                "vector": vectors[i],
+                "payload": {
+                    "filename": filename, 
+                    "content": chunk, 
+                    "document_set": document_set,
+                    "pipeline": pipeline_type
+                }
+            })
         
         batch_size = 64
         for i in range(0, len(points), batch_size):
             try:
                 batch_points = points[i : i + batch_size]
-                db_service.upsert_vectors(batch_points)
+                await db_service.upsert_vectors(batch_points) # await async method
             except Exception as e:
                 return f"Upsert failed for batch {i}: {e}"
         
+        # Explicit GC still helpful for heavyweight VLM artifacts
         gc.collect()
-        return f"Indexed {filename} with VLM: {len(chunks)} chunks."
+        return f"Indexed {filename} ({pipeline_type}): {len(chunks)} chunks."
+
+    async def process_file(self, filename, content=None, filepath=None, document_set="all"):
+        """Process a single file: Convert -> Chunk -> Embed -> Index."""
+        return await self._process_content_flow(filename, content, filepath, document_set, use_vlm=False)
+
+    async def process_file_vlm(self, filename, content=None, filepath=None, document_set="all"):
+        """Process a single file using VLM pipeline."""
+        return await self._process_content_flow(filename, content, filepath, document_set, use_vlm=True)
 
 ingestion_service = IngestionService()

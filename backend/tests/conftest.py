@@ -7,9 +7,9 @@ import tempfile
 
 # Set up test environment
 os.environ["MONITORED_DIR"] = tempfile.mkdtemp()
-os.environ["QDRANT_HOST"] = "localhost"
+os.environ["DATABASE_CONN_STRING"] = "postgresql://user:pass@localhost:5432/db"
 os.environ["OPENAI_API_KEY"] = "sk-test-key"
-os.environ["QDRANT_COLLECTION_NAME"] = "test-documents"
+os.environ["VECTOR_TABLE_NAME"] = "test-documents"
 os.environ["CELERY_QUEUE_NAME"] = "test-queue"
 
 # Mock nest_asyncio to prevent conflict with TestClient
@@ -27,25 +27,19 @@ from auth import get_current_user
 app.dependency_overrides[get_current_user] = lambda: {"uid": "test-user", "email": "test@example.com"}
 
 @pytest.fixture
-def mock_qdrant_client(mocker):
-    mock_client = MagicMock()
-    mock_client.scroll.return_value = ([], None)
-    mock_group = MagicMock()
-    mock_group.hits = []
-    mock_response = MagicMock()
-    mock_response.groups = [mock_group]
-    mock_client.query_points_groups.return_value = mock_response
+def mock_vector_db(mocker):
+    # Mock methods of the global db_service instance
+    mocker.patch('services.vector_db.db_service.ensure_collection_exists', return_value=None)
+    mocker.patch('services.vector_db.db_service.search', return_value=[])
+    mocker.patch('services.vector_db.db_service.upsert_vectors', return_value=None)
+    mocker.patch('services.vector_db.db_service.delete_document', return_value=None)
+    mocker.patch('services.vector_db.db_service.list_documents', return_value=[])
     
-    # Patch the client inside the service
-    mocker.patch('services.vector_db.VectorDBService.client', mock_client)
-    # Also patch the global qdrant_client if used directly (legacy check)
-    mocker.patch('services.vector_db.QdrantClient', return_value=mock_client)
+    # Also patch psycopg2.connect to avoid actual DB attempts if initialization happens
+    mocker.patch('services.vector_db.psycopg2.connect', return_value=MagicMock())
     
-    # Patch the global db_service instance's client attribute directly to be safe
     from services.vector_db import db_service
-    db_service.client = mock_client
-    
-    return mock_client
+    return db_service
 
 @pytest.fixture
 def mock_openai_agent(mocker):

@@ -6,7 +6,8 @@ firebase-admin
 python-dotenv
 fastapi
 uvicorn
-qdrant-client>=1.11.0
+asyncpg
+pgvector
 langchain-text-splitters
 watchdog
 docling[vlm]

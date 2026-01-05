@@ -24,12 +24,12 @@ def test_ingest_documents(client, mock_celery_task):
     assert response.status_code == 200
     assert response.json() == {"task_id": "mock-task-id"}
 
-def test_list_documents_empty(client, mock_qdrant_client):
+def test_list_documents_empty(client, mock_vector_db):
     response = client.get("/agent/documents")
     assert response.status_code == 200
     assert response.json() == {"documents": []}
 
-def test_search_documents(client, mock_qdrant_client, mock_openai_agent):
+def test_search_documents(client, mock_vector_db, mock_openai_agent):
     # Mock db_service.search outcome for integration test
     # We patch the service method to return a list of dicts as expected by the endpoint
     # The endpoint calls perform_rag which calls db_service.search

@@ -21,7 +21,9 @@ OPENAI_EMBEDDING_DIMENSIONS = int(os.getenv('OPENAI_EMBEDDING_DIMENSIONS') or '7
 API_URL = os.getenv('API_URL')
 
 # Multi-tenancy Configuration
-QDRANT_COLLECTION_NAME = os.getenv('QDRANT_COLLECTION_NAME') or 'documents'
+# Database Configuration
+DATABASE_CONN_STRING = os.getenv('DATABASE_CONN_STRING')
+VECTOR_TABLE_NAME = os.getenv('VECTOR_TABLE_NAME') or 'documents'
 CELERY_QUEUE_NAME = os.getenv('CELERY_QUEUE_NAME') or 'celery'
 
 # File Monitoring

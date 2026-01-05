@@ -10,6 +10,7 @@ from io import BytesIO
 import base64
 import httpx
 import logging
+import asyncio
 
 logger = logging.getLogger(__name__)
 os.environ["USE_NNPACK"] = "0"
@@ -45,47 +46,47 @@ def answer_question(context_data):
     agent = Agent(get_model(), system_prompt=f"Answer using: {kb_content}")
     return agent.run_sync(user_input).output
 
+async def _ingest_docs_async(files_data, use_vlm=False):
+    """Async helper for ingestion tasks."""
+    try:
+        await db_service.ensure_collection_exists()
+        results = []
+        
+        for file_item in files_data:
+            filename = file_item['filename']
+            try:
+                if use_vlm:
+                    res = await ingestion_service.process_file_vlm(
+                        filename, 
+                        content=file_item.get('content'), 
+                        filepath=file_item.get('filepath'),
+                        document_set=file_item.get('document_set', 'default')
+                    )
+                else:
+                    res = await ingestion_service.process_file(
+                        filename, 
+                        content=file_item.get('content'), 
+                        filepath=file_item.get('filepath'),
+                        document_set=file_item.get('document_set', 'default')
+                    )
+                results.append(res)
+            except Exception as e:
+                logger.error(f"Failed processing {filename}: {e}")
+                results.append(f"Failed {filename}: {e}")
+                
+        return "\n".join(results)
+    finally:
+        await db_service.close()
+
 @app.task
 def ingest_docs_task(files_data):
     """Ingest a list of files using IngestionService."""
-    db_service.ensure_collection_exists()
-    results = []
-    
-    for file_item in files_data:
-        filename = file_item['filename']
-        try:
-            res = ingestion_service.process_file(
-                filename, 
-                content=file_item.get('content'), 
-                filepath=file_item.get('filepath'),
-                document_set=file_item.get('document_set', 'default')
-            )
-            results.append(res)
-        except Exception as e:
-            results.append(f"Failed {filename}: {e}")
-            
-    return "\n".join(results)
+    return asyncio.run(_ingest_docs_async(files_data, use_vlm=False))
 
 @app.task
 def ingest_docs_vlm_task(files_data):
     """Ingest a list of files using IngestionService with VLM pipeline."""
-    db_service.ensure_collection_exists()
-    results = []
-    
-    for file_item in files_data:
-        filename = file_item['filename']
-        try:
-            res = ingestion_service.process_file_vlm(
-                filename, 
-                content=file_item.get('content'), 
-                filepath=file_item.get('filepath'),
-                document_set=file_item.get('document_set', 'default')
-            )
-            results.append(res)
-        except Exception as e:
-            results.append(f"Failed VLM processing for {filename}: {e}")
-            
-    return "\n".join(results)
+    return asyncio.run(_ingest_docs_async(files_data, use_vlm=True))
 
 @app.task(name="async_tasks.summarize_document_task")
 def summarize_document_task(filename: str, content_b64: str, backend_notify_url: str):

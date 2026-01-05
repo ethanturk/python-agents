@@ -12,7 +12,7 @@ def test_run_sync_agent_no_key(mocker):
     response = run_sync_agent("Hello")
     assert "Error: OPENAI_API_KEY not found" in response
 
-def test_perform_rag_success(mock_qdrant_client, mock_openai_agent):
+def test_perform_rag_success(mock_vector_db, mock_openai_agent):
     # Mock Qdrant results via db_service mock (handled in conftest implicit patch of client)
     # We need to ensure db_service.search returns what we want.
     # Since db_service.search calls client.query_points_groups, and logic handles parsing,
