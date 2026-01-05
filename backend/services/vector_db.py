@@ -17,6 +17,7 @@ class VectorDBService:
         self.db_url = config.DATABASE_CONN_STRING
         self.table_name = config.VECTOR_TABLE_NAME or 'documents'
         self.pool = None
+        self._schema_verified = False
         self._validate_table_name()
 
     def _validate_table_name(self):
@@ -83,6 +84,7 @@ class VectorDBService:
                 await conn.execute(f"CREATE INDEX IF NOT EXISTS idx_document_set ON {self.table_name} (document_set);")
                 
             logger.info(f"Ensured table {self.table_name} exists with pgvector extension.")
+            self._schema_verified = True
         except Exception as e:
             logger.error(f"Failed to ensure vector table exists: {e}")
             raise e
@@ -142,6 +144,10 @@ class VectorDBService:
 
     async def upsert_vectors(self, points: List[Dict[str, Any]]):
         """Upsert vectors."""
+        # Lazy check for schema initialization
+        if not self._schema_verified:
+            await self.ensure_collection_exists()
+
         pool = await self.get_pool()
         if not pool or not points:
             return

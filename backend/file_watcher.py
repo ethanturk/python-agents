@@ -67,8 +67,6 @@ def start_watching(path, callback):
     if not os.path.exists(path):
         os.makedirs(path, exist_ok=True)
 
-    db_service.ensure_collection_exists()
-
     # Simple background scanner (simplified from original)
     def scan_existing():
         indexed = get_indexed_filenames()
