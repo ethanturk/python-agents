@@ -1,4 +1,3 @@
-
 import os
 import json
 import logging
@@ -11,6 +10,12 @@ import config
 from services.llm import get_embeddings_model
 
 logger = logging.getLogger(__name__)
+
+class DocumentPoint:
+    """Compatibility wrapper for document results (mimics Qdrant point)."""
+    def __init__(self, id, payload):
+        self.id = id
+        self.payload = payload
 
 class VectorDBService:
     def __init__(self):
@@ -38,6 +43,7 @@ class VectorDBService:
             logger.warning("SUPABASE_URL or SUPABASE_KEY not set.")
 
     async def search(self, query: str, limit: int = 10, document_set: str = None) -> List[Dict[str, Any]]:
+        # Search returns Dicts (content, metadata, score) - typically used by agent.py which likely expects this format
         if not self.client:
             return []
 
@@ -120,6 +126,7 @@ class VectorDBService:
             raise e
 
     async def list_documents(self, limit=100, offset=0):
+        # Must return objects with .id and .payload attributes
         if not self.client:
              return []
 
@@ -132,15 +139,13 @@ class VectorDBService:
             rows = response.data
             results = []
             for row in rows:
-                 results.append({
-                     "id": str(row.get('id')),
-                     "payload": {
-                         "content": row.get('content'),
-                         "filename": row.get('filename'),
-                         "document_set": row.get('document_set'),
-                         **(row.get('metadata') or {})
-                     }
-                 })
+                 payload = {
+                     "content": row.get('content'),
+                     "filename": row.get('filename'),
+                     "document_set": row.get('document_set'),
+                     **(row.get('metadata') or {})
+                 }
+                 results.append(DocumentPoint(id=str(row.get('id')), payload=payload))
             return results
         except Exception as e:
             logger.error(f"List documents failed: {e}")
