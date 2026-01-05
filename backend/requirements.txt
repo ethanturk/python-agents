@@ -9,7 +9,7 @@ uvicorn
 qdrant-client>=1.11.0
 langchain-text-splitters
 watchdog
-docling
+docling[vlm]
 pypdfium2
 pandas
 xlrd

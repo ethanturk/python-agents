@@ -66,6 +66,27 @@ def ingest_docs_task(files_data):
             
     return "\n".join(results)
 
+@app.task
+def ingest_docs_vlm_task(files_data):
+    """Ingest a list of files using IngestionService with VLM pipeline."""
+    db_service.ensure_collection_exists()
+    results = []
+    
+    for file_item in files_data:
+        filename = file_item['filename']
+        try:
+            res = ingestion_service.process_file_vlm(
+                filename, 
+                content=file_item.get('content'), 
+                filepath=file_item.get('filepath'),
+                document_set=file_item.get('document_set', 'default')
+            )
+            results.append(res)
+        except Exception as e:
+            results.append(f"Failed VLM processing for {filename}: {e}")
+            
+    return "\n".join(results)
+
 @app.task(name="async_tasks.summarize_document_task")
 def summarize_document_task(filename: str, content_b64: str, backend_notify_url: str):
     """Async task to summarize a document."""
