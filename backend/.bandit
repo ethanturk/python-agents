@@ -1,0 +1,36 @@
+[bandit]
+# Bandit security scanner configuration
+# https://bandit.readthedocs.io/
+
+# Directories to exclude from scanning
+exclude_dirs =
+    /tests/
+    /venv/
+    /env/
+    /.venv/
+    /node_modules/
+    /__pycache__/
+    /.pytest_cache/
+    /.mypy_cache/
+
+# Test IDs to skip
+# https://bandit.readthedocs.io/en/latest/plugins/index.html#complete-test-plugin-listing
+skips =
+    B101  # assert_used - pytest uses asserts in tests
+    B104  # hardcoded_bind_all_interfaces - acceptable for dev server
+    B608  # hardcoded_sql_expressions - we use parameterized queries
+
+# Severity level
+# Options: LOW, MEDIUM, HIGH
+# level = MEDIUM
+
+# Confidence level
+# Options: LOW, MEDIUM, HIGH
+# confidence = MEDIUM
+
+# Output format
+# Options: csv, custom, html, json, screen, txt, xml, yaml
+# format = screen
+
+# Number of lines of code context to print
+# context_lines = 3

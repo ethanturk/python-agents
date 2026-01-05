@@ -139,7 +139,12 @@ class VectorDBService:
             return []
 
     async def close(self):
-        pass
+        """Close the underlying Supabase client and cleanup resources."""
+        try:
+            self.supabase.close()
+            logger.info("VectorDBService closed successfully.")
+        except Exception as e:
+            logger.warning(f"Error closing VectorDBService: {e}")
 
 # Global Instance
 db_service = VectorDBService()

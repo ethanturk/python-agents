@@ -33,6 +33,45 @@ logger = logging.getLogger(__name__)
 os.environ["USE_NNPACK"] = "0"
 MONITORED_DIR = config.MONITORED_DIR
 
+# Security: File upload configuration
+MAX_FILE_SIZE = int(os.getenv("MAX_FILE_SIZE", 100_000_000))  # 100MB default
+MAX_FILES_PER_UPLOAD = int(os.getenv("MAX_FILES_PER_UPLOAD", 10))
+ALLOWED_EXTENSIONS = {'.pdf', '.txt', '.docx', '.doc', '.xlsx', '.xls', '.csv', '.md', '.json', '.xml'}
+
+# Security: Path traversal prevention
+from pathlib import Path
+
+def safe_path_join(base_dir: str, user_path: str) -> Path:
+    """
+    Safely join a base directory with a user-provided path.
+    Prevents path traversal attacks by ensuring the resolved path is within base_dir.
+
+    Args:
+        base_dir: The base directory (trusted)
+        user_path: User-provided path component (untrusted)
+
+    Returns:
+        Resolved Path object
+
+    Raises:
+        HTTPException: If path traversal is detected
+    """
+    base = Path(base_dir).resolve()
+    # Only use the filename component to prevent directory traversal
+    safe_filename = Path(user_path).name
+    full_path = (base / safe_filename).resolve()
+
+    # Ensure the resolved path is still within the base directory
+    try:
+        full_path.relative_to(base)
+    except ValueError:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid file path: path traversal detected"
+        )
+
+    return full_path
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
@@ -78,12 +117,19 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+# CORS Configuration - Restrict origins for security
+# Configure allowed origins via environment variable or use defaults
+ALLOWED_ORIGINS = os.getenv(
+    "ALLOWED_ORIGINS",
+    "http://localhost:3000,http://localhost:3001,https://apps.ethanturk.com"
+).split(",")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"],
 )
 
 # Mount static files
@@ -162,7 +208,6 @@ async def list_document_sets():
 @app.delete("/agent/documents/{filename:path}", dependencies=[Depends(get_current_user)])
 async def delete_document_endpoint(filename: str, document_set: str = "all"):
     import re
-    from pathlib import Path
 
     try:
         # Delete from filesystem if a specific set is provided or mapped
@@ -172,8 +217,12 @@ async def delete_document_endpoint(filename: str, document_set: str = "all"):
              if root.exists():
                  for item in root.iterdir():
                      if item.is_dir():
-                         # filename might be a full path or relative path from DB, so strictly use .name
-                         target = item / Path(filename).name
+                         # Use safe path join to prevent path traversal
+                         try:
+                             target = safe_path_join(str(item), filename)
+                         except HTTPException:
+                             continue  # Skip invalid paths
+
                          if target.exists() and target.is_file():
                              try:
                                  os.remove(target)
@@ -183,8 +232,10 @@ async def delete_document_endpoint(filename: str, document_set: str = "all"):
 
         elif document_set:
             sanitized_set = re.sub(r'[^a-z0-9_]', '_', document_set.lower().strip()).strip('_')
-            # filename might be a full path or relative path from DB, so strictly use .name
-            file_path = Path(MONITORED_DIR) / sanitized_set / Path(filename).name
+            # Use safe path join to prevent path traversal
+            base_path = Path(MONITORED_DIR) / sanitized_set
+            file_path = safe_path_join(str(base_path), filename)
+
             if file_path.exists():
                 try:
                     os.remove(file_path)
@@ -209,7 +260,13 @@ async def delete_document_endpoint(filename: str, document_set: str = "all"):
 async def upload_files(files: list[UploadFile] = File(...), document_set: str = Form(...)):
     import shutil
     import re
-    from pathlib import Path
+
+    # Validate number of files
+    if len(files) > MAX_FILES_PER_UPLOAD:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Too many files. Maximum {MAX_FILES_PER_UPLOAD} files per upload."
+        )
 
     sanitized_set = re.sub(r'[^a-z0-9_]', '_', document_set.lower().strip()).strip('_')
     if not sanitized_set:
@@ -224,13 +281,42 @@ async def upload_files(files: list[UploadFile] = File(...), document_set: str = 
     uploaded_files = []
     try:
         for file in files:
+            # Validate file extension
             filename = Path(file.filename).name
-            file_path = target_dir / filename
+            file_ext = Path(filename).suffix.lower()
+
+            if file_ext not in ALLOWED_EXTENSIONS:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"File type '{file_ext}' not allowed. Allowed types: {', '.join(ALLOWED_EXTENSIONS)}"
+                )
+
+            # Use safe path join to prevent path traversal
+            file_path = safe_path_join(str(target_dir), filename)
+
+            # Read and validate file size
+            file_content = await file.read()
+            file_size = len(file_content)
+
+            if file_size > MAX_FILE_SIZE:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"File '{filename}' is too large ({file_size / 1_000_000:.2f}MB). Maximum size: {MAX_FILE_SIZE / 1_000_000:.0f}MB"
+                )
+
+            # Write file
             with open(file_path, "wb") as buffer:
-                shutil.copyfileobj(file.file, buffer)
+                buffer.write(file_content)
+
             uploaded_files.append(filename)
+            logger.info(f"Uploaded file: {filename} ({file_size} bytes) to {document_set}")
+
+    except HTTPException:
+        # Re-raise HTTP exceptions
+        raise
     except Exception as e:
-         raise HTTPException(status_code=500, detail=f"Failed to save file: {e}")
+        logger.error(f"Failed to save file: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to save file: {str(e)}")
 
     return {"status": "success", "uploaded": uploaded_files, "document_set": sanitized_set}
 
