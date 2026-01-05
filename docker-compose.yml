@@ -4,9 +4,6 @@ services:
     ports:
       - "${BACKEND_PORT}:8000"
     command: [ "uvicorn", "backend_app:app", "--host", "0.0.0.0", "--port", "8000", "--loop", "asyncio" ]
-    dns:
-      - 8.8.8.8
-      - 8.8.4.4
     environment:
       BASE_URL: ${BASE_URL:-192.168.5.204}
       CELERY_BROKER_URL: ${CELERY_BROKER_URL:-amqp://guest:guest@${BASE_URL}:5672//}
