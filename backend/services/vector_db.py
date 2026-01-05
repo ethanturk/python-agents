@@ -18,6 +18,7 @@ class VectorDBService:
         self.supabase_key = config.SUPABASE_KEY
         self.table_name = config.VECTOR_TABLE_NAME or 'documents'
         self.client: Optional[Client] = None
+        
         self._validate_table_name()
         self._init_client()
 
@@ -36,26 +37,7 @@ class VectorDBService:
         else:
             logger.warning("SUPABASE_URL or SUPABASE_KEY not set.")
 
-    async def ensure_collection_exists(self):
-        """
-        For Supabase REST, we assume the table exists (managed via migrations or dashboard).
-        We just check connectivity.
-        """
-        if not self.client:
-            return
-
-        try:
-            # Simple check: try to fetch 1 record
-            # In Supabase REST we usually don't CREATE TABLE from code dynamically 
-            # as easily as SQL, but we rely on the RPC setup we just did.
-            logger.info(f"Using table: {self.table_name}")
-            # No-op mostly, just logging
-        except Exception as e:
-            logger.error(f"Failed to verify table access: {e}")
-            raise e
-
     async def search(self, query: str, limit: int = 10, document_set: str = None) -> List[Dict[str, Any]]:
-        """Search documents using embeddings via RPC."""
         if not self.client:
             return []
 
@@ -69,14 +51,12 @@ class VectorDBService:
         try:
             params = {
                 "query_embedding": query_vector,
-                "match_threshold": 0, # adjustable
+                "match_threshold": 0,
                 "match_count": limit,
                 "filter_document_set": document_set if document_set != "all" else None
             }
             
             response = self.client.rpc("match_documents", params).execute()
-            
-            # response.data is list of dicts
             rows = response.data
             
             results = []
@@ -90,14 +70,12 @@ class VectorDBService:
                     },
                     "score": float(row.get('similarity', 0))
                 })
-                
             return results
         except Exception as e:
-            logger.error(f"Supabase RPC search failed: {e}")
+            logger.error(f"Search failed: {e}")
             return []
 
     async def upsert_vectors(self, points: List[Dict[str, Any]]):
-        """Upsert vectors via REST."""
         if not self.client or not points:
             return
 
@@ -110,7 +88,6 @@ class VectorDBService:
                 filename = payload.get('filename')
                 content = payload.get('content')
                 doc_set = payload.get('document_set')
-                
                 metadata = {k: v for k, v in payload.items() if k not in ['filename', 'content', 'document_set']}
                 
                 records.append({
@@ -122,7 +99,6 @@ class VectorDBService:
                     "metadata": metadata
                 })
 
-            # Supabase upsert
             self.client.table(self.table_name).upsert(records).execute()
         except Exception as e:
             logger.error(f"Upsert failed: {e}")
@@ -171,7 +147,6 @@ class VectorDBService:
             return []
 
     async def close(self):
-        # Supabase client (httpx) mostly handles itself, but we can clear it
         self.client = None
 
 # Global Instance

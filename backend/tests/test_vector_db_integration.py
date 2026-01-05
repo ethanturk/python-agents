@@ -31,9 +31,6 @@ async def test_vector_db_lifecycle():
         mock_get_model.return_value = mock_embedding
         
         logger.info("Starting VectorDB Lifecycle Test")
-
-        # 1. Ensure Table Exists
-        await db_service.ensure_collection_exists()
         
         # 2. Upsert Document
         test_filename = f"pytest_{uuid.uuid4()}.txt"

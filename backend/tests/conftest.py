@@ -29,7 +29,6 @@ app.dependency_overrides[get_current_user] = lambda: {"uid": "test-user", "email
 @pytest.fixture
 def mock_vector_db(mocker):
     # Mock methods of the global db_service instance
-    mocker.patch('services.vector_db.db_service.ensure_collection_exists', return_value=None)
     mocker.patch('services.vector_db.db_service.search', return_value=[])
     mocker.patch('services.vector_db.db_service.upsert_vectors', return_value=None)
     mocker.patch('services.vector_db.db_service.delete_document', return_value=None)

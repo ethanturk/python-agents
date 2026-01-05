@@ -35,7 +35,6 @@ def test_ingest_docs_task(mocker):
     result = ingest_docs_task(files)
     
     assert "Indexed doc.pdf" in result
-    mock_db.ensure_collection_exists.assert_called_once()
     mock_ingestion.process_file.assert_called_once()
 
 def test_summarize_document_task(mocker):

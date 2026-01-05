@@ -39,7 +39,6 @@ async def lifespan(app: FastAPI):
     logger.info("Starting up...")
     init_db()
     init_firebase()
-    await db_service.ensure_collection_exists()
 
     observer = start_watching(MONITORED_DIR, lambda files: ingest_docs_task.delay(files))
     

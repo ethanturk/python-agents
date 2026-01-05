@@ -49,7 +49,6 @@ def answer_question(context_data):
 async def _ingest_docs_async(files_data, use_vlm=False):
     """Async helper for ingestion tasks."""
     try:
-        await db_service.ensure_collection_exists()
         results = []
         
         for file_item in files_data:

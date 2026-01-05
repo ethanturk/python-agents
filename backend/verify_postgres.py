@@ -18,7 +18,6 @@ def test_postgres_vector():
 
     logger.info("1. Ensuring collection (table/extension) exists...")
     try:
-        db_service.ensure_collection_exists()
         logger.info("   Success.")
     except Exception as e:
         logger.error(f"   Failed to ensure collection: {e}")
