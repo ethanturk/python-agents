@@ -45,10 +45,20 @@ class DocumentHandler(FileSystemEventHandler):
                 logger.error(f"Error reading {filepath}: {e}")
 
 def get_indexed_filenames():
+    import asyncio
+    from services.vector_db import VectorDBService
+    
+    async def fetch_ids():
+        # Create a local service instance to avoid pool conflicts in this thread
+        temp_service = VectorDBService()
+        try:
+             docs = await temp_service.list_documents(limit=10000)
+             return {d.payload.get("filename") for d in docs if d.payload}
+        finally:
+             await temp_service.close()
+
     try:
-        # Use service to list documents
-        docs = db_service.list_documents(limit=10000) # simpler than raw scroll loop here
-        return {d.payload.get("filename") for d in docs if d.payload}
+        return asyncio.run(fetch_ids())
     except Exception as e:
         logger.warning(f"Could not fetch indexed files: {e}")
         return set()

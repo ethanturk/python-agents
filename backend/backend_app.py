@@ -39,7 +39,7 @@ async def lifespan(app: FastAPI):
     logger.info("Starting up...")
     init_db()
     init_firebase()
-    db_service.ensure_collection_exists()
+    await db_service.ensure_collection_exists()
 
     observer = start_watching(MONITORED_DIR, lambda files: ingest_docs_task.delay(files))
     
@@ -132,9 +132,9 @@ def search_documents_endpoint(request: SearchRequest):
     return perform_rag(request.prompt, request.limit, request.document_set)
 
 @app.get("/agent/documents", dependencies=[Depends(get_current_user)])
-def list_documents():
+async def list_documents():
     try:
-        all_docs = db_service.list_documents()
+        all_docs = await db_service.list_documents()
         docs = []
         for point in all_docs:
              docs.append({
@@ -149,9 +149,9 @@ def list_documents():
         return {"documents": []}
 
 @app.get("/agent/documentsets", dependencies=[Depends(get_current_user)])
-def list_document_sets():
+async def list_document_sets():
     try:
-        all_docs = db_service.list_documents()
+        all_docs = await db_service.list_documents()
         sets = set()
         for point in all_docs:
             sets.add(point.payload.get("document_set", "all"))
@@ -161,7 +161,7 @@ def list_document_sets():
         return {"document_sets": []}
 
 @app.delete("/agent/documents/{filename:path}", dependencies=[Depends(get_current_user)])
-def delete_document_endpoint(filename: str, document_set: str = "all"):
+async def delete_document_endpoint(filename: str, document_set: str = "all"):
     import re
     from pathlib import Path
 
@@ -201,7 +201,7 @@ def delete_document_endpoint(filename: str, document_set: str = "all"):
              db_filename = '/' + filename
         
         logger.info(f"Deleting from Vector DB: {db_filename} (set={document_set})")
-        db_service.delete_document(db_filename, document_set)
+        await db_service.delete_document(db_filename, document_set)
         return {"status": "success", "message": f"Deleted {filename}"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
