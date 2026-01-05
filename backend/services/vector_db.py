@@ -33,6 +33,15 @@ class VectorDBService:
             
         if self.pool is None:
             try:
+                # Debug logging to identify what host we are failing to connect to
+                if self.db_url:
+                    from urllib.parse import urlparse
+                    try:
+                        parsed = urlparse(self.db_url)
+                        logger.info(f"Attempting to connect to DB at host: {parsed.hostname}, port: {parsed.port}")
+                    except Exception:
+                         logger.info(f"Attempting to connect to DB (failed to parse URL for logging)")
+
                 self.pool = await asyncpg.create_pool(
                     self.db_url,
                     min_size=1,
