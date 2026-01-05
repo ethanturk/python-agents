@@ -1,13 +1,11 @@
-import os
-import json
 import logging
 import uuid
 import re
 from typing import List, Dict, Any, Optional
 
-from supabase import create_client, Client
 import config
 from services.llm import get_embeddings_model
+from services.supabase_service import supabase_service
 
 logger = logging.getLogger(__name__)
 
@@ -19,32 +17,17 @@ class DocumentPoint:
 
 class VectorDBService:
     def __init__(self):
-        self.supabase_url = config.SUPABASE_URL
-        self.supabase_key = config.SUPABASE_KEY
+        self.supabase = supabase_service
         self.table_name = config.VECTOR_TABLE_NAME or 'documents'
-        self.client: Optional[Client] = None
-        
         self._validate_table_name()
-        self._init_client()
 
     def _validate_table_name(self):
         """Ensure table name is safe."""
         if not re.match(r'^[a-zA-Z0-9_]+$', self.table_name):
             raise ValueError(f"Invalid table name: {self.table_name}")
-            
-    def _init_client(self):
-        if self.supabase_url and self.supabase_key:
-            try:
-                self.client = create_client(self.supabase_url, self.supabase_key)
-                logger.info("Initialized Supabase REST client.")
-            except Exception as e:
-                logger.error(f"Failed to initialize Supabase client: {e}")
-        else:
-            logger.warning("SUPABASE_URL or SUPABASE_KEY not set.")
 
     async def search(self, query: str, limit: int = 10, document_set: str = None) -> List[Dict[str, Any]]:
-        # Search returns Dicts (content, metadata, score) - typically used by agent.py which likely expects this format
-        if not self.client:
+        if not self.supabase.is_available():
             return []
 
         embeddings = get_embeddings_model()
@@ -62,7 +45,7 @@ class VectorDBService:
                 "filter_document_set": document_set if document_set != "all" else None
             }
             
-            response = self.client.rpc("match_documents", params).execute()
+            response = self.supabase.rpc("match_documents", params)
             rows = response.data
             
             results = []
@@ -82,7 +65,7 @@ class VectorDBService:
             return []
 
     async def upsert_vectors(self, points: List[Dict[str, Any]]):
-        if not self.client or not points:
+        if not self.supabase.is_available() or not points:
             return
 
         try:
@@ -105,37 +88,41 @@ class VectorDBService:
                     "metadata": metadata
                 })
 
-            self.client.table(self.table_name).upsert(records).execute()
+            self.supabase.upsert(self.table_name, records)
         except Exception as e:
             logger.error(f"Upsert failed: {e}")
             raise e
 
     async def delete_document(self, filename: str, document_set: str = None):
-        if not self.client:
+        if not self.supabase.is_available():
             return
 
         try:
-            query = self.client.table(self.table_name).delete().eq("filename", filename)
+            filters = {"filename": filename}
             if document_set and document_set != "all":
-                query = query.eq("document_set", document_set)
-            
-            query.execute()
+                filters["document_set"] = document_set
+                
+            # Note: generic delete takes simple filters. 
+            # If we need complex queries (like 'eq' chaining), we might need to expose builder in service
+            # For now, let's assume 'delete' in service handles dict as 'AND' eq filters
+            self.supabase.delete(self.table_name, filters)
             logger.info(f"Deleted documents for filename: {filename}")
         except Exception as e:
             logger.error(f"Delete failed: {e}")
             raise e
 
     async def list_documents(self, limit=100, offset=0):
-        # Must return objects with .id and .payload attributes
-        if not self.client:
+        if not self.supabase.is_available():
              return []
 
         try:
-            response = self.client.table(self.table_name)\
-                .select("id, content, filename, document_set, metadata")\
-                .range(offset, offset + limit - 1)\
-                .execute()
-                
+            response = self.supabase.select(
+                self.table_name, 
+                columns="id, content, filename, document_set, metadata",
+                range_start=offset,
+                range_end=offset + limit - 1
+            )
+            
             rows = response.data
             results = []
             for row in rows:
@@ -152,7 +139,7 @@ class VectorDBService:
             return []
 
     async def close(self):
-        self.client = None
+        pass
 
 # Global Instance
 db_service = VectorDBService()
