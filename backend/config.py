@@ -22,6 +22,10 @@ API_URL = os.getenv('API_URL')
 
 # Multi-tenancy Configuration
 # Database Configuration
+# Supabase REST Credentials
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+
 DATABASE_CONN_STRING = os.getenv('DATABASE_CONN_STRING')
 VECTOR_TABLE_NAME = os.getenv('VECTOR_TABLE_NAME') or 'documents'
 CELERY_QUEUE_NAME = os.getenv('CELERY_QUEUE_NAME') or 'celery'
