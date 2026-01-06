@@ -10,6 +10,7 @@ import config
 
 logger = logging.getLogger(__name__)
 
+
 def get_document_set(filepath):
     try:
         monitored_path = Path(config.MONITORED_DIR).resolve()
@@ -22,45 +23,48 @@ def get_document_set(filepath):
         pass
     return "all"
 
+
 class DocumentHandler(FileSystemEventHandler):
     def __init__(self, callback):
         self.callback = callback
 
     def on_created(self, event):
-        if event.is_directory: return
-        
+        if event.is_directory:
+            return
+
         filepath = event.src_path
         if os.path.exists(filepath) and os.path.getsize(filepath) > 0:
             logger.info(f"New file detected: {filepath}")
             try:
                 with open(filepath, "rb") as f:
                     content = f.read()
-                self.callback([{
-                    "filename": filepath, 
-                    "filepath": filepath, 
-                    "content": content, 
-                    "document_set": get_document_set(filepath)
-                }])
+                self.callback(
+                    [
+                        {
+                            "filename": filepath,
+                            "filepath": filepath,
+                            "content": content,
+                            "document_set": get_document_set(filepath),
+                        }
+                    ]
+                )
             except Exception as e:
                 logger.error(f"Error reading {filepath}: {e}")
 
+
 def get_indexed_filenames():
     import asyncio
-    from services.vector_db import VectorDBService
-    
+
     async def fetch_ids():
-        # Use the global service instance (singleton pattern)
-        # DO NOT close it - it's shared across the application
-        temp_service = VectorDBService()
-        docs = await temp_service.list_documents(limit=10000)
+        docs = await db_service.list_documents(limit=10000)
         return {d.payload.get("filename") for d in docs if d.payload}
-        # Note: No close() call - the singleton is managed by the app lifecycle
 
     try:
         return asyncio.run(fetch_ids())
     except Exception as e:
         logger.warning(f"Could not fetch indexed files: {e}")
         return set()
+
 
 def start_watching(path, callback):
     if not os.path.exists(path):
@@ -71,19 +75,24 @@ def start_watching(path, callback):
         indexed = get_indexed_filenames()
         for root, _, files in os.walk(path):
             for filename in files:
-                if filename.startswith('.'): continue
+                if filename.startswith("."):
+                    continue
                 filepath = os.path.join(root, filename)
                 if filepath not in indexed and os.path.getsize(filepath) > 0:
                     logger.info(f"Processing existing unindexed: {filepath}")
                     try:
                         with open(filepath, "rb") as f:
-                             content = f.read()
-                        callback([{
-                            "filename": filepath, 
-                            "filepath": filepath, 
-                            "content": content, 
-                            "document_set": get_document_set(filepath)
-                        }])
+                            content = f.read()
+                        callback(
+                            [
+                                {
+                                    "filename": filepath,
+                                    "filepath": filepath,
+                                    "content": content,
+                                    "document_set": get_document_set(filepath),
+                                }
+                            ]
+                        )
                         time.sleep(0.5)
                     except Exception as e:
                         logger.error(e)
