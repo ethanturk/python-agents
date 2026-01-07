@@ -123,6 +123,16 @@ docker-compose -f docker-compose.frontend.yml up -d --build
 
 ### Testing
 
+**Pre-Commit Hooks** (MANDATORY):
+```bash
+# Install pre-commit hooks (run once)
+./setup-precommit.sh
+
+# Hooks run automatically on git commit
+# To run manually: pre-commit run --all-files
+# To skip (not recommended): git commit --no-verify
+```
+
 **Automated Testing** (CI/CD):
 ```bash
 # All tests run automatically on push/PR via GitHub Actions
@@ -139,7 +149,7 @@ make test-unit
 **Backend tests** (pytest):
 ```bash
 cd backend
-pip install -r requirements.txt
+pip3 install -r requirements.txt
 pytest tests/                    # All tests
 pytest -m unit                   # Unit tests only
 pytest -m integration             # Integration tests (requires containers)
@@ -341,9 +351,7 @@ Docling pipelines are **synchronous** (CPU-bound):
 
 ## Project-Specific Notes
 
-### GEMINI.md Integration
-
-This project has Archon skills integration documented in `GEMINI.md`:
+This project has Archon skills integration documented:
 - **Do NOT** use Claude's built-in todo tracking when Archon is present
 - Task management through Archon skills: `find_tasks`, `manage_task`
 - Knowledge base through RAG: `rag_search_knowledge_base`, `rag_get_available_sources`
@@ -351,11 +359,17 @@ This project has Archon skills integration documented in `GEMINI.md`:
 
 ### Git Workflow
 
-Per `GEMINI.md` session completion requirements:
-1. Run quality gates (tests, linters, builds)
-2. Update task/issue status
-3. **MANDATORY**: `git pull --rebase && git push`
-4. Verify: `git status` shows "up to date with origin"
+**Pre-commit Quality Gates (MANDATORY):**
+- Install hooks: `./setup-precommit.sh`
+- Hooks run automatically on commit, blocking bad code from being committed
+- Includes: Black, Ruff, ESLint, Prettier, tests, security scans
+
+Per session completion requirements:
+1. Pre-commit hooks catch issues automatically on commit
+2. Run quality gates (tests, linters, builds) if needed
+3. Update task/issue status
+4. **MANDATORY**: `git pull --rebase && git push`
+5. Verify: `git status` shows "up to date with origin"
 
 ### Legacy Files
 

@@ -1,6 +1,6 @@
 # The Potato: A Comprehensive Review
-**Scientific Name:** *Solanum tuberosum*  
-**Family:** Solanaceae  
+**Scientific Name:** *Solanum tuberosum*
+**Family:** Solanaceae
 **Date:** 2025-12-30
 
 ---

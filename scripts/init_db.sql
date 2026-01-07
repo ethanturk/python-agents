@@ -14,8 +14,8 @@ create table if not exists documents (
 );
 
 -- Create indexes for faster searching
-create index if not exists documents_vector_idx 
-  on documents 
+create index if not exists documents_vector_idx
+  on documents
   using hnsw (vector vector_cosine_ops);
 
 create index if not exists idx_filename on documents (filename);

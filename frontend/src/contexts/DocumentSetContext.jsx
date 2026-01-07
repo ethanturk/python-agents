@@ -1,7 +1,7 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import axios from 'axios';
-import { API_BASE } from '../config';
-import { useAuth } from './AuthContext';
+import React, { createContext, useContext, useEffect, useState } from "react";
+import axios from "axios";
+import { API_BASE } from "../config";
+import { useAuth } from "./AuthContext";
 
 const DocumentSetContext = createContext();
 
@@ -12,7 +12,7 @@ export function useDocumentSet() {
 export function DocumentSetProvider({ children }) {
   const [documentSets, setDocumentSets] = useState([]);
   const [selectedSet, setSelectedSet] = useState(
-    sessionStorage.getItem('selectedDocumentSet') || 'default'
+    sessionStorage.getItem("selectedDocumentSet") || "default",
   );
   const [loading, setLoading] = useState(true);
   const { currentUser } = useAuth();
@@ -22,11 +22,14 @@ export function DocumentSetProvider({ children }) {
     try {
       const config = {};
       if (currentUser) {
-          const token = await currentUser.getIdToken();
-          config.headers = { Authorization: `Bearer ${token}` };
+        const token = await currentUser.getIdToken();
+        config.headers = { Authorization: `Bearer ${token}` };
       }
-      
-      const response = await axios.get(`${API_BASE}/agent/documentsets`, config);
+
+      const response = await axios.get(
+        `${API_BASE}/agent/documentsets`,
+        config,
+      );
       setDocumentSets(response.data.document_sets || []);
     } catch (error) {
       console.error("Failed to fetch document sets", error);
@@ -36,14 +39,14 @@ export function DocumentSetProvider({ children }) {
   };
 
   useEffect(() => {
-    sessionStorage.setItem('selectedDocumentSet', selectedSet);
+    sessionStorage.setItem("selectedDocumentSet", selectedSet);
   }, [selectedSet]);
 
   // Validate selectedSet against fetched documentSets
   useEffect(() => {
     if (!loading && documentSets.length > 0) {
-      if (selectedSet !== 'all' && !documentSets.includes(selectedSet)) {
-        setSelectedSet('all');
+      if (selectedSet !== "all" && !documentSets.includes(selectedSet)) {
+        setSelectedSet("all");
       }
     }
   }, [documentSets, loading, selectedSet]);
@@ -53,7 +56,7 @@ export function DocumentSetProvider({ children }) {
     selectedSet,
     setSelectedSet,
     fetchDocumentSets,
-    loading
+    loading,
   };
 
   return (

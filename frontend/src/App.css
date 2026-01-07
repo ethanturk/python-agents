@@ -327,7 +327,6 @@
 
 /* --- Responsive Design --- */
 @media (max-width: 768px) {
-
   /* Layout adjustments */
   .p-4 {
     padding: 16px !important;

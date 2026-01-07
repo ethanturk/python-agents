@@ -1,13 +1,17 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { API_BASE } from '../config';
-import { WEBSOCKET } from '../constants';
+import { useState, useEffect, useRef, useCallback } from "react";
+import { API_BASE } from "../config";
+import { WEBSOCKET } from "../constants";
 
 const determineWsUrl = () => {
-  let url = API_BASE.replace('http', 'ws');
-  if (typeof window !== 'undefined' && window.location.protocol === 'https:' && url.startsWith('ws://')) {
-    url = url.replace('ws://', 'wss://');
+  let url = API_BASE.replace("http", "ws");
+  if (
+    typeof window !== "undefined" &&
+    window.location.protocol === "https:" &&
+    url.startsWith("ws://")
+  ) {
+    url = url.replace("ws://", "wss://");
   }
-  return url + '/ws';
+  return url + "/ws";
 };
 
 const WS_BASE = determineWsUrl();
@@ -27,7 +31,10 @@ export default function useWebSocket({ onMessage }) {
 
   const connect = useCallback(() => {
     // Prevent multiple simultaneous connection attempts
-    if (isConnectingRef.current || (ws.current && ws.current.readyState === WebSocket.CONNECTING)) {
+    if (
+      isConnectingRef.current ||
+      (ws.current && ws.current.readyState === WebSocket.CONNECTING)
+    ) {
       return;
     }
 
@@ -69,7 +76,10 @@ export default function useWebSocket({ onMessage }) {
       }
 
       // Retry after configured delay
-      reconnectTimeoutRef.current = setTimeout(connect, WEBSOCKET.RECONNECT_DELAY);
+      reconnectTimeoutRef.current = setTimeout(
+        connect,
+        WEBSOCKET.RECONNECT_DELAY,
+      );
     };
 
     ws.current.onerror = (err) => {

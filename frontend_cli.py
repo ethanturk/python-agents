@@ -51,7 +51,7 @@ def ingest_documents():
         return
 
     files_content = []
-    
+
     if os.path.isfile(path):
         try:
             with open(path, "r", encoding="utf-8") as f:
@@ -67,7 +67,7 @@ def ingest_documents():
                         files_content.append({"filename": file, "content": f.read()})
                 except Exception as e:
                     print(f"Skipping {file}: {e}")
-    
+
     if not files_content:
         print("No valid files found to ingest.")
         return
@@ -91,7 +91,7 @@ def search_documents():
         results = response.json()
         if results.get("answer"):
             print(f"\n--- Thought-out Answer ---\n{results['answer']}\n")
-        
+
         print("--- Sources ---")
         for idx, result in enumerate(results.get("results", []), 1):
              print(f"{idx}. {result['content'][:200]}... (Source: {result['metadata'].get('filename')})")
@@ -108,9 +108,9 @@ def main():
         print("4. Ingest Documents")
         print("5. Search Documents")
         print("6. Exit")
-        
+
         choice = input("Select an option: ").strip()
-        
+
         if choice == '1':
             run_sync_agent()
         elif choice == '2':

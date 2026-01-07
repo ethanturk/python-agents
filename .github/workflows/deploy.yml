@@ -96,6 +96,6 @@ jobs:
           # Replace placeholders with actual image tags
           sed -i "s|pythonagents.azurecr.io/backend:latest|${{ needs.deploy-infra.outputs.acr_login_server }}/backend:${{ github.sha }}|g" k8s/backend.yaml
           sed -i "s|pythonagents.azurecr.io/frontend:latest|${{ needs.deploy-infra.outputs.acr_login_server }}/frontend:${{ github.sha }}|g" k8s/frontend.yaml
-          
+
           kubectl apply -f k8s/backend.yaml
           kubectl apply -f k8s/frontend.yaml

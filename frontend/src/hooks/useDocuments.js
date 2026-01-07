@@ -1,6 +1,6 @@
-import { useState, useCallback } from 'react';
-import axios from 'axios';
-import { API_BASE } from '../config';
+import { useState, useCallback } from "react";
+import axios from "axios";
+import { API_BASE } from "../config";
 
 export default function useDocuments() {
   const [groupedDocs, setGroupedDocs] = useState({});
@@ -20,18 +20,18 @@ export default function useDocuments() {
       const groups = docs.reduce((acc, doc) => {
         const file = doc.filename || "Unknown";
         // Create a single entry with the chunk count
-        acc[file] = [{
-          id: doc.id,
-          filename: doc.filename,
-          document_set: doc.document_set,
-          chunk_count: doc.chunk_count
-        }];
+        acc[file] = [
+          {
+            id: doc.id,
+            filename: doc.filename,
+            document_set: doc.document_set,
+            chunk_count: doc.chunk_count,
+          },
+        ];
         return acc;
       }, {});
 
-      const sortedGroups = Object.fromEntries(
-        Object.entries(groups).sort()
-      );
+      const sortedGroups = Object.fromEntries(Object.entries(groups).sort());
 
       setGroupedDocs(sortedGroups);
     } catch (error) {
@@ -57,7 +57,7 @@ export default function useDocuments() {
     if (!docToDelete) return;
     try {
       await axios.delete(`${API_BASE}/agent/documents/${docToDelete}`, {
-        params: { document_set: docSetToDelete }
+        params: { document_set: docSetToDelete },
       });
       // Refresh list
       await fetchDocuments();
@@ -79,6 +79,6 @@ export default function useDocuments() {
     ensureDocsLoaded,
     handlePromptDelete,
     confirmDelete,
-    setDeleteDialogOpen
+    setDeleteDialogOpen,
   };
 }

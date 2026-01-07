@@ -1,7 +1,12 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { auth } from '../firebase';
-import { onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
-import { Box, CircularProgress } from '@mui/material';
+import React, { createContext, useContext, useEffect, useState } from "react";
+import { auth } from "../firebase";
+import {
+  onAuthStateChanged,
+  signInWithPopup,
+  GoogleAuthProvider,
+  signOut,
+} from "firebase/auth";
+import { Box, CircularProgress } from "@mui/material";
 
 const AuthContext = createContext();
 
@@ -34,30 +39,26 @@ export function AuthProvider({ children }) {
   const value = {
     currentUser,
     loginWithGoogle,
-    logout
+    logout,
   };
 
   if (loading) {
     return (
       <Box
         sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          minHeight: '100vh',
-          gap: 2
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          minHeight: "100vh",
+          gap: 2,
         }}
       >
         <CircularProgress size={48} />
-        <Box sx={{ color: 'text.secondary' }}>Loading...</Box>
+        <Box sx={{ color: "text.secondary" }}>Loading...</Box>
       </Box>
     );
   }
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

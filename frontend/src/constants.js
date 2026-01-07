@@ -20,8 +20,8 @@ export const WEBSOCKET = {
 
 // Storage keys
 export const STORAGE_KEYS = {
-  SUMMARIZATION_STATE: 'summarization_state_v1',
-  USER_PREFERENCES: 'user_preferences',
+  SUMMARIZATION_STATE: "summarization_state_v1",
+  USER_PREFERENCES: "user_preferences",
 };
 
 // Summarization configuration
@@ -43,9 +43,16 @@ export const UPLOAD = {
   MAX_FILE_SIZE: 100 * 1024 * 1024, // 100MB
   BATCH_SIZE: 64,
   ALLOWED_EXTENSIONS: [
-    '.pdf', '.docx', '.doc', '.txt', '.md',
-    '.xlsx', '.xls', '.csv',
-    '.pptx', '.ppt'
+    ".pdf",
+    ".docx",
+    ".doc",
+    ".txt",
+    ".md",
+    ".xlsx",
+    ".xls",
+    ".csv",
+    ".pptx",
+    ".ppt",
   ],
 };
 

@@ -1,6 +1,6 @@
 # The Onion: A Comprehensive Review
-**Scientific Name:** *Allium cepa*  
-**Family:** Amaryllidaceae  
+**Scientific Name:** *Allium cepa*
+**Family:** Amaryllidaceae
 **Date:** 2025-12-30
 
 ---

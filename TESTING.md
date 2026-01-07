@@ -177,13 +177,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      
+
       - name: Start test containers
         run: docker-compose -f docker-compose.test.yml up -d
-      
+
       - name: Run tests
         run: ./run_tests.sh --all --coverage
-      
+
       - name: Upload coverage
         uses: codecov/codecov-action@v3
 ```

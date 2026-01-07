@@ -25,14 +25,14 @@ The system is composed of several independent services, each deployable via Dock
 
 1.  **Environment Variables**:
     Create a `.env` file in the project root. You can copy the example variables.
-    
+
     ```properties
     OPENAI_API_KEY=sk-...
     OPENAI_API_BASE=https://api.openai.com/v1
     OPENAI_MODEL=gpt-4o
-    
+
     # Optional Overrides
-    # CELERY_BROKER_URL=amqp://guest:guest@rabbitmq:5672//
+    # CELERY_BROKER_URL=amqp://guest:guest@rabbitmq:5672//  # pragma: allowlist secret
     # VITE_API_BASE=http://localhost:9999
     ```
 

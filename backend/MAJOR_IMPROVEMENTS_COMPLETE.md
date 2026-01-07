@@ -13,7 +13,7 @@
 **Files Created:**
 - `backend/services/ingestion_pipeline.py` (89 lines)
   - `DocumentPipelineStrategy` (ABC)
-  - `StandardPipelineStrategy` 
+  - `StandardPipelineStrategy`
   - `VLMPipelineStrategy`
   - `PipelineFactory`
 

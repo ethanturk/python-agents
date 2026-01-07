@@ -1,6 +1,6 @@
 # The Pepper: A Comprehensive Review
-**Scientific Name:** *Capsicum annuum*  
-**Family:** Solanaceae  
+**Scientific Name:** *Capsicum annuum*
+**Family:** Solanaceae
 **Date:** 2025-12-30
 
 ---

@@ -1,6 +1,6 @@
 # The Kale: A Comprehensive Review
-**Scientific Name:** *Brassica oleracea*  
-**Family:** Brassicaceae  
+**Scientific Name:** *Brassica oleracea*
+**Family:** Brassicaceae
 **Date:** 2025-12-30
 
 ---

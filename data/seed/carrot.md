@@ -1,6 +1,6 @@
 # The Carrot: A Comprehensive Review
-**Scientific Name:** *Daucus carota*  
-**Family:** Apiaceae  
+**Scientific Name:** *Daucus carota*
+**Family:** Apiaceae
 **Date:** 2025-12-30
 
 ---

@@ -1,38 +1,40 @@
-import { useState, useCallback } from 'react';
-import axios from 'axios';
-import { API_BASE } from '../config';
-import { useDocumentSet } from '../contexts/DocumentSetContext';
-import { SEARCH } from '../constants';
+import { useState, useCallback } from "react";
+import axios from "axios";
+import { API_BASE } from "../config";
+import { useDocumentSet } from "../contexts/DocumentSetContext";
+import { SEARCH } from "../constants";
 
 export default function useSearch() {
   const { selectedSet } = useDocumentSet();
   const [searchData, setSearchData] = useState({ answer: null, results: [] });
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [searchLimit, setSearchLimit] = useState(SEARCH.DEFAULT_LIMIT);
   const [searchChatHistory, setSearchChatHistory] = useState([]);
   const [searchChatLoading, setSearchChatLoading] = useState(false);
-  const [validationError, setValidationError] = useState('');
+  const [validationError, setValidationError] = useState("");
 
   const handleSearch = useCallback(async () => {
     // Validate query
     if (!query || !query.trim()) {
-      setValidationError('Please enter a search query');
+      setValidationError("Please enter a search query");
       return;
     }
 
     if (query.trim().length < SEARCH.MIN_QUERY_LENGTH) {
-      setValidationError(`Search query must be at least ${SEARCH.MIN_QUERY_LENGTH} characters`);
+      setValidationError(
+        `Search query must be at least ${SEARCH.MIN_QUERY_LENGTH} characters`,
+      );
       return;
     }
 
-    setValidationError('');
+    setValidationError("");
     setLoading(true);
     try {
-      const response = await axios.post(`${API_BASE}/agent/search`, { 
-        prompt: query, 
+      const response = await axios.post(`${API_BASE}/agent/search`, {
+        prompt: query,
         limit: searchLimit,
-        document_set: selectedSet
+        document_set: selectedSet,
       });
       const data = response.data;
       setSearchChatHistory([]); // Reset chat on new search
@@ -48,28 +50,31 @@ export default function useSearch() {
     }
   }, [query, searchLimit, selectedSet]);
 
-  const handleSendSearchChat = useCallback(async (question) => {
-    if (!searchData.results || searchData.results.length === 0) return;
+  const handleSendSearchChat = useCallback(
+    async (question) => {
+      if (!searchData.results || searchData.results.length === 0) return;
 
-    const newMsg = { role: 'user', text: question };
-    setSearchChatHistory(prev => [...prev, newMsg]);
-    setSearchChatLoading(true);
+      const newMsg = { role: "user", text: question };
+      setSearchChatHistory((prev) => [...prev, newMsg]);
+      setSearchChatLoading(true);
 
-    try {
-      const res = await axios.post(`${API_BASE}/agent/search_qa`, {
-        question: question,
-        context_results: searchData.results
-      });
-      const answerMsg = { role: 'ai', text: res.data.answer };
-      setSearchChatHistory(prev => [...prev, answerMsg]);
-    } catch (error) {
-      console.error("Search Chat error:", error);
-      const errorMsg = { role: 'ai', text: "Sorry, I encountered an error." };
-      setSearchChatHistory(prev => [...prev, errorMsg]);
-    } finally {
-      setSearchChatLoading(false);
-    }
-  }, [searchData.results]);
+      try {
+        const res = await axios.post(`${API_BASE}/agent/search_qa`, {
+          question: question,
+          context_results: searchData.results,
+        });
+        const answerMsg = { role: "ai", text: res.data.answer };
+        setSearchChatHistory((prev) => [...prev, answerMsg]);
+      } catch (error) {
+        console.error("Search Chat error:", error);
+        const errorMsg = { role: "ai", text: "Sorry, I encountered an error." };
+        setSearchChatHistory((prev) => [...prev, errorMsg]);
+      } finally {
+        setSearchChatLoading(false);
+      }
+    },
+    [searchData.results],
+  );
 
   return {
     query,
@@ -82,6 +87,6 @@ export default function useSearch() {
     searchChatLoading,
     validationError,
     handleSearch,
-    handleSendSearchChat
+    handleSendSearchChat,
   };
 }

@@ -15,8 +15,10 @@ This document summarizes all the fixes applied to address the performance and us
 ### CRITICAL SEVERITY (3/3)
 
 #### ✅ P1: Fixed WebSocket Reconnection Loop
+
 **File**: `src/hooks/useWebSocket.js`
 **Changes**:
+
 - Added `useRef` to store `onMessage` handler preventing dependency changes
 - Implemented connection state tracking to prevent multiple simultaneous connections
 - Proper cleanup of event handlers and timeouts
@@ -27,8 +29,10 @@ This document summarizes all the fixes applied to address the performance and us
 ---
 
 #### ✅ U1: Added Loading Screen During Auth Check
+
 **File**: `src/contexts/AuthContext.jsx`
 **Changes**:
+
 - Added centered loading spinner with "Loading..." text
 - Shows during initial auth state check (1-3 seconds)
 - Proper UX instead of blank screen
@@ -38,11 +42,14 @@ This document summarizes all the fixes applied to address the performance and us
 ---
 
 #### ✅ U2: Added Error Boundaries
+
 **Files**:
+
 - `src/components/ErrorBoundary.jsx` (new)
 - `src/main.jsx`
 
 **Changes**:
+
 - Created comprehensive ErrorBoundary component with user-friendly UI
 - Shows error details in development mode only
 - Provides "Try Again" and "Reload Page" recovery options
@@ -55,8 +62,10 @@ This document summarizes all the fixes applied to address the performance and us
 ### HIGH SEVERITY (7/7)
 
 #### ✅ P2: Memoized SearchView Component
+
 **File**: `src/components/SearchView.jsx`
 **Changes**:
+
 - Wrapped component with `React.memo()`
 - Added `useMemo()` for `uniqueFiles` calculation
 - Changed `React.useState` to `useState` import
@@ -66,11 +75,14 @@ This document summarizes all the fixes applied to address the performance and us
 ---
 
 #### ✅ P3: Fixed Axios Interceptor Pattern
+
 **Files**:
+
 - `src/App.jsx`
 - Added import for `{ auth }` from firebase
 
 **Changes**:
+
 - Changed interceptor setup to run only once (empty dependency array)
 - Uses `auth.currentUser` directly instead of React state
 - Prevents interceptor recreation on every auth state change
@@ -80,11 +92,14 @@ This document summarizes all the fixes applied to address the performance and us
 ---
 
 #### ✅ U3: Added Offline Detection
+
 **Files**:
+
 - `src/hooks/useOnlineStatus.js` (new)
 - `src/App.jsx`
 
 **Changes**:
+
 - Created `useOnlineStatus` hook monitoring navigator.onLine
 - Integrated into App.jsx with error Alert when offline
 - WebSocket warning only shows when online but disconnected
@@ -94,11 +109,14 @@ This document summarizes all the fixes applied to address the performance and us
 ---
 
 #### ✅ A1: Added ARIA Labels to Icon Buttons
+
 **Files**:
+
 - `src/components/NavBar.jsx`
 - `src/components/DocumentListView.jsx`
 
 **Changes**:
+
 - Added `aria-label` attributes to all IconButtons
 - Added `aria-expanded` state to expand/collapse buttons
 - Dynamic labels for notifications showing unread count
@@ -109,8 +127,10 @@ This document summarizes all the fixes applied to address the performance and us
 ---
 
 #### ✅ S1: Fixed API Base URL Security Issue
+
 **File**: `src/config.js`
 **Changes**:
+
 - Removed hardcoded IP address fallback
 - Added validation that throws error if `VITE_API_BASE` not set
 - Clear error message guides developers to create .env file
@@ -122,12 +142,15 @@ This document summarizes all the fixes applied to address the performance and us
 ### MEDIUM SEVERITY (3/3)
 
 #### ✅ C2: Extracted Magic Numbers to Constants
+
 **Files**:
+
 - `src/constants.js` (new)
 - `src/hooks/useWebSocket.js`
 - `src/hooks/useSummarization.js`
 
 **Changes**:
+
 - Created centralized constants file with categories:
   - TIME (seconds, minutes, hours, days)
   - WEBSOCKET (reconnect delay, max attempts)
@@ -143,8 +166,10 @@ This document summarizes all the fixes applied to address the performance and us
 ---
 
 #### ✅ B2: Added Production Build Optimizations
+
 **File**: `vite.config.js`
 **Changes**:
+
 - Enabled terser minification with console.log removal in production
 - Configured manual chunk splitting:
   - `react-vendor`: React core
@@ -159,8 +184,10 @@ This document summarizes all the fixes applied to address the performance and us
 ---
 
 #### ✅ B4: Added Environment Variable Validation
+
 **File**: `vite.config.js`
 **Changes**:
+
 - Added production build validation for required env vars
 - Checks `VITE_API_BASE` and `VITE_FIREBASE_API_KEY`
 - Build fails fast with clear error message if missing
@@ -284,6 +311,7 @@ npm test
 ## 📊 Performance Improvements
 
 ### Before Fixes
+
 - Initial bundle: ~650KB minified, ~180KB gzipped
 - Blank screen on load (1-3 seconds)
 - WebSocket reconnection loop causing memory leaks
@@ -291,6 +319,7 @@ npm test
 - No error recovery
 
 ### After Fixes
+
 - Optimized bundle: ~420KB minified, ~110KB gzipped (**35% reduction**)
 - Loading indicator during auth check
 - Stable WebSocket connection
@@ -315,12 +344,14 @@ To complete all identified issues:
 ## 🔧 Files Modified
 
 ### New Files Created
+
 - `src/components/ErrorBoundary.jsx`
 - `src/hooks/useOnlineStatus.js`
 - `src/constants.js`
 - `FIXES_APPLIED.md` (this file)
 
 ### Files Modified
+
 - `src/hooks/useWebSocket.js`
 - `src/contexts/AuthContext.jsx`
 - `src/main.jsx`

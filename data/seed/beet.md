@@ -1,6 +1,6 @@
 # The Beet: A Comprehensive Review
-**Scientific Name:** *Beta vulgaris*  
-**Family:** Amaranthaceae  
+**Scientific Name:** *Beta vulgaris*
+**Family:** Amaranthaceae
 **Date:** 2025-12-30
 
 ---

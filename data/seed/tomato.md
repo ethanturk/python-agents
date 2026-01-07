@@ -1,6 +1,6 @@
 # The Tomato: A Comprehensive Review
-**Scientific Name:** *Solanum lycopersicum*  
-**Family:** Solanaceae  
+**Scientific Name:** *Solanum lycopersicum*
+**Family:** Solanaceae
 **Date:** 2025-12-30
 
 ---

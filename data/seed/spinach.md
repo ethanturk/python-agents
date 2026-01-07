@@ -1,6 +1,6 @@
 # The Spinach: A Comprehensive Review
-**Scientific Name:** *Spinacia oleracea*  
-**Family:** Amaranthaceae  
+**Scientific Name:** *Spinacia oleracea*
+**Family:** Amaranthaceae
 **Date:** 2025-12-30
 
 ---

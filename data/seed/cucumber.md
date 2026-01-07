@@ -1,6 +1,6 @@
 # The Cucumber: A Comprehensive Review
-**Scientific Name:** *Cucumis sativus*  
-**Family:** Cucurbitaceae  
+**Scientific Name:** *Cucumis sativus*
+**Family:** Cucurbitaceae
 **Date:** 2025-12-30
 
 ---

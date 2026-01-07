@@ -73,10 +73,10 @@ done
 start_containers() {
     echo -e "${YELLOW}Starting test containers...${NC}"
     docker-compose -f docker-compose.test.yml up -d
-    
+
     echo -e "${YELLOW}Waiting for services to be healthy...${NC}"
     sleep 5
-    
+
     # Wait for database
     echo "Waiting for PostgreSQL..."
     max_attempts=30
@@ -89,12 +89,12 @@ start_containers() {
         attempt=$((attempt + 1))
         sleep 2
     done
-    
+
     if [ $attempt -eq $max_attempts ]; then
         echo -e "${RED}PostgreSQL did not become ready${NC}"
         exit 1
     fi
-    
+
     # Wait for RabbitMQ
     echo "Waiting for RabbitMQ..."
     max_attempts=30
@@ -107,7 +107,7 @@ start_containers() {
         attempt=$((attempt + 1))
         sleep 2
     done
-    
+
     if [ $attempt -eq $max_attempts ]; then
         echo -e "${RED}RabbitMQ did not become ready${NC}"
         exit 1

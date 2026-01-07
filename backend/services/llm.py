@@ -1,14 +1,16 @@
-import config
+import logging
+
+import litellm
 from pydantic_ai.models.openai import OpenAIChatModel
 from pydantic_ai.providers.openai import OpenAIProvider
-from langchain_openai import OpenAIEmbeddings
-import logging
-import litellm
+
+import config
 
 logger = logging.getLogger(__name__)
 
 # Configure LiteLLM to drop unsupported parameters (fixes LM Studio issues)
 litellm.drop_params = True
+
 
 class LiteLLMEmbeddings:
     def __init__(self, model_name, api_key=None, api_base=None):
@@ -22,9 +24,9 @@ class LiteLLMEmbeddings:
             input=texts,
             api_key=self.api_key,
             api_base=self.api_base,
-            drop_params=True  # Drop unsupported params like encoding_format
+            drop_params=True,  # Drop unsupported params like encoding_format
         )
-        return [r['embedding'] for r in response.data]
+        return [r["embedding"] for r in response.data]
 
     def embed_query(self, text):
         response = litellm.embedding(
@@ -32,9 +34,10 @@ class LiteLLMEmbeddings:
             input=[text],
             api_key=self.api_key,
             api_base=self.api_base,
-            drop_params=True
+            drop_params=True,
         )
-        return response.data[0]['embedding']
+        return response.data[0]["embedding"]
+
 
 class LLMService:
     _instance = None
@@ -45,10 +48,7 @@ class LLMService:
         """Returns the configured PydanticAI OpenAIChatModel."""
         return OpenAIChatModel(
             config.OPENAI_MODEL,
-            provider=OpenAIProvider(
-                base_url=config.OPENAI_API_BASE,
-                api_key=config.OPENAI_API_KEY
-            )
+            provider=OpenAIProvider(base_url=config.OPENAI_API_BASE, api_key=config.OPENAI_API_KEY),
         )
 
     @classmethod
@@ -58,13 +58,15 @@ class LLMService:
             logger.info("Initializing LiteLLM Embeddings Model...")
             cls._embedding_model = LiteLLMEmbeddings(
                 model_name=config.OPENAI_EMBEDDING_MODEL,
-                api_key=config.OPENAI_API_KEY, 
-                api_base=config.OPENAI_API_BASE
+                api_key=config.OPENAI_API_KEY,
+                api_base=config.OPENAI_API_BASE,
             )
         return cls._embedding_model
 
+
 def get_model():
     return LLMService.get_model()
+
 
 def get_embeddings_model():
     return LLMService.get_embeddings()

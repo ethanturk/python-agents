@@ -1,4 +1,4 @@
-.PHONY: help test test-unit test-integration test-e2e test-all test-coverage lint lint-fix format format-check clean build dev dev-stop dev-logs
+.PHONY: help test test-unit test-integration test-e2e test-all test-coverage lint lint-fix format format-check clean build dev dev-stop dev-logs pre-commit-setup pre-commit-run pre-commit-update
 
 # Default target
 help:
@@ -12,6 +12,9 @@ help:
 	@echo "  make lint-fix       - Auto-fix linting issues"
 	@echo "  make format         - Format code"
 	@echo "  make format-check   - Check code formatting"
+	@echo "  make pre-commit-setup - Install pre-commit hooks"
+	@echo "  make pre-commit-run  - Run pre-commit hooks manually"
+	@echo "  make pre-commit-update - Update pre-commit hooks"
 	@echo "  make clean          - Clean build artifacts"
 	@echo "  make build          - Build all Docker containers"
 	@echo "  make dev            - Start development environment"
@@ -113,3 +116,17 @@ ci: lint typecheck test-unit
 # Full CI test
 ci-full: lint typecheck test-all
 	@echo "Full CI checks passed!"
+
+# Pre-commit hooks
+pre-commit-setup:
+	@echo "Installing pre-commit hooks..."
+	./setup-precommit.sh
+
+pre-commit-run:
+	@echo "Running pre-commit hooks on all files..."
+	pre-commit run --all-files
+
+pre-commit-update:
+	@echo "Updating pre-commit hooks..."
+	pre-commit autoupdate
+	pre-commit install
