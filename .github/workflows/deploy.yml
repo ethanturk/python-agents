@@ -5,6 +5,8 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+if: false  # Disabled temporarily
+
 permissions:
   id-token: write
   contents: read

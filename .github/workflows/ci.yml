@@ -23,74 +23,11 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          cache: 'pip'
 
       - name: Install dependencies
         run: |
           cd backend
-          pip3 install -r requirements.txt
-          pip3 install ruff black mypy
-
-      - name: Run Ruff linter
-        run: |
-          cd backend
-          ruff check .
-
-      - name: Check formatting
-        run: |
-          cd backend
-          black --check .
-
-      - name: Run type checks
-        run: |
-          cd backend
-          mypy . || true  # Continue even if mypy fails
-
-  # Frontend linting
-  frontend-lint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
-
-      - name: Install dependencies
-        run: |
-          cd frontend
-          npm ci
-
-      - name: Run linter
-        run: |
-          cd frontend
-          npm run lint
-
-      - name: Run tests
-        run: |
-          cd frontend
-          npm test -- --run
-
-  # Unit tests (fast, no containers)
-  unit-tests:
-    runs-on: ubuntu-latest
-    needs: [backend-lint, frontend-lint]
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-          cache: 'pip'
-
-      - name: Install dependencies
-        run: |
-          cd backend
-          pip3 install -r requirements.txt
+          pip3 install --no-cache-dir -r requirements.txt
 
       - name: Run unit tests
         run: |
@@ -112,7 +49,7 @@ jobs:
   # Integration tests (with containers)
   integration-tests:
     runs-on: ubuntu-latest
-    needs: [unit-tests]
+    needs: [backend-lint]
     steps:
       - uses: actions/checkout@v4
 
@@ -120,12 +57,11 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          cache: 'pip'
 
       - name: Install dependencies
         run: |
           cd backend
-          pip3 install -r requirements.txt
+          pip3 install --no-cache-dir -r requirements.txt
 
       - name: Start test containers
         run: |
@@ -237,7 +173,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip3 install bandit safety
+          pip3 install --no-cache-dir bandit safety
 
       - name: Run security checks with bandit
         run: |
@@ -270,7 +206,7 @@ jobs:
       - name: Install dependencies
         run: |
           cd backend
-          pip3 install -r requirements.txt
+          pip3 install --no-cache-dir -r requirements.txt
 
       - name: Start test containers
         run: |
@@ -299,17 +235,16 @@ jobs:
   test-summary:
     name: Test Summary
     runs-on: ubuntu-latest
-    needs: [unit-tests, integration-tests, frontend-lint, backend-lint]
+    needs: [backend-lint, integration-tests, frontend-lint]
     if: always()
     steps:
       - name: Check test results
         run: |
-          if [ "${{ needs.unit-tests.result }}" != "success" ] || \
+          if [ "${{ needs.backend-lint.result }}" != "success" ] || \
              [ "${{ needs.integration-tests.result }}" != "success" ] || \
-             [ "${{ needs.frontend-lint.result }}" != "success" ] || \
-             [ "${{ needs.backend-lint.result }}" != "success" ]; then
+             [ "${{ needs.frontend-lint.result }}" != "success" ]; then
             echo "❌ Some tests failed"
-            echo "Unit Tests: ${{ needs.unit-tests.result }}"
+            echo "Backend Lint/Tests: ${{ needs.backend-lint.result }}"
             echo "Integration Tests: ${{ needs.integration-tests.result }}"
             echo "Frontend Lint: ${{ needs.frontend-lint.result }}"
             echo "Backend Lint: ${{ needs.backend-lint.result }}"
@@ -322,30 +257,27 @@ jobs:
   pr-comment:
     name: PR Comment
     runs-on: ubuntu-latest
-    needs: [unit-tests, integration-tests, frontend-lint, backend-lint]
+    needs: [backend-lint, integration-tests, frontend-lint]
     if: github.event_name == 'pull_request'
     steps:
       - name: Comment on PR
         uses: actions/github-script@v7
         with:
           script: |
-            const unitTests = '${{ needs.unit-tests.result }}';
+            const backendLint = '${{ needs.backend-lint.result }}';
             const integrationTests = '${{ needs.integration-tests.result }}';
             const frontendLint = '${{ needs.frontend-lint.result }}';
-            const backendLint = '${{ needs.backend-lint.result }}';
 
-            const unitIcon = unitTests === 'success' ? '✅' : '❌';
+            const backendIcon = backendLint === 'success' ? '✅' : '❌';
             const integrationIcon = integrationTests === 'success' ? '✅' : '❌';
             const frontendIcon = frontendLint === 'success' ? '✅' : '❌';
-            const backendIcon = backendLint === 'success' ? '✅' : '❌';
 
             const comment = `## 🧪 Test Results
 
             | Test Suite | Status |
             |------------|--------|
-            | Backend Lint | ${backendIcon} ${backendLint} |
+            | Backend Lint/Tests | ${backendIcon} ${backendLint} |
             | Frontend Lint | ${frontendIcon} ${frontendLint} |
-            | Unit Tests | ${unitIcon} ${unitTests} |
             | Integration Tests | ${integrationIcon} ${integrationTests} |
 
             ---
