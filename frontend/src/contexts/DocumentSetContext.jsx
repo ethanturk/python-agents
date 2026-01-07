@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import React, { createContext, useEffect, useState } from "react";
+import React, { createContext, useEffect, useState, useCallback } from "react";
 import axios from "axios";
 import { API_BASE } from "../config";
 import { useAuth } from "../hooks/useAuth";
@@ -15,7 +15,7 @@ export function DocumentSetProvider({ children }) {
   const { currentUser } = useAuth();
 
   // Fetch sets
-  const fetchDocumentSets = async () => {
+  const fetchDocumentSets = useCallback(async () => {
     try {
       const config = {};
       if (currentUser) {
@@ -33,7 +33,7 @@ export function DocumentSetProvider({ children }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentUser]);
 
   useEffect(() => {
     sessionStorage.setItem("selectedDocumentSet", selectedSet);
