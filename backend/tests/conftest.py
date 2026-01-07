@@ -18,12 +18,19 @@ os.environ.setdefault(
     "postgresql://test_user:test_pass@localhost:5433/test_db",  # pragma: allowlist secret
 )
 os.environ.setdefault("OPENAI_API_KEY", "sk-test-key")
+os.environ.setdefault("OPENAI_API_BASE", "https://api.openai.com/v1")
+os.environ.setdefault("OPENAI_MODEL", "gpt-4o-mini")
+os.environ.setdefault("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
+os.environ.setdefault("OPENAI_EMBEDDING_DIMENSIONS", "1536")
 os.environ.setdefault("VECTOR_TABLE_NAME", "test_documents")
 os.environ.setdefault("CELERY_QUEUE_NAME", "test-queue")
 os.environ.setdefault(
     "CELERY_BROKER_URL",
     "amqp://test_user:test_pass@localhost:5673//",  # pragma: allowlist secret
 )
+os.environ.setdefault("SUPABASE_URL", "http://localhost:54321")
+os.environ.setdefault("SUPABASE_KEY", "test-key")  # pragma: allowlist secret
+
 
 # Check if we're running with test containers
 USE_TEST_CONTAINERS = os.getenv("USE_TEST_CONTAINERS", "false").lower() == "true"
@@ -33,6 +40,23 @@ if not USE_TEST_CONTAINERS:
     sys.modules["nest_asyncio"] = MagicMock()
     sys.modules["firebase_admin"] = MagicMock()
     sys.modules["auth"] = MagicMock()
+
+    # Mock docling and heavy dependencies
+    sys.modules["docling"] = MagicMock()
+    sys.modules["docling.datamodel"] = MagicMock()
+    sys.modules["docling.datamodel.base_models"] = MagicMock()
+    sys.modules["docling.datamodel.pipeline_options"] = MagicMock()
+    sys.modules["docling.document_converter"] = MagicMock()
+    sys.modules["docling.backend"] = MagicMock()
+    sys.modules["docling.backend.pypdfium2_backend"] = MagicMock()
+    sys.modules["docling.pipeline.vlm_pipeline"] = MagicMock()
+
+    # Mock supabase client
+    sys.modules["supabase"] = MagicMock()
+    sys.modules["postgrest"] = MagicMock()
+    sys.modules["gotrue"] = MagicMock()
+    sys.modules["storage3"] = MagicMock()
+
 
 # Import after environment setup
 from auth import get_current_user

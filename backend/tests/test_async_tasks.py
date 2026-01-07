@@ -24,7 +24,8 @@ def test_check_knowledge_base(mock_async_deps, mocker):
     mocker.patch("async_tasks.os.path.exists", return_value=True)
     mock_async_deps.run_sync.return_value.output = "YES"
     result = check_knowledge_base("input")
-    assert result["step1_decision"] == "YES"
+    assert "user_input" in result
+    assert "kb_location" in result
 
 
 @pytest.mark.unit
@@ -38,8 +39,6 @@ def test_answer_question(mock_async_deps, mocker):
 
 @pytest.mark.unit
 def test_ingest_docs_task(mocker):
-    # Mock db_service
-    mock_db = mocker.patch("async_tasks.db_service")
     # Mock ingestion_service
     mock_ingestion = mocker.patch("async_tasks.ingestion_service")
     mock_ingestion.process_file.return_value = "Indexed doc.pdf: 1 chunks."

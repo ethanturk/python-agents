@@ -13,7 +13,11 @@ def mock_document_converter(mocker):
     mock_result.document.export_to_markdown.return_value = "Mocked document content"
     mock_converter.convert.return_value = mock_result
 
-    mocker.patch("summarizer.DocumentConverter", return_value=mock_converter)
+    # Patch the factory method that creates converters
+    mocker.patch(
+        "services.docling_utils.DoclingConverterFactory.create_standard_converter",
+        return_value=mock_converter,
+    )
     return mock_converter
 
 
@@ -41,10 +45,10 @@ def test_summarize_document_xls_conversion(
     mock_document_converter, mock_openai_agent_summarizer, mocker
 ):
     # Mock pandas and tempfile
-    mock_pd = mocker.patch("summarizer.pd")
+    mock_pd = mocker.patch("utils.file_conversion.pd")
     mock_pd.read_excel.return_value = {"Sheet1": MagicMock()}
 
-    mock_temp = mocker.patch("summarizer.tempfile.NamedTemporaryFile")
+    mock_temp = mocker.patch("utils.file_conversion.tempfile.NamedTemporaryFile")
     mock_temp.return_value.name = "/tmp/test.xlsx"
 
     # Mock os.path.exists and remove

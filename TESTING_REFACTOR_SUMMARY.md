@@ -224,8 +224,8 @@ All existing tests have been updated with `@pytest.mark.unit` markers. Tests tha
 ### Environment Variables
 
 - `USE_TEST_CONTAINERS=true`: Enable integration tests with real services
-- Test database: `postgresql://test_user:test_pass@localhost:5433/test_db`
-- Test RabbitMQ: `amqp://test_user:test_pass@localhost:5673//`
+- Test database: `postgresql://test_user:test_pass@localhost:5433/test_db`  # pragma: allowlist secret
+- Test RabbitMQ: `amqp://test_user:test_pass@localhost:5673//`  # pragma: allowlist secret
 
 ### Breaking Changes
 
