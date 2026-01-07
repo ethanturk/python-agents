@@ -2,16 +2,19 @@
 Refactored SupabaseService - EXAMPLE ONLY, NOT FOR PRODUCTION USE
 Demonstrates fixes for DRY, SOLID, and connection pooling issues.
 """
+
 import logging
-from typing import Optional, Dict, Any, List, Protocol
-from supabase import create_client, Client
 from contextlib import asynccontextmanager
+from typing import Any, Optional, Protocol
+
+from supabase import Client, create_client
 
 logger = logging.getLogger(__name__)
 
 
 class SupabaseConfig(Protocol):
     """Protocol for Supabase configuration (Dependency Inversion)."""
+
     url: str
     key: str
 
@@ -83,7 +86,7 @@ class SupabaseService:
         """Check if Supabase client is available."""
         return self.client is not None
 
-    def rpc(self, function_name: str, params: Dict[str, Any]) -> Any:
+    def rpc(self, function_name: str, params: dict[str, Any]) -> Any:
         """
         Execute a Postgres RPC function.
 
@@ -104,7 +107,7 @@ class SupabaseService:
             logger.error(f"RPC {function_name} failed: {e}")
             raise
 
-    def upsert(self, table: str, data: List[Dict[str, Any]]) -> Any:
+    def upsert(self, table: str, data: list[dict[str, Any]]) -> Any:
         """
         Upsert records into a table.
 
@@ -125,7 +128,7 @@ class SupabaseService:
             logger.error(f"Upsert to {table} failed: {e}")
             raise
 
-    def delete(self, table: str, filters: Dict[str, Any]) -> Any:
+    def delete(self, table: str, filters: dict[str, Any]) -> Any:
         """
         Delete records from a table based on equality filters.
 
@@ -154,7 +157,7 @@ class SupabaseService:
         table: str,
         columns: str = "*",
         range_start: Optional[int] = None,
-        range_end: Optional[int] = None
+        range_end: Optional[int] = None,
     ) -> Any:
         """
         Select records from a table.
@@ -202,7 +205,7 @@ class SupabaseService:
             # The supabase-py client uses httpx internally
             # Check if it exposes a close method
             try:
-                if hasattr(self._client, 'close'):
+                if hasattr(self._client, "close"):
                     await self._client.close()
                 # Note: Current supabase-py may not expose close()
                 # This is a limitation of the library

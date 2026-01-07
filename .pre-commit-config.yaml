@@ -12,6 +12,7 @@ repos:
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: check-yaml
+        exclude: ^(k8s/.*\.ya?ml|.*\.bandit)$  # Skip multi-doc K8s manifests and .bandit config (INI format)
       - id: check-json
       - id: check-toml
       - id: check-added-large-files
@@ -61,7 +62,7 @@ repos:
     rev: v1.4.0
     hooks:
       - id: detect-secrets
-        exclude: package.lock.json
+        exclude: (package.lock.json|\.env$)  # Exclude .env file (not committed)
 
   # JavaScript/TypeScript linting (frontend)
   - repo: local

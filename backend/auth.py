@@ -1,13 +1,15 @@
-import os
-import firebase_admin
-from firebase_admin import auth, credentials
-from fastapi import HTTPException, Security, Depends
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 import logging
+import os
+
+import firebase_admin
+from fastapi import HTTPException, Security
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from firebase_admin import auth, credentials
 
 logger = logging.getLogger(__name__)
 
 security = HTTPBearer()
+
 
 def init_firebase():
     """
@@ -41,6 +43,7 @@ def init_firebase():
                 f"Firebase Admin initialization failed: {e}. "
                 "Auth verification will fail. Set FIREBASE_REQUIRED=true to make this fatal."
             )
+
 
 def get_current_user(credentials: HTTPAuthorizationCredentials = Security(security)):
     """Verifies the Firebase ID token."""

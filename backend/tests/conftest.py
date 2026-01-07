@@ -1,12 +1,12 @@
-import pytest
 import asyncio
+import os
+import sys
+import tempfile
 import time
 from unittest.mock import MagicMock
+
+import pytest
 from fastapi.testclient import TestClient
-import sys
-import os
-import tempfile
-from typing import Generator
 
 # Add backend to path so we can import modules
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -14,12 +14,16 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # Set up test environment
 os.environ.setdefault("MONITORED_DIR", tempfile.mkdtemp())
 os.environ.setdefault(
-    "DATABASE_CONN_STRING", "postgresql://test_user:test_pass@localhost:5433/test_db"
+    "DATABASE_CONN_STRING",
+    "postgresql://test_user:test_pass@localhost:5433/test_db",  # pragma: allowlist secret
 )
 os.environ.setdefault("OPENAI_API_KEY", "sk-test-key")
 os.environ.setdefault("VECTOR_TABLE_NAME", "test_documents")
 os.environ.setdefault("CELERY_QUEUE_NAME", "test-queue")
-os.environ.setdefault("CELERY_BROKER_URL", "amqp://test_user:test_pass@localhost:5673//")
+os.environ.setdefault(
+    "CELERY_BROKER_URL",
+    "amqp://test_user:test_pass@localhost:5673//",  # pragma: allowlist secret
+)
 
 # Check if we're running with test containers
 USE_TEST_CONTAINERS = os.getenv("USE_TEST_CONTAINERS", "false").lower() == "true"
@@ -31,8 +35,8 @@ if not USE_TEST_CONTAINERS:
     sys.modules["auth"] = MagicMock()
 
 # Import after environment setup
-from backend_app import app
 from auth import get_current_user
+from backend_app import app
 
 # Mock Authentication
 app.dependency_overrides[get_current_user] = lambda: {
@@ -56,7 +60,6 @@ def mock_vector_db(mocker):
     mocker.patch("services.vector_db.db_service.upsert_vectors", return_value=None)
     mocker.patch("services.vector_db.db_service.delete_document", return_value=None)
     mocker.patch("services.vector_db.db_service.list_documents", return_value=[])
-    mocker.patch("services.vector_db.psycopg2.connect", return_value=MagicMock())
 
     from services.vector_db import db_service
 
@@ -138,39 +141,6 @@ def test_pdf_file(tmp_path):
     file_path = tmp_path / "test.pdf"
     file_path.write_bytes(b"%PDF-1.4\nfake pdf content")
     return file_path
-
-
-# Integration test fixtures
-@pytest.fixture(scope="session")
-def test_db_connection():
-    """
-    Integration fixture for real database connection.
-    Skips tests if USE_TEST_CONTAINERS is not set to true.
-    """
-    if not USE_TEST_CONTAINERS:
-        pytest.skip("Set USE_TEST_CONTAINERS=true to run integration tests")
-
-    # Wait for database to be ready
-    import psycopg2
-
-    max_retries = 10
-    for i in range(max_retries):
-        try:
-            conn = psycopg2.connect(
-                host="localhost",
-                port=5433,
-                user="test_user",
-                password="test_pass",
-                database="test_db",
-            )
-            yield conn
-            conn.close()
-            break
-        except psycopg2.OperationalError:
-            if i < max_retries - 1:
-                time.sleep(2)
-            else:
-                pytest.skip("Could not connect to test database")
 
 
 @pytest.fixture(scope="session")

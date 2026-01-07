@@ -6,8 +6,6 @@ firebase-admin
 python-dotenv
 fastapi
 uvicorn
-asyncpg
-pgvector
 langchain-text-splitters
 watchdog
 docling[vlm]
@@ -16,7 +14,6 @@ pandas
 xlrd
 openpyxl
 httpx
-websockets
 pytest
 pytest-asyncio
 pytest-mock

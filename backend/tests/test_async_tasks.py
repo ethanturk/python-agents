@@ -1,12 +1,13 @@
+from unittest.mock import MagicMock
+
 import pytest
-from unittest.mock import MagicMock, ANY
+
 from async_tasks import (
-    check_knowledge_base,
     answer_question,
+    check_knowledge_base,
     ingest_docs_task,
     summarize_document_task,
 )
-import config
 
 
 @pytest.fixture

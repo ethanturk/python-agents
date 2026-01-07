@@ -1,16 +1,20 @@
 import logging
 import threading
-from typing import Optional, Dict, Any, List
-from supabase import create_client, Client
+from typing import Any, Optional
+
+from supabase import Client, create_client
+
 import config
 
 logger = logging.getLogger(__name__)
+
 
 class SupabaseService:
     """
     Service to handle direct interactions with Supabase REST API.
     Wraps the supabase-py client.
     """
+
     def __init__(self):
         self.supabase_url = config.SUPABASE_URL
         self.supabase_key = config.SUPABASE_KEY
@@ -53,7 +57,7 @@ class SupabaseService:
     def is_available(self) -> bool:
         return self.client is not None
 
-    def rpc(self, function_name: str, params: Dict[str, Any]) -> Any:
+    def rpc(self, function_name: str, params: dict[str, Any]) -> Any:
         """
         Execute a Postgres RPC function.
 
@@ -75,7 +79,7 @@ class SupabaseService:
             logger.error(f"RPC {function_name} failed: {e}")
             raise
 
-    def upsert(self, table: str, data: List[Dict[str, Any]]) -> Any:
+    def upsert(self, table: str, data: list[dict[str, Any]]) -> Any:
         """
         Upsert records into a table.
 
@@ -97,7 +101,7 @@ class SupabaseService:
             logger.error(f"Upsert to {table} failed: {e}")
             raise
 
-    def delete(self, table: str, filters: Dict[str, Any]) -> Any:
+    def delete(self, table: str, filters: dict[str, Any]) -> Any:
         """
         Delete records from a table based on simple equality filters.
 
@@ -122,7 +126,9 @@ class SupabaseService:
             logger.error(f"Delete from {table} failed: {e}")
             raise
 
-    def select(self, table: str, columns: str = "*", range_start: int = None, range_end: int = None) -> Any:
+    def select(
+        self, table: str, columns: str = "*", range_start: int = None, range_end: int = None
+    ) -> Any:
         """
         Select records from a table.
 
@@ -187,9 +193,10 @@ class SupabaseService:
         if self.client:
             try:
                 # The supabase client has a postgrest_client which has an httpx session
-                if hasattr(self.client, 'postgrest') and hasattr(self.client.postgrest, 'session'):
+                if hasattr(self.client, "postgrest") and hasattr(self.client.postgrest, "session"):
                     # Close the httpx client session
                     import asyncio
+
                     try:
                         # Try to close async session if running in async context
                         asyncio.get_running_loop()
@@ -203,6 +210,7 @@ class SupabaseService:
                 logger.warning(f"Error closing Supabase client: {e}")
             finally:
                 self.client = None
+
 
 # Global instance
 supabase_service = SupabaseService()

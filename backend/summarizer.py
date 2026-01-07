@@ -1,21 +1,21 @@
-import os
 import logging
+import os
 from io import BytesIO
 from typing import Union
 
 # Docling imports
 from docling.datamodel.base_models import DocumentStream
 
-# PydanticAI imports
-from pydantic_ai import Agent
-
 # LangChain Text Splitter (still used)
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
+# PydanticAI imports
+from pydantic_ai import Agent
+
 import config
-from utils.file_conversion import FileConversionUtils
-from services.llm import LLMService
 from services.docling_utils import DoclingConverterFactory
+from services.llm import LLMService
+from utils.file_conversion import FileConversionUtils
 
 logger = logging.getLogger(__name__)
 

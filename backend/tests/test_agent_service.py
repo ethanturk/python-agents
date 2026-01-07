@@ -1,7 +1,7 @@
 import pytest
-from unittest.mock import MagicMock
-from services.agent import run_sync_agent, perform_rag
+
 import config
+from services.agent import perform_rag, run_sync_agent
 
 
 @pytest.mark.unit

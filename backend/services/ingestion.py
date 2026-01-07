@@ -1,15 +1,15 @@
+import gc
+import logging
+import uuid
+from io import BytesIO
+
 from docling.datamodel.base_models import DocumentStream
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from services.llm import get_embeddings_model, LLMService
-from services.vector_db import db_service
-from services.ingestion_pipeline import PipelineFactory
-from utils.file_conversion import FileConversionUtils
 
-import uuid
-import logging
-import gc
-from io import BytesIO
-from pathlib import Path
+from services.ingestion_pipeline import PipelineFactory
+from services.llm import LLMService
+from services.vector_db import db_service
+from utils.file_conversion import FileConversionUtils
 
 logger = logging.getLogger(__name__)
 

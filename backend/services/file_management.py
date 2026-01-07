@@ -1,7 +1,8 @@
 import os
 from pathlib import Path
-from fastapi import UploadFile, HTTPException
-from typing import List
+
+from fastapi import HTTPException, UploadFile
+
 import config
 from utils.validation import sanitize_document_set
 
@@ -41,7 +42,7 @@ class FileManagementService:
 
         return full_path
 
-    def validate_upload(self, files: List[UploadFile], document_set: str) -> tuple:
+    def validate_upload(self, files: list[UploadFile], document_set: str) -> tuple:
         """Validate upload request and return target directory and sanitized set name."""
         if len(files) > self.max_files_per_upload:
             raise HTTPException(

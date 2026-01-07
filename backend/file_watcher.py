@@ -1,12 +1,14 @@
-import os
-import time
 import logging
+import os
 import threading
+import time
 from pathlib import Path
-from watchdog.observers import Observer
+
 from watchdog.events import FileSystemEventHandler
-from services.vector_db import db_service
+from watchdog.observers import Observer
+
 import config
+from services.vector_db import db_service
 
 logger = logging.getLogger(__name__)
 

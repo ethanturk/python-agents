@@ -7,7 +7,7 @@ services:
     container_name: test-db
     environment:
       POSTGRES_USER: test_user
-      POSTGRES_PASSWORD: test_pass
+      POSTGRES_PASSWORD: test_pass  # pragma: allowlist secret
       POSTGRES_DB: test_db
     ports:
       - "5433:5432"

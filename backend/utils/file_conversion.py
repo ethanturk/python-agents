@@ -1,10 +1,11 @@
-import pandas as pd
-import tempfile
-import os
 import logging
+import os
+import tempfile
 from io import BytesIO
 from pathlib import Path
-from typing import Union, Optional, Tuple
+from typing import Optional, Union
+
+import pandas as pd
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +52,7 @@ class FileConversionUtils:
     @staticmethod
     def prepare_source_for_conversion(
         source: Union[str, Path, BytesIO], filename: str = None
-    ) -> Tuple:
+    ) -> tuple:
         """
         Prepare file source for document conversion.
         Handles XLS conversion and returns (prepared_source, temp_file_to_cleanup).

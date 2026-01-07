@@ -1,6 +1,8 @@
-import pytest
-from unittest.mock import MagicMock, patch
 from io import BytesIO
+from unittest.mock import MagicMock
+
+import pytest
+
 from summarizer import summarize_document
 
 

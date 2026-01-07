@@ -1,0 +1,21 @@
+[lint]
+# Ignore type annotation style suggestions (Python 3.10+ syntax)
+select = ["E", "F", "W", "B", "S", "C"]
+ignore = [
+    "UP007",  # Use X | Y for type annotations (optional Python 3.10+ style)
+    "E501",   # Line too long (not strict)
+    "B008",    # Do not perform function call in argument defaults
+    "B904",    # Raise with from err (optional)
+    "S110",    # Try-except-pass (optional)
+    "C901",    # Function too complex (optional)
+    "S108",    # Insecure temp file usage (OK for test files)
+    "S101",    # Assert statements are expected in tests
+    "F841",    # Unused variable OK in tests
+    "E722",    # Bare except OK for this codebase
+    "E402",    # Module level imports OK in conftest and backend_app.py (conditional imports)
+    "S603",    # Subprocess OK in this codebase (input is trusted)
+    "S608",    # Supabase RPC calls are parameterized, not direct SQL
+    "C401",    # Generator is fine for this use case
+]
+
+[per-file-ignores]

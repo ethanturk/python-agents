@@ -1,16 +1,16 @@
 import logging
-import uuid
 import re
-from typing import List, Dict, Any, Optional
+import uuid
+from typing import Any
 
 import config
 from services.llm import get_embeddings_model
 from services.supabase_service import supabase_service
 from services.vector_db_interfaces import (
+    DocumentMetadataReader,
+    VectorDeleter,
     VectorReader,
     VectorWriter,
-    VectorDeleter,
-    DocumentMetadataReader,
 )
 
 logger = logging.getLogger(__name__)
@@ -37,7 +37,7 @@ class VectorDBService(VectorReader, VectorWriter, VectorDeleter, DocumentMetadat
 
     async def search(
         self, query: str, limit: int = 10, document_set: str = None
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         if not self.supabase.is_available():
             return []
 
@@ -77,7 +77,7 @@ class VectorDBService(VectorReader, VectorWriter, VectorDeleter, DocumentMetadat
             logger.error(f"Search failed: {e}")
             return []
 
-    async def upsert_vectors(self, points: List[Dict[str, Any]]):
+    async def upsert_vectors(self, points: list[dict[str, Any]]):
         if not self.supabase.is_available() or not points:
             return
 
@@ -160,7 +160,7 @@ class VectorDBService(VectorReader, VectorWriter, VectorDeleter, DocumentMetadat
             logger.error(f"List documents failed: {e}")
             return []
 
-    async def get_distinct_document_sets(self) -> List[str]:
+    async def get_distinct_document_sets(self) -> list[str]:
         """Get distinct document_set values from the database."""
         if not self.supabase.is_available():
             return []
@@ -173,7 +173,7 @@ class VectorDBService(VectorReader, VectorWriter, VectorDeleter, DocumentMetadat
             logger.error(f"Get distinct document sets failed: {e}")
             return []
 
-    async def get_distinct_filenames(self) -> List[Dict[str, Any]]:
+    async def get_distinct_filenames(self) -> list[dict[str, Any]]:
         """Get distinct filenames with their document_set and a sample chunk count."""
         if not self.supabase.is_available():
             return []

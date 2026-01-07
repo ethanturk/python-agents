@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List, Dict, Any, Optional
+from typing import Any
 
 
 class VectorReader(ABC):
@@ -8,12 +8,12 @@ class VectorReader(ABC):
     @abstractmethod
     async def search(
         self, query: str, limit: int = 10, document_set: str = None
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Search for documents similar to query."""
         pass
 
     @abstractmethod
-    async def list_documents(self, limit=1000, offset=0) -> List[Any]:
+    async def list_documents(self, limit=1000, offset=0) -> list[Any]:
         """List all documents."""
         pass
 
@@ -22,7 +22,7 @@ class VectorWriter(ABC):
     """Interface for writing/updating vector data."""
 
     @abstractmethod
-    async def upsert_vectors(self, points: List[Dict[str, Any]]) -> None:
+    async def upsert_vectors(self, points: list[dict[str, Any]]) -> None:
         """Insert or update document vectors."""
         pass
 
@@ -40,11 +40,11 @@ class DocumentMetadataReader(ABC):
     """Interface for reading document metadata."""
 
     @abstractmethod
-    async def get_distinct_document_sets(self) -> List[str]:
+    async def get_distinct_document_sets(self) -> list[str]:
         """Get all distinct document sets."""
         pass
 
     @abstractmethod
-    async def get_distinct_filenames(self) -> List[Dict[str, Any]]:
+    async def get_distinct_filenames(self) -> list[dict[str, Any]]:
         """Get distinct filenames with metadata."""
         pass

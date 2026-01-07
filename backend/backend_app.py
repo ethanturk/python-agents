@@ -1,52 +1,55 @@
-import os
-import logging
 import base64
+import logging
+import os
+from contextlib import asynccontextmanager
+
+from celery import chain
+from celery.result import AsyncResult
 from fastapi import (
+    Depends,
     FastAPI,
-    HTTPException,
-    WebSocket,
-    WebSocketDisconnect,
-    UploadFile,
     File,
     Form,
-    Depends,
+    HTTPException,
+    UploadFile,
+    WebSocket,
+    WebSocketDisconnect,
 )
-from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
-from contextlib import asynccontextmanager
-from celery.result import AsyncResult
+from fastapi.staticfiles import StaticFiles
 
 # Internal Imports
 import config
-from auth import init_firebase, get_current_user
-from database import init_db, get_all_summaries, save_summary, get_summary
-from file_watcher import start_watching
-
-# Service Layer
-from services.vector_db import db_service
-from services.agent import run_sync_agent, perform_rag, run_qa_agent
-from services.websocket import manager
-from services.file_management import file_service
-from async_tasks import (
-    ingest_docs_task,
-    summarize_document_task,
-    check_knowledge_base,
-    answer_question,
-    app as celery_app,
-)
-from celery import chain
 
 # API Models
 from api.models import (
     AgentRequest,
-    TaskResponse,
     IngestRequest,
+    NotificationRequest,
+    SearchQARequest,
     SearchRequest,
     SummarizeRequest,
-    NotificationRequest,
     SummaryQARequest,
-    SearchQARequest,
+    TaskResponse,
 )
+from async_tasks import (
+    answer_question,
+    check_knowledge_base,
+    ingest_docs_task,
+    summarize_document_task,
+)
+from async_tasks import (
+    app as celery_app,
+)
+from auth import get_current_user, init_firebase
+from database import get_all_summaries, get_summary, init_db, save_summary
+from file_watcher import start_watching
+from services.agent import perform_rag, run_qa_agent, run_sync_agent
+from services.file_management import file_service
+
+# Service Layer
+from services.vector_db import db_service
+from services.websocket import manager
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
