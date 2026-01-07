@@ -1,11 +1,22 @@
-variable "location" {
-  description = "The Azure Region to deploy resources"
+variable "project_id" {
+  description = "The GCP Project ID"
   type        = string
-  default     = "eastus"
+}
+
+variable "region" {
+  description = "The GCP region to deploy resources"
+  type        = string
+  default     = "us-central1"
 }
 
 variable "node_count" {
-  description = "Number of nodes in the AKS cluster"
+  description = "Number of nodes in the GKE cluster node pool"
   type        = number
   default     = 1
+}
+
+variable "machine_type" {
+  description = "Machine type for GKE nodes"
+  type        = string
+  default     = "e2-small"
 }

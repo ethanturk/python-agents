@@ -1,3 +1,8 @@
+# OPTIONAL: Separate Celery worker service
+# By default, the worker runs embedded in the backend server (RUN_WORKER_EMBEDDED=true)
+# Only use this docker-compose file if you need dedicated worker instances
+# To use: Set RUN_WORKER_EMBEDDED=false in your .env and run:
+#   docker-compose -f docker-compose.worker.yml up -d
 services:
   worker:
     build: ./backend
