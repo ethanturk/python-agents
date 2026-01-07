@@ -20,5 +20,6 @@ websockets
 pytest
 pytest-asyncio
 pytest-mock
+pytest-cov
 litellm
 supabase

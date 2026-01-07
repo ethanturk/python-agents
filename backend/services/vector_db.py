@@ -6,27 +6,38 @@ from typing import List, Dict, Any, Optional
 import config
 from services.llm import get_embeddings_model
 from services.supabase_service import supabase_service
+from services.vector_db_interfaces import (
+    VectorReader,
+    VectorWriter,
+    VectorDeleter,
+    DocumentMetadataReader,
+)
 
 logger = logging.getLogger(__name__)
 
+
 class DocumentPoint:
     """Compatibility wrapper for document results (mimics Qdrant point)."""
+
     def __init__(self, id, payload):
         self.id = id
         self.payload = payload
 
-class VectorDBService:
+
+class VectorDBService(VectorReader, VectorWriter, VectorDeleter, DocumentMetadataReader):
     def __init__(self):
         self.supabase = supabase_service
-        self.table_name = config.VECTOR_TABLE_NAME or 'documents'
+        self.table_name = config.VECTOR_TABLE_NAME or "documents"
         self._validate_table_name()
 
     def _validate_table_name(self):
         """Ensure table name is safe."""
-        if not re.match(r'^[a-zA-Z0-9_]+$', self.table_name):
+        if not re.match(r"^[a-zA-Z0-9_]+$", self.table_name):
             raise ValueError(f"Invalid table name: {self.table_name}")
 
-    async def search(self, query: str, limit: int = 10, document_set: str = None) -> List[Dict[str, Any]]:
+    async def search(
+        self, query: str, limit: int = 10, document_set: str = None
+    ) -> List[Dict[str, Any]]:
         if not self.supabase.is_available():
             return []
 
@@ -42,23 +53,25 @@ class VectorDBService:
                 "query_embedding": query_vector,
                 "match_threshold": 0,
                 "match_count": limit,
-                "filter_document_set": document_set if document_set != "all" else None
+                "filter_document_set": document_set if document_set != "all" else None,
             }
-            
+
             response = self.supabase.rpc("match_documents", params)
             rows = response.data
-            
+
             results = []
             for row in rows:
-                results.append({
-                    "content": row.get('content'),
-                    "metadata": {
-                        "filename": row.get('filename'),
-                        "document_set": row.get('document_set'),
-                        **(row.get('metadata') or {})
-                    },
-                    "score": float(row.get('similarity', 0))
-                })
+                results.append(
+                    {
+                        "content": row.get("content"),
+                        "metadata": {
+                            "filename": row.get("filename"),
+                            "document_set": row.get("document_set"),
+                            **(row.get("metadata") or {}),
+                        },
+                        "score": float(row.get("similarity", 0)),
+                    }
+                )
             return results
         except Exception as e:
             logger.error(f"Search failed: {e}")
@@ -71,22 +84,28 @@ class VectorDBService:
         try:
             records = []
             for point in points:
-                p_id = point.get('id') or str(uuid.uuid4())
-                vector = point.get('vector')
-                payload = point.get('payload', {})
-                filename = payload.get('filename')
-                content = payload.get('content')
-                doc_set = payload.get('document_set')
-                metadata = {k: v for k, v in payload.items() if k not in ['filename', 'content', 'document_set']}
-                
-                records.append({
-                    "id": p_id,
-                    "vector": vector,
-                    "filename": filename,
-                    "document_set": doc_set,
-                    "content": content,
-                    "metadata": metadata
-                })
+                p_id = point.get("id") or str(uuid.uuid4())
+                vector = point.get("vector")
+                payload = point.get("payload", {})
+                filename = payload.get("filename")
+                content = payload.get("content")
+                doc_set = payload.get("document_set")
+                metadata = {
+                    k: v
+                    for k, v in payload.items()
+                    if k not in ["filename", "content", "document_set"]
+                }
+
+                records.append(
+                    {
+                        "id": p_id,
+                        "vector": vector,
+                        "filename": filename,
+                        "document_set": doc_set,
+                        "content": content,
+                        "metadata": metadata,
+                    }
+                )
 
             self.supabase.upsert(self.table_name, records)
         except Exception as e:
@@ -101,8 +120,8 @@ class VectorDBService:
             filters = {"filename": filename}
             if document_set and document_set != "all":
                 filters["document_set"] = document_set
-                
-            # Note: generic delete takes simple filters. 
+
+            # Note: generic delete takes simple filters.
             # If we need complex queries (like 'eq' chaining), we might need to expose builder in service
             # For now, let's assume 'delete' in service handles dict as 'AND' eq filters
             self.supabase.delete(self.table_name, filters)
@@ -113,27 +132,29 @@ class VectorDBService:
 
     async def list_documents(self, limit=1000, offset=0):
         if not self.supabase.is_available():
-             return []
+            return []
 
         try:
             response = self.supabase.select(
                 self.table_name,
                 columns="id, content, filename, document_set, metadata",
                 range_start=offset,
-                range_end=offset + limit - 1
+                range_end=offset + limit - 1,
             )
 
             rows = response.data
-            logger.info(f"list_documents returned {len(rows)} rows (limit={limit}, offset={offset})")
+            logger.info(
+                f"list_documents returned {len(rows)} rows (limit={limit}, offset={offset})"
+            )
             results = []
             for row in rows:
-                 payload = {
-                     "content": row.get('content'),
-                     "filename": row.get('filename'),
-                     "document_set": row.get('document_set'),
-                     **(row.get('metadata') or {})
-                 }
-                 results.append(DocumentPoint(id=str(row.get('id')), payload=payload))
+                payload = {
+                    "content": row.get("content"),
+                    "filename": row.get("filename"),
+                    "document_set": row.get("document_set"),
+                    **(row.get("metadata") or {}),
+                }
+                results.append(DocumentPoint(id=str(row.get("id")), payload=payload))
             return results
         except Exception as e:
             logger.error(f"List documents failed: {e}")
@@ -163,7 +184,7 @@ class VectorDBService:
                 self.table_name,
                 columns="filename, document_set",
                 range_start=0,
-                range_end=9999  # Large range to get all unique files
+                range_end=9999,  # Large range to get all unique files
             )
 
             rows = response.data
@@ -172,17 +193,17 @@ class VectorDBService:
             # Group by filename to count chunks
             file_groups = {}
             for row in rows:
-                filename = row.get('filename')
-                document_set = row.get('document_set', 'all')
+                filename = row.get("filename")
+                document_set = row.get("document_set", "all")
 
                 if filename:
                     if filename not in file_groups:
                         file_groups[filename] = {
-                            'filename': filename,
-                            'document_set': document_set,
-                            'chunk_count': 0
+                            "filename": filename,
+                            "document_set": document_set,
+                            "chunk_count": 0,
                         }
-                    file_groups[filename]['chunk_count'] += 1
+                    file_groups[filename]["chunk_count"] += 1
 
             result = list(file_groups.values())
             logger.info(f"Found {len(result)} distinct filenames")
@@ -198,6 +219,7 @@ class VectorDBService:
             logger.info("VectorDBService closed successfully.")
         except Exception as e:
             logger.warning(f"Error closing VectorDBService: {e}")
+
 
 # Global Instance
 db_service = VectorDBService()

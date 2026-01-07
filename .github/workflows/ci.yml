@@ -1,0 +1,359 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+  checks: write
+
+jobs:
+  # Backend linting and type checking
+  backend-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+          pip install ruff black mypy
+      
+      - name: Run Ruff linter
+        run: |
+          cd backend
+          ruff check .
+      
+      - name: Check formatting
+        run: |
+          cd backend
+          black --check .
+      
+      - name: Run type checks
+        run: |
+          cd backend
+          mypy . || true  # Continue even if mypy fails
+
+  # Frontend linting
+  frontend-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      
+      - name: Install dependencies
+        run: |
+          cd frontend
+          npm ci
+      
+      - name: Run linter
+        run: |
+          cd frontend
+          npm run lint
+      
+      - name: Run tests
+        run: |
+          cd frontend
+          npm test -- --run
+
+  # Unit tests (fast, no containers)
+  unit-tests:
+    runs-on: ubuntu-latest
+    needs: [backend-lint, frontend-lint]
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+      
+      - name: Run unit tests
+        run: |
+          cd backend
+          pytest -m unit -v
+      
+      - name: Generate coverage
+        run: |
+          cd backend
+          pytest -m unit --cov=. --cov-report=xml --cov-report=term
+      
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./backend/coverage.xml
+          flags: unit-tests
+          name: codecov-unit-tests
+
+  # Integration tests (with containers)
+  integration-tests:
+    runs-on: ubuntu-latest
+    needs: [unit-tests]
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+      
+      - name: Start test containers
+        run: |
+          docker-compose -f docker-compose.test.yml up -d
+      
+      - name: Wait for database to be ready
+        run: |
+          echo "Waiting for PostgreSQL..."
+          max_attempts=30
+          attempt=0
+          while [ $attempt -lt $max_attempts ]; do
+            if docker exec test-db pg_isready -U test_user > /dev/null 2>&1; then
+              echo "PostgreSQL is ready!"
+              break
+            fi
+            attempt=$((attempt + 1))
+            echo "Attempt $attempt of $max_attempts..."
+            sleep 2
+          done
+          
+          if [ $attempt -eq $max_attempts ]; then
+            echo "PostgreSQL did not become ready"
+            docker-compose -f docker-compose.test.yml logs test-db
+            exit 1
+          fi
+      
+      - name: Wait for RabbitMQ to be ready
+        run: |
+          echo "Waiting for RabbitMQ..."
+          max_attempts=30
+          attempt=0
+          while [ $attempt -lt $max_attempts ]; do
+            if docker exec test-rabbitmq rabbitmq-diagnostics ping > /dev/null 2>&1; then
+              echo "RabbitMQ is ready!"
+              break
+            fi
+            attempt=$((attempt + 1))
+            echo "Attempt $attempt of $max_attempts..."
+            sleep 2
+          done
+          
+          if [ $attempt -eq $max_attempts ]; then
+            echo "RabbitMQ did not become ready"
+            docker-compose -f docker-compose.test.yml logs test-rabbitmq
+            exit 1
+          fi
+      
+      - name: Show running containers
+        run: |
+          docker ps
+          echo "---"
+          docker-compose -f docker-compose.test.yml ps
+      
+      - name: Run integration tests
+        env:
+          USE_TEST_CONTAINERS: "true"
+          DATABASE_CONN_STRING: "postgresql://test_user:test_pass@localhost:5433/test_db"
+          CELERY_BROKER_URL: "amqp://test_user:test_pass@localhost:5673//"
+        run: |
+          cd backend
+          pytest -m integration -v --tb=short
+      
+      - name: Upload integration test logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-test-logs
+          path: |
+            backend/pytest-logs.txt
+            backend/htmlcov/
+      
+      - name: Stop containers and cleanup
+        if: always()
+        run: |
+          docker-compose -f docker-compose.test.yml down -v
+
+  # Build Docker images
+  build:
+    runs-on: ubuntu-latest
+    needs: [integration-tests]
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Build backend image
+        run: |
+          docker build -t backend-test ./backend
+      
+      - name: Build worker image
+        run: |
+          docker build -t worker-test ./backend
+      
+      - name: Build frontend image
+        run: |
+          docker build -t frontend-test ./frontend
+
+  # Security checks
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          pip install bandit safety
+      
+      - name: Run security checks with bandit
+        run: |
+          bandit -r backend/ -f json -o bandit-report.json || true
+      
+      - name: Upload bandit report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: bandit-report
+          path: bandit-report.json
+      
+      - name: Check dependencies for vulnerabilities
+        run: |
+          cd backend
+          safety check --json || true
+
+  # Full test suite (optional, manually triggered)
+  full-tests:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+      
+      - name: Start test containers
+        run: |
+          docker-compose -f docker-compose.test.yml up -d
+      
+      - name: Wait for services
+        run: sleep 15
+      
+      - name: Run all tests
+        env:
+          USE_TEST_CONTAINERS: "true"
+        run: |
+          ./run_tests.sh --all --coverage
+      
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./backend/coverage.xml
+      
+      - name: Stop containers and cleanup
+        if: always()
+        run: |
+          docker-compose -f docker-compose.test.yml down -v
+
+  # Test Summary
+  test-summary:
+    name: Test Summary
+    runs-on: ubuntu-latest
+    needs: [unit-tests, integration-tests, frontend-lint, backend-lint]
+    if: always()
+    steps:
+      - name: Check test results
+        run: |
+          if [ "${{ needs.unit-tests.result }}" != "success" ] || \
+             [ "${{ needs.integration-tests.result }}" != "success" ] || \
+             [ "${{ needs.frontend-lint.result }}" != "success" ] || \
+             [ "${{ needs.backend-lint.result }}" != "success" ]; then
+            echo "❌ Some tests failed"
+            echo "Unit Tests: ${{ needs.unit-tests.result }}"
+            echo "Integration Tests: ${{ needs.integration-tests.result }}"
+            echo "Frontend Lint: ${{ needs.frontend-lint.result }}"
+            echo "Backend Lint: ${{ needs.backend-lint.result }}"
+            exit 1
+          else
+            echo "✅ All tests passed!"
+          fi
+
+  # PR Comment with results
+  pr-comment:
+    name: PR Comment
+    runs-on: ubuntu-latest
+    needs: [unit-tests, integration-tests, frontend-lint, backend-lint]
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Comment on PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const unitTests = '${{ needs.unit-tests.result }}';
+            const integrationTests = '${{ needs.integration-tests.result }}';
+            const frontendLint = '${{ needs.frontend-lint.result }}';
+            const backendLint = '${{ needs.backend-lint.result }}';
+            
+            const unitIcon = unitTests === 'success' ? '✅' : '❌';
+            const integrationIcon = integrationTests === 'success' ? '✅' : '❌';
+            const frontendIcon = frontendLint === 'success' ? '✅' : '❌';
+            const backendIcon = backendLint === 'success' ? '✅' : '❌';
+            
+            const comment = `## 🧪 Test Results
+            
+            | Test Suite | Status |
+            |------------|--------|
+            | Backend Lint | ${backendIcon} ${backendLint} |
+            | Frontend Lint | ${frontendIcon} ${frontendLint} |
+            | Unit Tests | ${unitIcon} ${unitTests} |
+            | Integration Tests | ${integrationIcon} ${integrationTests} |
+            
+            ---
+            *Commit: ${context.sha.slice(0, 7)}*`;
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });

@@ -1,9 +1,8 @@
-from docling.datamodel.base_models import InputFormat, DocumentStream
-from docling.document_converter import DocumentConverter
+from docling.datamodel.base_models import DocumentStream
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from services.llm import get_embeddings_model, LLMService
 from services.vector_db import db_service
-from services.docling_utils import DoclingConverterFactory
+from services.ingestion_pipeline import PipelineFactory
 from utils.file_conversion import FileConversionUtils
 
 import uuid
@@ -18,32 +17,32 @@ logger = logging.getLogger(__name__)
 class IngestionService:
     def __init__(self):
         self.splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=100)
-        self.converter = DoclingConverterFactory.create_standard_converter()
-        self._vlm_converter_instance = None
+        self._standard_pipeline = None
+        self._vlm_pipeline = None
 
-    @property
-    def _vlm_converter(self):
-        """Singleton accessor for VLM converter to avoid heavy re-initialization."""
-        if self._vlm_converter_instance is None:
-            logger.info("Initializing Singleton VLM Converter...")
-            self._vlm_converter_instance = DoclingConverterFactory.create_vlm_converter()
-        return self._vlm_converter_instance
+    def _get_pipeline(self, use_vlm: bool):
+        """Get the appropriate pipeline strategy."""
+        if use_vlm:
+            if self._vlm_pipeline is None:
+                self._vlm_pipeline = PipelineFactory.create_pipeline(use_vlm=True)
+            return self._vlm_pipeline
+        else:
+            if self._standard_pipeline is None:
+                self._standard_pipeline = PipelineFactory.create_pipeline(use_vlm=False)
+            return self._standard_pipeline
 
     async def _process_content_flow(
         self, filename, content=None, filepath=None, document_set="all", use_vlm=False
     ):
         """Internal shared flow for processing content."""
-        pipeline_type = "vlm" if use_vlm else "standard"
+        pipeline = self._get_pipeline(use_vlm)
+        pipeline_type = pipeline.get_pipeline_name()
         logger.info(f"Processing file: {filename} (Pipeline: {pipeline_type})")
 
-        # 1. Convert to Markdown
-        chunk_source_failed = False
+        temp_file_to_cleanup = None
         markdown_content = ""
 
         try:
-            source = None
-            temp_file_to_cleanup = None
-
             input_source = filepath or (BytesIO(content) if content else None)
 
             if input_source is None:
@@ -59,17 +58,11 @@ class IngestionService:
             elif content and not FileConversionUtils.is_xls_file(None, filename):
                 source = DocumentStream(name=filename, stream=BytesIO(content))
 
-            converter = self._vlm_converter if use_vlm else self.converter
-
+            converter = pipeline.get_converter()
             doc_result = converter.convert(source)
             markdown_content = doc_result.document.export_to_markdown()
 
-            if hasattr(doc_result.input, "_backend") and doc_result.input._backend:
-                try:
-                    doc_result.input._backend.unload()
-                except:
-                    pass
-
+            pipeline.cleanup_backend(doc_result)
             FileConversionUtils.cleanup_temp_file(temp_file_to_cleanup)
 
         except Exception as e:
