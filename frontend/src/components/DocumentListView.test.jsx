@@ -62,7 +62,6 @@ describe("DocumentListView", () => {
   });
 
   it("calls onDelete when Delete button clicked", async () => {
-    const user = userEvent.setup();
     const onDelete = vi.fn();
     render(
       <DocumentListView

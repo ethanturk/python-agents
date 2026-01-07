@@ -18,7 +18,7 @@ import SummarizeIcon from "@mui/icons-material/Summarize";
 import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 import { getWebLink, getFilenameOnly } from "../utils";
 import UploadDialog from "./UploadDialog";
-import { useDocumentSet } from "../contexts/DocumentSetContext";
+import { useDocumentSet } from "../hooks/useDocumentSet";
 
 const DocumentRow = memo(({ filename, chunks, onSummarize, onDelete }) => {
   const [expanded, setExpanded] = useState(false);

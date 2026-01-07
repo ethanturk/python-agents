@@ -20,8 +20,8 @@ import {
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import { Notifications, Logout } from "@mui/icons-material";
 import RefreshIcon from "@mui/icons-material/Refresh";
-import { useAuth } from "../contexts/AuthContext";
-import { useDocumentSet } from "../contexts/DocumentSetContext";
+import { useAuth } from "../hooks/useAuth";
+import { useDocumentSet } from "../hooks/useDocumentSet";
 import { formatDocumentSetName } from "../utils";
 
 function NavBar({
@@ -44,7 +44,7 @@ function NavBar({
     if (currentUser) {
       fetchDocumentSets();
     }
-  }, [currentUser]);
+  }, [currentUser, fetchDocumentSets]);
 
   const handleMenu = (event) => {
     setAnchorEl(event.currentTarget);

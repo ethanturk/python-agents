@@ -15,7 +15,7 @@ import { auth } from "./firebase";
 import NavBar from "./components/NavBar";
 import DeleteConfirmDialog from "./components/DeleteConfirmDialog";
 import NotificationSidebar from "./components/NotificationSidebar";
-import { useAuth } from "./contexts/AuthContext";
+import { useAuth } from "./hooks/useAuth";
 import darkTheme from "./theme";
 
 // Lazy load view components for code splitting
@@ -128,8 +128,9 @@ function App() {
       const timer = setTimeout(() => setShowWsWarning(true), 5000);
       return () => clearTimeout(timer);
     } else {
-      setShowWsWarning(false);
+      setTimeout(() => setShowWsWarning(false), 0);
     }
+    return () => {};
   }, [isConnected, isConnecting, isOnline]);
 
   // --- Effects ---

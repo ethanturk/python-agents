@@ -1,13 +1,10 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+/* eslint-disable react-refresh/only-export-components */
+import React, { createContext, useEffect, useState } from "react";
 import axios from "axios";
 import { API_BASE } from "../config";
-import { useAuth } from "./AuthContext";
+import { useAuth } from "../hooks/useAuth";
 
-const DocumentSetContext = createContext();
-
-export function useDocumentSet() {
-  return useContext(DocumentSetContext);
-}
+export const DocumentSetContext = createContext();
 
 export function DocumentSetProvider({ children }) {
   const [documentSets, setDocumentSets] = useState([]);

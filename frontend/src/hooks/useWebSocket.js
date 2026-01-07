@@ -23,12 +23,14 @@ export default function useWebSocket({ onMessage }) {
   const onMessageRef = useRef(onMessage);
   const reconnectTimeoutRef = useRef(null);
   const isConnectingRef = useRef(false);
+  const connectRef = useRef(null);
 
   // Keep onMessage ref up to date without triggering reconnects
   useEffect(() => {
     onMessageRef.current = onMessage;
   }, [onMessage]);
 
+  // Connection function stored in ref for use in onclose callback
   const connect = useCallback(() => {
     // Prevent multiple simultaneous connection attempts
     if (
@@ -77,7 +79,7 @@ export default function useWebSocket({ onMessage }) {
 
       // Retry after configured delay
       reconnectTimeoutRef.current = setTimeout(
-        connect,
+        () => connectRef.current?.(),
         WEBSOCKET.RECONNECT_DELAY,
       );
     };
@@ -90,8 +92,13 @@ export default function useWebSocket({ onMessage }) {
     };
   }, []); // No dependencies - stable function
 
+  // Store connect function in ref
   useEffect(() => {
-    connect();
+    connectRef.current = connect;
+  }, [connect]);
+
+  useEffect(() => {
+    connectRef.current?.();
 
     return () => {
       // Cleanup on unmount

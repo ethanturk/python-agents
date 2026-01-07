@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react";
 import axios from "axios";
 import { API_BASE } from "../config";
-import { useDocumentSet } from "../contexts/DocumentSetContext";
+import { useDocumentSet } from "./useDocumentSet";
 import { SEARCH } from "../constants";
 
 export default function useSearch() {
