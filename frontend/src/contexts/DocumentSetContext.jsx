@@ -39,15 +39,6 @@ export function DocumentSetProvider({ children }) {
     sessionStorage.setItem("selectedDocumentSet", selectedSet);
   }, [selectedSet]);
 
-  // Validate selectedSet against fetched documentSets
-  useEffect(() => {
-    if (!loading && documentSets.length > 0) {
-      if (selectedSet !== "all" && !documentSets.includes(selectedSet)) {
-        setSelectedSet("all");
-      }
-    }
-  }, [documentSets, loading, selectedSet]);
-
   const value = {
     documentSets,
     selectedSet,
