@@ -2,12 +2,16 @@ import { render, screen } from "@testing-library/react";
 import App from "./App";
 import { describe, it, expect, vi } from "vitest";
 
-vi.mock("./contexts/AuthContext", () => ({
+vi.mock("./hooks/useAuth", () => ({
   useAuth: () => ({ currentUser: { email: "test@test.com" } }),
 }));
 
-vi.mock("./contexts/DocumentSetContext", () => ({
-  useDocumentSet: () => ({ selectedSet: "all", documentSets: [] }),
+vi.mock("./hooks/useDocumentSet", () => ({
+  useDocumentSet: () => ({
+    selectedSet: "all",
+    documentSets: [],
+    fetchDocumentSets: vi.fn(),
+  }),
 }));
 
 vi.mock("./hooks/useWebSocket", () => ({
@@ -22,6 +26,12 @@ vi.mock("./hooks/useDocuments", () => ({
     fetchDocuments: vi.fn(),
     handlePromptDelete: vi.fn(),
     confirmDelete: vi.fn(),
+  }),
+}));
+
+vi.mock("./hooks/useSummarization", () => ({
+  useSummarization: () => ({
+    fetchBackendSummaries: vi.fn(),
   }),
 }));
 

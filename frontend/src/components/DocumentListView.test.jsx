@@ -4,7 +4,7 @@ import DocumentListView from "./DocumentListView";
 import { describe, it, expect, vi } from "vitest";
 
 // Mock the context hook
-vi.mock("../contexts/DocumentSetContext", () => ({
+vi.mock("../hooks/useDocumentSet", () => ({
   useDocumentSet: () => ({
     selectedSet: "all",
   }),
@@ -13,10 +13,20 @@ vi.mock("../contexts/DocumentSetContext", () => ({
 describe("DocumentListView", () => {
   const mockGroupedDocs = {
     "/path/to/test1.txt": [
-      { id: "1", filename: "/path/to/test1.txt", content_snippet: "snippet 1" },
+      {
+        id: "1",
+        filename: "/path/to/test1.txt",
+        content_snippet: "snippet 1",
+        document_set: "all",
+      },
     ],
     "/path/to/test2.pdf": [
-      { id: "2", filename: "/path/to/test2.pdf", content_snippet: "snippet 2" },
+      {
+        id: "2",
+        filename: "/path/to/test2.pdf",
+        content_snippet: "snippet 2",
+        document_set: "all",
+      },
     ],
   };
 
@@ -74,6 +84,6 @@ describe("DocumentListView", () => {
     // Find specific delete button for test1
     const deleteBtn = screen.getByTestId("delete-btn-/path/to/test1.txt");
     fireEvent.click(deleteBtn);
-    expect(onDelete).toHaveBeenCalledWith("/path/to/test1.txt");
+    expect(onDelete).toHaveBeenCalledWith("/path/to/test1.txt", "all");
   });
 });
