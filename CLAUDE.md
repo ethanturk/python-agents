@@ -112,14 +112,13 @@ The system uses multiple Docker Compose files for modular deployment:
 
 ```bash
 # Start infrastructure & backend (RabbitMQ, Qdrant, Flower, Backend API)
-# By default, the Celery worker runs embedded in the backend server
 docker-compose -f docker-compose.yml up -d --build
+
+# Start Celery worker for async tasks
+docker-compose -f docker-compose.worker.yml up -d --build
 
 # Start React frontend
 docker-compose -f docker-compose.frontend.yml up -d --build
-
-# OPTIONAL: Start separate Celery worker (only if RUN_WORKER_EMBEDDED=false)
-docker-compose -f docker-compose.worker.yml up -d --build
 ```
 
 ### Testing
@@ -240,7 +239,7 @@ All configuration via environment variables (`.env`):
 - `SUPABASE_URL` / `SUPABASE_KEY` - Supabase credentials
 - `CELERY_BROKER_URL` - RabbitMQ connection
 - `MONITORED_DIR` - File watcher directory
-- `RUN_WORKER_EMBEDDED` - Run Celery worker inside FastAPI process (default: true for simplified deployment)
+- `RUN_WORKER_EMBEDDED` - Run Celery worker inside FastAPI process (dev mode)
 
 ## Important Patterns
 

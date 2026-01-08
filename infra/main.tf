@@ -1,8 +1,8 @@
 terraform {
   required_providers {
-    google = {
-      source  = "hashicorp/google"
-      version = "~> 5.0"
+    azurerm = {
+      source  = "hashicorp/azurerm"
+      version = "~> 3.0"
     }
     random = {
       source  = "hashicorp/random"
@@ -11,83 +11,62 @@ terraform {
   }
 }
 
-provider "google" {
-  project = var.project_id
-  region  = var.region
+provider "azurerm" {
+  features {}
 }
 
-resource "random_id" "suffix" {
+variable "location" {
+  default = "eastus"
+}
+
+resource "azurerm_resource_group" "rg" {
+  name     = "rg-python-agents"
+  location = var.location
+}
+
+resource "random_id" "acr_suffix" {
   byte_length = 4
-}
-
-# Artifact Registry repository for container images
-resource "google_artifact_registry_repository" "containers" {
-  location      = var.region
-  repository_id = "python-agents-${random_id.suffix.hex}"
-  description   = "Container registry for Python Agents application"
-  format        = "DOCKER"
-}
-
-# GKE cluster
-resource "google_container_cluster" "primary" {
-  name     = "gke-python-agents"
-  location = var.region
-
-  # We can't create a cluster with no node pool defined, but we want to only use
-  # separately managed node pools. So we create the smallest possible default
-  # node pool and immediately delete it.
-  remove_default_node_pool = true
-  initial_node_count       = 1
-
-  workload_identity_config {
-    workload_pool = "${var.project_id}.svc.id.goog"
-  }
-
-  deletion_protection = false
-}
-
-# Separately managed node pool
-resource "google_container_node_pool" "primary_nodes" {
-  name       = "primary-node-pool"
-  location   = var.region
-  cluster    = google_container_cluster.primary.name
-  node_count = var.node_count
-
-  node_config {
-    machine_type = var.machine_type
-
-    # Google recommends custom service accounts that have cloud-platform scope and permissions granted via IAM Roles.
-    service_account = google_service_account.gke_sa.email
-    oauth_scopes = [
-      "https://www.googleapis.com/auth/cloud-platform"
-    ]
-
-    tags = ["gke-node", "python-agents"]
+  keepers = {
+    rg_id = azurerm_resource_group.rg.id
   }
 }
 
-# Service account for GKE nodes
-resource "google_service_account" "gke_sa" {
-  account_id   = "gke-python-agents-${random_id.suffix.hex}"
-  display_name = "GKE Service Account for Python Agents"
+resource "azurerm_container_registry" "acr" {
+  name                = "acrpythonagents${random_id.acr_suffix.hex}"
+  resource_group_name = azurerm_resource_group.rg.name
+  location            = azurerm_resource_group.rg.location
+  sku                 = "Standard"
+  admin_enabled       = true
 }
 
-# Grant Artifact Registry Reader role to GKE service account
-resource "google_project_iam_member" "gke_artifact_registry_reader" {
-  project = var.project_id
-  role    = "roles/artifactregistry.reader"
-  member  = "serviceAccount:${google_service_account.gke_sa.email}"
+resource "azurerm_kubernetes_cluster" "aks" {
+  name                = "aks-python-agents"
+  location            = azurerm_resource_group.rg.location
+  resource_group_name = azurerm_resource_group.rg.name
+  dns_prefix          = "pythonagents"
+
+  default_node_pool {
+    name       = "default"
+    node_count = 1
+    vm_size    = "Standard_B2s"
+    upgrade_settings {
+      max_surge = "10%"
+    }
+  }
+
+  identity {
+    type = "SystemAssigned"
+  }
+
+  tags = {
+    Environment = "Development"
+  }
 }
 
-# Grant GKE cluster necessary roles
-resource "google_project_iam_member" "gke_cluster_monitoring_viewer" {
-  project = var.project_id
-  role    = "roles/monitoring.viewer"
-  member  = "serviceAccount:${google_service_account.gke_sa.email}"
-}
-
-resource "google_project_iam_member" "gke_cluster_logging_writer" {
-  project = var.project_id
-  role    = "roles/logging.logWriter"
-  member  = "serviceAccount:${google_service_account.gke_sa.email}"
+# Grant pull access to AKS managed identity on ACR
+resource "azurerm_role_assignment" "aks_acr_pull" {
+  principal_id                     = azurerm_kubernetes_cluster.aks.kubelet_identity[0].object_id
+  role_definition_name             = "AcrPull"
+  scope                            = azurerm_container_registry.acr.id
+  skip_service_principal_aad_check = true
 }

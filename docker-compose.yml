@@ -7,7 +7,6 @@ services:
     environment:
       BASE_URL: ${BASE_URL:-192.168.5.204}
       CELERY_BROKER_URL: ${CELERY_BROKER_URL:-amqp://guest:guest@${BASE_URL}:5672//}  # pragma: allowlist secret
-      RUN_WORKER_EMBEDDED: ${RUN_WORKER_EMBEDDED:-true}
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       OPENAI_API_BASE: ${OPENAI_API_BASE}
       OPENAI_MODEL: ${OPENAI_MODEL}
