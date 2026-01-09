@@ -1,6 +1,6 @@
-/* global process */
-import { defineConfig, loadEnv } from "vite";
+import path from "path";
 import react from "@vitejs/plugin-react";
+import { defineConfig, loadEnv } from "vite";
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => {
@@ -23,6 +23,11 @@ export default defineConfig(({ mode }) => {
   return {
     base: appBase,
     plugins: [react()],
+    resolve: {
+      alias: {
+        "@": path.resolve(__dirname, "./src"),
+      },
+    },
 
     // ============================================================================
     // MEMORY & PERFORMANCE OPTIMIZATIONS FOR DOCKER
@@ -30,21 +35,6 @@ export default defineConfig(({ mode }) => {
 
     // Optimize dependency pre-bundling to reduce esbuild memory usage
     optimizeDeps: {
-      // Disable pre-bundling for large dependencies to reduce memory pressure
-      // Vite will bundle these on-demand during dev, which uses less memory upfront
-      exclude: [
-        // MUI is very large and memory-intensive to pre-bundle
-        "@mui/material",
-        "@mui/icons-material",
-        "@emotion/react",
-        "@emotion/styled",
-        // Firebase modules are also heavy
-        "firebase/auth",
-        "firebase/app",
-        // React-markdown with plugins
-        "react-markdown",
-        "remark-gfm",
-      ],
       // Include only small, frequently used dependencies
       include: [
         // React ecosystem - small and essential
@@ -102,38 +92,11 @@ export default defineConfig(({ mode }) => {
         },
         output: {
           // More granular chunking for better caching and parallel loading
-          manualChunks: (id) => {
-            // React core
-            if (id.includes("react") || id.includes("react-dom")) {
-              return "react-vendor";
-            }
-            // MUI components - split into smaller chunks
-            if (id.includes("@mui/material")) {
-              // Group by MUI feature to reduce bundle size
-              if (id.includes("@mui/material/")) return "mui-core-vendor";
-              return "mui-vendor";
-            }
-            if (id.includes("@mui/icons-material")) {
-              return "mui-icons-vendor";
-            }
-            // Emotion styling
-            if (id.includes("@emotion/")) {
-              return "emotion-vendor";
-            }
-            // Firebase - split by service
-            if (id.includes("firebase")) {
-              if (id.includes("firebase/app")) return "firebase-core-vendor";
-              if (id.includes("firebase/auth")) return "firebase-auth-vendor";
-              return "firebase-vendor";
-            }
-            // Markdown rendering
-            if (id.includes("react-markdown") || id.includes("remark-gfm")) {
-              return "markdown-vendor";
-            }
-            // Keep node_modules in vendor chunk (except above)
-            if (id.includes("node_modules")) {
-              return "vendor";
-            }
+          manualChunks: {
+            "react-vendor": ["react", "react-dom"],
+            "firebase-vendor": ["firebase/app", "firebase/auth"],
+            "markdown-vendor": ["react-markdown", "remark-gfm"],
+            vendor: ["axios"],
           },
           // Optimize chunk file names for better caching
           chunkFileNames: "assets/js/[name]-[hash].js",
