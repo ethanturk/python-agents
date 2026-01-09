@@ -172,7 +172,7 @@ configs:
           dashboard-auth:
             basicAuth:
               users:
-                - "admin:$apr1$M1xmqBJh$zdXS.cwOtV6.Ojtxcbi.W1"
+                - "admin:$$apr1$$M1xmqBJh$$zdXS.cwOtV6.Ojtxcbi.W1"
 
           # Strip /traefik prefix for dashboard
           dashboard-stripprefix:
