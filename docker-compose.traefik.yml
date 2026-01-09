@@ -42,8 +42,8 @@ services:
 
 networks:
   web:
-    external: true
     name: web
+    driver: bridge
 
 volumes:
   traefik_data:
