@@ -10,13 +10,13 @@ This document outlines the security measures implemented in the backend applicat
 
 **Fix:** Restricted to whitelisted origins via environment variable:
 ```python
-ALLOWED_ORIGINS=http://localhost:3000,http://localhost:3001,https://apps.ethanturk.com
+ALLOWED_ORIGINS=http://localhost:3000,http://localhost:3001,https://aidocs.ethanturk.com
 ```
 
 **Configuration:**
 - Set `ALLOWED_ORIGINS` in `.env` file
 - Comma-separated list of allowed origins
-- Default: localhost:3000, localhost:3001, apps.ethanturk.com
+- Default: localhost:3000, localhost:3001, aidocs.ethanturk.com
 
 ### 2. Path Traversal Protection ✅ FIXED
 

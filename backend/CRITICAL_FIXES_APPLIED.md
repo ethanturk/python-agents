@@ -26,7 +26,7 @@ allow_origins=["*"]  # Allows ANY origin - CRITICAL vulnerability
 ```python
 ALLOWED_ORIGINS = os.getenv(
     "ALLOWED_ORIGINS",
-    "http://localhost:3000,http://localhost:3001,https://apps.ethanturk.com"
+    "http://localhost:3000,http://localhost:3001,https://aidocs.ethanturk.com"
 ).split(",")
 
 app.add_middleware(
@@ -375,7 +375,7 @@ make ci               # Full CI pipeline
 
 **Added:**
 ```bash
-ALLOWED_ORIGINS=http://localhost:3000,http://localhost:3001,https://apps.ethanturk.com
+ALLOWED_ORIGINS=http://localhost:3000,http://localhost:3001,https://aidocs.ethanturk.com
 MAX_FILE_SIZE=100000000
 MAX_FILES_PER_UPLOAD=10
 FIREBASE_REQUIRED=false

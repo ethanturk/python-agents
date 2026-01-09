@@ -13,7 +13,7 @@ services:
         target: /etc/nginx/certs
         read_only: true
         volume:
-          subpath: certs/apps.ethanturk.com
+          subpath: certs/aidocs.ethanturk.com
 
 volumes:
   nas:

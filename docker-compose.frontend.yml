@@ -6,6 +6,7 @@ services:
     ports:
       - "${FRONTEND_PORT:-3000}:3000"
     environment:
+      # Client-side environment variables
       VITE_API_BASE: ${VITE_API_BASE}
       VITE_FIREBASE_API_KEY: ${VITE_FIREBASE_API_KEY}
       VITE_FIREBASE_AUTH_DOMAIN: ${VITE_FIREBASE_AUTH_DOMAIN}
@@ -14,15 +15,44 @@ services:
       VITE_FIREBASE_MESSAGING_SENDER_ID: ${VITE_FIREBASE_MESSAGING_SENDER_ID}
       VITE_FIREBASE_APP_ID: ${VITE_FIREBASE_APP_ID}
       VITE_BASE_PATH: ${VITE_BASE_PATH}
-      # Increase Node memory limit to prevent esbuild crashes
-      NODE_OPTIONS: "--max-old-space-size=4096"
-    # Resource limits to prevent container from using too much memory
+
+      # Node.js memory optimizations for Docker
+      # CRITICAL: Set max-old-space-size BELOW container limit (1.5GB < 2GB)
+      # This prevents OOM kills while giving Node enough memory for esbuild
+      NODE_OPTIONS: "--max-old-space-size=1536"
+
+      # Reduce garbage collection overhead
+      NODE_ENV: "development"
+
+      # Optimize esbuild specifically
+      ESBUILD_BINARY_PATH: "/app/node_modules/esbuild/bin/esbuild"
+
+    # Resource limits tuned for efficient Vite operation
     deploy:
       resources:
         limits:
           memory: 2G
+          cpus: "2.0"  # Limit CPU to prevent runaway processes
         reservations:
           memory: 512M
+          cpus: "0.5"
+
+    # Health check to detect when server stops responding
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+    # Restart policy to recover from crashes
+    restart: unless-stopped
+
+    # Volume mounts for development (optional - uncomment if needed)
+    # volumes:
+    #   - ./frontend/src:/app/src
+    #   - ./frontend/public:/app/public
+
     networks:
       - web
 
