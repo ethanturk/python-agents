@@ -158,7 +158,7 @@ app = FastAPI(lifespan=lifespan)
 # Configure allowed origins via environment variable or use defaults
 ALLOWED_ORIGINS = os.getenv(
     "ALLOWED_ORIGINS",
-    "http://localhost:3000,http://localhost:3001,https://apps.ethanturk.com",
+    "http://localhost:3000,http://localhost:3001,https://aidocs.ethanturk.com",
 ).split(",")
 
 app.add_middleware(

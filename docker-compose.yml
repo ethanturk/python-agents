@@ -25,6 +25,7 @@ services:
 
       SUPABASE_URL: ${SUPABASE_URL}
       SUPABASE_KEY: ${SUPABASE_KEY}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-https://aidocs.ethanturk.com,http://localhost:3000,http://localhost:3001}
     networks:
       - web
 
