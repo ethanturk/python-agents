@@ -23,9 +23,9 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { useAuth } from "../hooks/useAuth";
-import { useDocumentSet } from "../hooks/useDocumentSet";
-import { formatDocumentSetName } from "@/utils";
+import { useAuth } from "../contexts/AuthContext";
+import { useDocumentSet } from "../contexts/DocumentSetContext";
+import { formatDocumentSetName } from "@/lib/utils";
 
 interface NavBarProps {
   onShowSearch: () => void;

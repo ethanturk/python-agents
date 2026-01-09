@@ -1,23 +1,33 @@
-/* eslint-disable react-refresh/only-export-components */
-import React, { createContext, useEffect, useState, useCallback } from "react";
+import React, { createContext, useEffect, useState, useCallback, useContext } from "react";
 import axios from "axios";
 import { API_BASE } from "../config";
-import { useAuth } from "../hooks/useAuth";
+import { useAuth } from "./AuthContext";
 
-export const DocumentSetContext = createContext();
+interface DocumentSetContextValue {
+  documentSets: string[];
+  selectedSet: string;
+  setSelectedSet: (set: string) => void;
+  fetchDocumentSets: () => Promise<void>;
+  loading: boolean;
+}
 
-export function DocumentSetProvider({ children }) {
-  const [documentSets, setDocumentSets] = useState([]);
-  const [selectedSet, setSelectedSet] = useState(
+export const DocumentSetContext = createContext<DocumentSetContextValue | undefined>(undefined);
+
+interface DocumentSetProviderProps {
+  children: React.ReactNode;
+}
+
+export function DocumentSetProvider({ children }: DocumentSetProviderProps) {
+  const [documentSets, setDocumentSets] = useState<string[]>([]);
+  const [selectedSet, setSelectedSet] = useState<string>(
     sessionStorage.getItem("selectedDocumentSet") || "default",
   );
   const [loading, setLoading] = useState(true);
   const { currentUser } = useAuth();
 
-  // Fetch sets
   const fetchDocumentSets = useCallback(async () => {
     try {
-      const config = {};
+      const config: any = {};
       if (currentUser) {
         const token = await currentUser.getIdToken();
         config.headers = { Authorization: `Bearer ${token}` };
@@ -39,7 +49,7 @@ export function DocumentSetProvider({ children }) {
     sessionStorage.setItem("selectedDocumentSet", selectedSet);
   }, [selectedSet]);
 
-  const value = {
+  const value: DocumentSetContextValue = {
     documentSets,
     selectedSet,
     setSelectedSet,
@@ -52,4 +62,12 @@ export function DocumentSetProvider({ children }) {
       {children}
     </DocumentSetContext.Provider>
   );
+}
+
+export function useDocumentSet() {
+  const context = useContext(DocumentSetContext);
+  if (context === undefined) {
+    throw new Error("useDocumentSet must be used within a DocumentSetProvider");
+  }
+  return context;
 }

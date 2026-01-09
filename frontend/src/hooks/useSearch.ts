@@ -1,21 +1,50 @@
 import { useState, useCallback } from "react";
 import axios from "axios";
 import { API_BASE } from "../config";
-import { useDocumentSet } from "./useDocumentSet";
-import { SEARCH } from "../constants";
+import { useDocumentSet } from "../contexts/DocumentSetContext";
+import { SEARCH } from "@/constants";
 
-export default function useSearch() {
+interface SearchResult {
+  metadata: {
+    filename: string;
+  };
+}
+
+interface SearchData {
+  answer: string | null;
+  results: SearchResult[];
+}
+
+interface ChatMessage {
+  role: "user" | "assistant";
+  text: string;
+}
+
+interface UseSearchReturn {
+  query: string;
+  setQuery: (query: string) => void;
+  searchData: SearchData;
+  searchLimit: number;
+  setSearchLimit: (limit: number) => void;
+  loading: boolean;
+  searchChatHistory: ChatMessage[];
+  searchChatLoading: boolean;
+  validationError: string;
+  handleSearch: () => Promise<void>;
+  handleSendSearchChat: (question: string) => Promise<void>;
+}
+
+export default function useSearch(): UseSearchReturn {
   const { selectedSet } = useDocumentSet();
-  const [searchData, setSearchData] = useState({ answer: null, results: [] });
-  const [query, setQuery] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [searchLimit, setSearchLimit] = useState(SEARCH.DEFAULT_LIMIT);
-  const [searchChatHistory, setSearchChatHistory] = useState([]);
-  const [searchChatLoading, setSearchChatLoading] = useState(false);
-  const [validationError, setValidationError] = useState("");
+  const [searchData, setSearchData] = useState<SearchData>({ answer: null, results: [] });
+  const [query, setQuery] = useState<string>("");
+  const [loading, setLoading] = useState<boolean>(false);
+  const [searchLimit, setSearchLimit] = useState<number>(SEARCH.DEFAULT_LIMIT);
+  const [searchChatHistory, setSearchChatHistory] = useState<ChatMessage[]>([]);
+  const [searchChatLoading, setSearchChatLoading] = useState<boolean>(false);
+  const [validationError, setValidationError] = useState<string>("");
 
   const handleSearch = useCallback(async () => {
-    // Validate query
     if (!query || !query.trim()) {
       setValidationError("Please enter a search query");
       return;
@@ -37,7 +66,7 @@ export default function useSearch() {
         document_set: selectedSet,
       });
       const data = response.data;
-      setSearchChatHistory([]); // Reset chat on new search
+      setSearchChatHistory([]);
       if (data.answer) {
         setSearchData({ answer: data.answer, results: data.results || [] });
       } else {
@@ -51,10 +80,10 @@ export default function useSearch() {
   }, [query, searchLimit, selectedSet]);
 
   const handleSendSearchChat = useCallback(
-    async (question) => {
+    async (question: string) => {
       if (!searchData.results || searchData.results.length === 0) return;
 
-      const newMsg = { role: "user", text: question };
+      const newMsg: ChatMessage = { role: "user", text: question };
       setSearchChatHistory((prev) => [...prev, newMsg]);
       setSearchChatLoading(true);
 
@@ -63,11 +92,11 @@ export default function useSearch() {
           question: question,
           context_results: searchData.results,
         });
-        const answerMsg = { role: "ai", text: res.data.answer };
+        const answerMsg: ChatMessage = { role: "assistant", text: res.data.answer };
         setSearchChatHistory((prev) => [...prev, answerMsg]);
       } catch (error) {
         console.error("Search Chat error:", error);
-        const errorMsg = { role: "ai", text: "Sorry, I encountered an error." };
+        const errorMsg: ChatMessage = { role: "assistant", text: "Sorry, I encountered an error." };
         setSearchChatHistory((prev) => [...prev, errorMsg]);
       } finally {
         setSearchChatLoading(false);

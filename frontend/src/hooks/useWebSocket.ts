@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { API_BASE } from "../config";
 import { WEBSOCKET } from "../constants";
 
-const determineWsUrl = () => {
+const determineWsUrl = (): string => {
   let url = API_BASE.replace("http", "ws");
   if (
     typeof window !== "undefined" &&
@@ -16,23 +16,29 @@ const determineWsUrl = () => {
 
 const WS_BASE = determineWsUrl();
 
-export default function useWebSocket({ onMessage }) {
-  const [isConnected, setIsConnected] = useState(false);
-  const [isConnecting, setIsConnecting] = useState(true); // Start as true
-  const ws = useRef(null);
-  const onMessageRef = useRef(onMessage);
-  const reconnectTimeoutRef = useRef(null);
-  const isConnectingRef = useRef(false);
-  const connectRef = useRef(null);
+interface UseWebSocketProps {
+  onMessage: (event: MessageEvent) => void;
+}
 
-  // Keep onMessage ref up to date without triggering reconnects
+interface UseWebSocketReturn {
+  isConnected: boolean;
+  isConnecting: boolean;
+}
+
+export default function useWebSocket({ onMessage }: UseWebSocketProps): UseWebSocketReturn {
+  const [isConnected, setIsConnected] = useState<boolean>(false);
+  const [isConnecting, setIsConnecting] = useState<boolean>(true);
+  const ws = useRef<WebSocket | null>(null);
+  const onMessageRef = useRef<(event: MessageEvent) => void>(onMessage);
+  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isConnectingRef = useRef<boolean>(false);
+  const connectRef = useRef<(() => void) | null>(null);
+
   useEffect(() => {
     onMessageRef.current = onMessage;
   }, [onMessage]);
 
-  // Connection function stored in ref for use in onclose callback
   const connect = useCallback(() => {
-    // Prevent multiple simultaneous connection attempts
     if (
       isConnectingRef.current ||
       (ws.current && ws.current.readyState === WebSocket.CONNECTING)
@@ -40,7 +46,6 @@ export default function useWebSocket({ onMessage }) {
       return;
     }
 
-    // Clear any existing connection
     if (ws.current) {
       ws.current.onopen = null;
       ws.current.onmessage = null;
@@ -60,7 +65,7 @@ export default function useWebSocket({ onMessage }) {
       isConnectingRef.current = false;
     };
 
-    ws.current.onmessage = (event) => {
+    ws.current.onmessage = (event: MessageEvent) => {
       if (onMessageRef.current) {
         onMessageRef.current(event);
       }
@@ -72,27 +77,22 @@ export default function useWebSocket({ onMessage }) {
       setIsConnecting(false);
       isConnectingRef.current = false;
 
-      // Clear any pending reconnect
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
       }
 
-      // Retry after configured delay
       reconnectTimeoutRef.current = setTimeout(
         () => connectRef.current?.(),
         WEBSOCKET.RECONNECT_DELAY,
       );
     };
 
-    ws.current.onerror = (err) => {
+    ws.current.onerror = (err: Event) => {
       console.error("WebSocket Error:", err);
-      // onerror usually precedes onclose, so we rely on onclose to reset state/retry
-      // but strictly handling it here:
-      ws.current.close();
+      ws.current?.close();
     };
-  }, []); // No dependencies - stable function
+  }, []);
 
-  // Store connect function in ref
   useEffect(() => {
     connectRef.current = connect;
   }, [connect]);
@@ -101,7 +101,6 @@ export default function useWebSocket({ onMessage }) {
     connectRef.current?.();
 
     return () => {
-      // Cleanup on unmount
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
       }
@@ -116,5 +115,5 @@ export default function useWebSocket({ onMessage }) {
     };
   }, [connect]);
 
-  return { isConnected, isConnecting, ws };
+  return { isConnected, isConnecting };
 }
