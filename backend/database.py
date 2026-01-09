@@ -7,28 +7,25 @@ logger = logging.getLogger(__name__)
 
 def init_db() -> None:
     """
-    Create summaries table in Supabase if it doesn't exist.
-    Uses supabase.sql().execute() for raw SQL execution.
+    Verify Supabase connection on startup.
+    Note: Tables should be created by running scripts/init_db.sql in Supabase SQL Editor.
     """
     try:
         if not supabase_service.client:
-            logger.warning("Supabase client not initialized, skipping summaries table creation")
+            logger.warning(
+                "Supabase client not initialized. Set SUPABASE_URL and SUPABASE_KEY environment variables."
+            )
             return
 
-        response = supabase_service.client.sql(
-            """
-            CREATE TABLE IF NOT EXISTS summaries (
-                id SERIAL PRIMARY KEY,
-                filename TEXT UNIQUE NOT NULL,
-                summary_text TEXT NOT NULL,
-                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-            );
-        """
-        ).execute()
+        if not supabase_service.is_available():
+            logger.warning("Supabase service is not available")
+            return
 
-        logger.info("Summaries table checked/created in Supabase")
+        logger.info(
+            "Supabase connection verified. Make sure to run scripts/init_db.sql to create tables."
+        )
     except Exception as e:
-        logger.error(f"Failed to initialize summaries table: {e}")
+        logger.error(f"Failed to verify Supabase connection: {e}")
 
 
 def save_summary(filename: str, summary_text: str) -> None:
