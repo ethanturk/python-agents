@@ -1,5 +1,15 @@
 FROM node:22-alpine AS builder
 
+# Build arguments for environment variables
+ARG VITE_API_BASE
+ARG VITE_FIREBASE_API_KEY
+ARG VITE_FIREBASE_AUTH_DOMAIN
+ARG VITE_FIREBASE_PROJECT_ID
+ARG VITE_FIREBASE_STORAGE_BUCKET
+ARG VITE_FIREBASE_MESSAGING_SENDER_ID
+ARG VITE_FIREBASE_APP_ID
+ARG VITE_BASE_PATH
+
 # Set environment variables for Node.js optimization during build
 ENV NODE_OPTIONS="--max-old-space-size=1536" \
     NODE_ENV="production" \
@@ -8,7 +18,16 @@ ENV NODE_OPTIONS="--max-old-space-size=1536" \
     # Use npm ci for faster, more reliable installs
     npm_config_fund=false \
     npm_config_audit=false \
-    npm_config_dedupe=false
+    npm_config_dedupe=false \
+    # Client-side env vars needed for build
+    VITE_API_BASE=${VITE_API_BASE} \
+    VITE_FIREBASE_API_KEY=${VITE_FIREBASE_API_KEY} \
+    VITE_FIREBASE_AUTH_DOMAIN=${VITE_FIREBASE_AUTH_DOMAIN} \
+    VITE_FIREBASE_PROJECT_ID=${VITE_FIREBASE_PROJECT_ID} \
+    VITE_FIREBASE_STORAGE_BUCKET=${VITE_FIREBASE_STORAGE_BUCKET} \
+    VITE_FIREBASE_MESSAGING_SENDER_ID=${VITE_FIREBASE_MESSAGING_SENDER_ID} \
+    VITE_FIREBASE_APP_ID=${VITE_FIREBASE_APP_ID} \
+    VITE_BASE_PATH=${VITE_BASE_PATH}
 
 WORKDIR /app
 
