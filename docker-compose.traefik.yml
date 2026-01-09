@@ -5,6 +5,27 @@ services:
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
+    command:
+      # API and Dashboard
+      - "--api.dashboard=true"
+      # Entry Points
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+      - "--entrypoints.websecure.address=:443"
+      # Certificate Resolver - Let's Encrypt
+      - "--certificatesresolvers.letsencrypt.acme.email=ethan.turk@gmail.com"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/data/acme.json"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
+      # Providers
+      - "--providers.file.directory=/etc/traefik/dynamic"
+      - "--providers.file.watch=true"
+      # Logging
+      - "--log.level=INFO"
+      - "--log.filepath=/data/traefik.log"
+      - "--log.format=json"
+      - "--accesslog.filepath=/data/access.log"
+      - "--accesslog.format=json"
     ports:
       - "80:80"
       - "443:443"
@@ -14,9 +35,7 @@ services:
       # Traefik data (named volume for certificates and logs)
       - traefik_data:/data
     configs:
-      - source: traefik_config
-        target: /etc/traefik/traefik.yml
-      - source: traefik_dynamic
+      - source: traefik_routes
         target: /etc/traefik/dynamic/routes.yml
     labels:
       # Enable Traefik dashboard
@@ -43,7 +62,123 @@ volumes:
     name: traefik_data
 
 configs:
-  traefik_config:
-    file: ./traefik/traefik.yml
-  traefik_dynamic:
-    file: ./traefik/dynamic/routes.yml
+  traefik_routes:
+    content: |
+      http:
+        # Routers
+        routers:
+          # ===== Southhaven App =====
+
+          # Southhaven Frontend
+          southhaven-frontend:
+            rule: "Host(`aidocs.ethanturk.com`) && PathPrefix(`/southhaven/`)"
+            entryPoints:
+              - websecure
+            service: southhaven-frontend-service
+            tls:
+              certResolver: letsencrypt
+            priority: 10
+
+          # Southhaven Backend API
+          southhaven-backend:
+            rule: "Host(`aidocs.ethanturk.com`) && PathPrefix(`/southhaven/agent/`)"
+            entryPoints:
+              - websecure
+            service: southhaven-backend-service
+            middlewares:
+              - southhaven-stripprefix
+            tls:
+              certResolver: letsencrypt
+            priority: 20
+
+          # Southhaven WebSocket
+          southhaven-websocket:
+            rule: "Host(`aidocs.ethanturk.com`) && PathPrefix(`/southhaven/ws`)"
+            entryPoints:
+              - websecure
+            service: southhaven-backend-service
+            middlewares:
+              - southhaven-stripprefix
+            tls:
+              certResolver: letsencrypt
+            priority: 30
+
+          # ===== Demo App =====
+
+          # Demo Frontend
+          demo-frontend:
+            rule: "Host(`aidocs.ethanturk.com`) && PathPrefix(`/demo/`)"
+            entryPoints:
+              - websecure
+            service: demo-frontend-service
+            tls:
+              certResolver: letsencrypt
+            priority: 10
+
+          # Demo Backend API
+          demo-backend:
+            rule: "Host(`aidocs.ethanturk.com`) && PathPrefix(`/demo/agent/`)"
+            entryPoints:
+              - websecure
+            service: demo-backend-service
+            middlewares:
+              - demo-stripprefix
+            tls:
+              certResolver: letsencrypt
+            priority: 20
+
+          # Demo WebSocket
+          demo-websocket:
+            rule: "Host(`aidocs.ethanturk.com`) && PathPrefix(`/demo/ws`)"
+            entryPoints:
+              - websecure
+            service: demo-backend-service
+            middlewares:
+              - demo-stripprefix
+            tls:
+              certResolver: letsencrypt
+            priority: 30
+
+        # Services
+        services:
+          # Southhaven Services
+          southhaven-frontend-service:
+            loadBalancer:
+              servers:
+                - url: "http://host.docker.internal:3001"
+              passHostHeader: true
+
+          southhaven-backend-service:
+            loadBalancer:
+              servers:
+                - url: "http://host.docker.internal:9998"
+              passHostHeader: true
+
+          # Demo Services
+          demo-frontend-service:
+            loadBalancer:
+              servers:
+                - url: "http://host.docker.internal:3002"
+              passHostHeader: true
+
+          demo-backend-service:
+            loadBalancer:
+              servers:
+                - url: "http://host.docker.internal:9997"
+              passHostHeader: true
+
+        # Middlewares
+        middlewares:
+          # Strip /southhaven prefix for backend requests
+          southhaven-stripprefix:
+            stripPrefix:
+              prefixes:
+                - "/southhaven"
+              forceSlash: false
+
+          # Strip /demo prefix for backend requests
+          demo-stripprefix:
+            stripPrefix:
+              prefixes:
+                - "/demo"
+              forceSlash: false
