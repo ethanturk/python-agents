@@ -21,6 +21,17 @@ create index if not exists documents_vector_idx
 create index if not exists idx_filename on documents (filename);
 create index if not exists idx_document_set on documents (document_set);
 
+-- Create the summaries table to store document summaries
+create table if not exists summaries (
+  id serial primary key,
+  filename text unique not null,
+  summary_text text not null,
+  created_at timestamp with time zone default now()
+);
+
+-- Create index for faster lookup by filename
+create index if not exists idx_summaries_filename on summaries (filename);
+
 -- Create the RPC function for similarity search via Supabase REST API
 create or replace function match_documents (
   query_embedding vector(768),

@@ -11,6 +11,10 @@ def init_db() -> None:
     Uses supabase.sql().execute() for raw SQL execution.
     """
     try:
+        if not supabase_service.client:
+            logger.warning("Supabase client not initialized, skipping summaries table creation")
+            return
+
         response = supabase_service.client.sql(
             """
             CREATE TABLE IF NOT EXISTS summaries (
@@ -33,6 +37,10 @@ def save_summary(filename: str, summary_text: str) -> None:
     Uses upsert to handle both insert and update cases.
     """
     try:
+        if not supabase_service.client:
+            logger.warning("Supabase client not initialized, cannot save summary")
+            return
+
         response = (
             supabase_service.client.table("summaries")
             .upsert(
@@ -59,6 +67,10 @@ def get_summary(filename: str) -> dict | None:
     Retrieve a summary by filename from Supabase.
     """
     try:
+        if not supabase_service.client:
+            logger.warning("Supabase client not initialized, cannot retrieve summary")
+            return None
+
         response = (
             supabase_service.client.table("summaries")
             .select("*")
@@ -79,6 +91,10 @@ def get_all_summaries() -> list[dict]:
     Retrieve all summaries ordered by creation date from Supabase.
     """
     try:
+        if not supabase_service.client:
+            logger.warning("Supabase client not initialized, cannot retrieve summaries")
+            return []
+
         response = (
             supabase_service.client.table("summaries")
             .select("*")
