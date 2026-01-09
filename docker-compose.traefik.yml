@@ -37,22 +37,6 @@ services:
     configs:
       - source: traefik_routes
         target: /etc/traefik/dynamic/routes.yml
-    labels:
-      # Enable Traefik dashboard
-      - "traefik.enable=true"
-      - "traefik.http.routers.dashboard.rule=Host(`aidocs.ethanturk.com`) && PathPrefix(`/traefik`)"
-      - "traefik.http.routers.dashboard.entrypoints=websecure"
-      - "traefik.http.routers.dashboard.tls=true"
-      - "traefik.http.routers.dashboard.tls.certresolver=letsencrypt"
-      - "traefik.http.routers.dashboard.service=api@internal"
-      - "traefik.http.routers.dashboard.middlewares=dashboard-auth,dashboard-stripprefix"
-
-      # Strip /traefik prefix for dashboard
-      - "traefik.http.middlewares.dashboard-stripprefix.stripprefix.prefixes=/traefik"
-
-      # Basic auth for dashboard (username: admin, password: changeme)  # pragma: allowlist secret
-      # Generate new password with: htpasswd -nb admin yourpassword  # pragma: allowlist secret
-      - "traefik.http.middlewares.dashboard-auth.basicauth.users=admin:$$apr1$$8EVjn/nj$$GiLUZqcbueTFeD23SuB6x0"
     extra_hosts:
       # Allow Traefik to reach services on host
       - "host.docker.internal:host-gateway"
@@ -67,6 +51,21 @@ configs:
       http:
         # Routers
         routers:
+          # ===== Traefik Dashboard =====
+
+          # Traefik Dashboard
+          traefik-dashboard:
+            rule: "Host(`aidocs.ethanturk.com`) && PathPrefix(`/traefik`)"
+            entryPoints:
+              - websecure
+            service: api@internal
+            middlewares:
+              - dashboard-auth
+              - dashboard-stripprefix
+            tls:
+              certResolver: letsencrypt
+            priority: 100
+
           # ===== Southhaven App =====
 
           # Southhaven Frontend
@@ -169,6 +168,18 @@ configs:
 
         # Middlewares
         middlewares:
+          # Dashboard authentication
+          dashboard-auth:
+            basicAuth:
+              users:
+                - "admin:$apr1$8EVjn/nj$GiLUZqcbueTFeD23SuB6x0"
+
+          # Strip /traefik prefix for dashboard
+          dashboard-stripprefix:
+            stripPrefix:
+              prefixes:
+                - "/traefik"
+
           # Strip /southhaven prefix for backend requests
           southhaven-stripprefix:
             stripPrefix:
