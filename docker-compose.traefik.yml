@@ -147,26 +147,26 @@ configs:
           southhaven-frontend-service:
             loadBalancer:
               servers:
-                - url: "http://southhaven-frontend:3000"
+                - url: "http://southhaven-frontend-frontend-1:3000"
               passHostHeader: true
 
           southhaven-backend-service:
             loadBalancer:
               servers:
-                - url: "http://southhaven-backend:8000"
+                - url: "http://southhaven-backend-backend-1:8000"
               passHostHeader: true
 
           # Demo Services
           demo-frontend-service:
             loadBalancer:
               servers:
-                - url: "http://demo-frontend:3000"
+                - url: "http://demo-frontend-frontend-1:3000"
               passHostHeader: true
 
           demo-backend-service:
             loadBalancer:
               servers:
-                - url: "http://demo-backend:8000"
+                - url: "http://demo-backend-backend-1:8000"
               passHostHeader: true
 
         # Middlewares
