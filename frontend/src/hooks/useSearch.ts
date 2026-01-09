@@ -36,7 +36,10 @@ interface UseSearchReturn {
 
 export default function useSearch(): UseSearchReturn {
   const { selectedSet } = useDocumentSet();
-  const [searchData, setSearchData] = useState<SearchData>({ answer: null, results: [] });
+  const [searchData, setSearchData] = useState<SearchData>({
+    answer: null,
+    results: [],
+  });
   const [query, setQuery] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
   const [searchLimit, setSearchLimit] = useState<number>(SEARCH.DEFAULT_LIMIT);
@@ -92,11 +95,17 @@ export default function useSearch(): UseSearchReturn {
           question: question,
           context_results: searchData.results,
         });
-        const answerMsg: ChatMessage = { role: "assistant", text: res.data.answer };
+        const answerMsg: ChatMessage = {
+          role: "assistant",
+          text: res.data.answer,
+        };
         setSearchChatHistory((prev) => [...prev, answerMsg]);
       } catch (error) {
         console.error("Search Chat error:", error);
-        const errorMsg: ChatMessage = { role: "assistant", text: "Sorry, I encountered an error." };
+        const errorMsg: ChatMessage = {
+          role: "assistant",
+          text: "Sorry, I encountered an error.",
+        };
         setSearchChatHistory((prev) => [...prev, errorMsg]);
       } finally {
         setSearchChatLoading(false);

@@ -66,11 +66,14 @@ export default function useDocuments(): UseDocumentsReturn {
     }
   }, [groupedDocs, fetchDocuments]);
 
-  const handlePromptDelete = useCallback((filename: string, documentSet?: string) => {
-    setDocToDelete(filename);
-    setDocSetToDelete(documentSet || null);
-    setDeleteDialogOpen(true);
-  }, []);
+  const handlePromptDelete = useCallback(
+    (filename: string, documentSet?: string) => {
+      setDocToDelete(filename);
+      setDocSetToDelete(documentSet || null);
+      setDeleteDialogOpen(true);
+    },
+    [],
+  );
 
   const confirmDelete = useCallback(async () => {
     if (!docToDelete) return;

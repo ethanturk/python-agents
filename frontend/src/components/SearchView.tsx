@@ -164,7 +164,9 @@ const SearchView = memo(function SearchView({
             <AccordionContent>
               {uniqueFiles.length === 0 ? (
                 <Alert>
-                  <AlertDescription>No citation sources found.</AlertDescription>
+                  <AlertDescription>
+                    No citation sources found.
+                  </AlertDescription>
                 </Alert>
               ) : (
                 <ul className="space-y-3">
@@ -174,14 +176,14 @@ const SearchView = memo(function SearchView({
                       className="flex items-center justify-between p-3 rounded-lg border"
                     >
                       <div className="flex-1">
-                        <p className="font-medium">{getFilenameOnly(filename)}</p>
-                        <p className="text-sm text-muted-foreground">{filename}</p>
+                        <p className="font-medium">
+                          {getFilenameOnly(filename)}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {filename}
+                        </p>
                       </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        asChild
-                      >
+                      <Button variant="outline" size="sm" asChild>
                         <a
                           href={getWebLink(filename)}
                           target="_blank"
@@ -228,10 +230,7 @@ const SearchView = memo(function SearchView({
             )}
           </div>
 
-          <form
-            onSubmit={handleChatSubmit}
-            className="flex gap-2 mt-4"
-          >
+          <form onSubmit={handleChatSubmit} className="flex gap-2 mt-4">
             <Input
               placeholder="Ask a follow-up question..."
               value={question}

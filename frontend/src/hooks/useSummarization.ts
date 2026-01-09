@@ -55,7 +55,9 @@ interface StorageData {
   cache?: Record<string, CachedSummary>;
 }
 
-export default function useSummarization({ onShowSnackbar }: UseSummarizationProps): UseSummarizationReturn {
+export default function useSummarization({
+  onShowSnackbar,
+}: UseSummarizationProps): UseSummarizationReturn {
   const [selectedDoc, setSelectedDoc] = useState<string>("");
   const [summaryResult, setSummaryResult] = useState<string | null>(null);
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
@@ -65,7 +67,9 @@ export default function useSummarization({ onShowSnackbar }: UseSummarizationPro
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState<number>(0);
   const [storageLoaded, setStorageLoaded] = useState<boolean>(false);
-  const [cachedSummaries, setCachedSummaries] = useState<Record<string, CachedSummary>>({});
+  const [cachedSummaries, setCachedSummaries] = useState<
+    Record<string, CachedSummary>
+  >({});
 
   useEffect(() => {
     const loadStorage = () => {
@@ -213,11 +217,17 @@ export default function useSummarization({ onShowSnackbar }: UseSummarizationPro
           filename: selectedDoc,
           question: question,
         });
-        const answerMsg: ChatMessage = { role: "assistant", text: res.data.answer };
+        const answerMsg: ChatMessage = {
+          role: "assistant",
+          text: res.data.answer,
+        };
         setChatHistory((prev) => [...prev, answerMsg]);
       } catch (error) {
         console.error("Chat error:", error);
-        const errorMsg: ChatMessage = { role: "assistant", text: "Sorry, I encountered an error." };
+        const errorMsg: ChatMessage = {
+          role: "assistant",
+          text: "Sorry, I encountered an error.",
+        };
         setChatHistory((prev) => [...prev, errorMsg]);
       } finally {
         setChatLoading(false);
@@ -249,7 +259,9 @@ export default function useSummarization({ onShowSnackbar }: UseSummarizationPro
   const handleNotificationClick = useCallback(
     (notif: Notification): boolean => {
       setNotifications((prev) =>
-        prev.map((n) => (n.filename === notif.filename ? { ...n, read: true } : n)),
+        prev.map((n) =>
+          n.filename === notif.filename ? { ...n, read: true } : n,
+        ),
       );
       if (!notif.read) setUnreadCount((prev) => Math.max(0, prev - 1));
 

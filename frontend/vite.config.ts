@@ -23,17 +23,17 @@ export default defineConfig(({ mode }) => {
   return {
     base: appBase,
     plugins: [react()],
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
+    resolve: {
+      alias: {
+        "@": path.resolve(__dirname, "./src"),
+      },
     },
-  },
-  define: {
-    global: {
-      require: "require",
-      module: "(typeof module !== 'undefined' ? module : { exports: {} })",
+    define: {
+      global: {
+        require: "require",
+        module: "(typeof module !== 'undefined' ? module : { exports: {} })",
+      },
     },
-  },
 
     // ============================================================================
     // MEMORY & PERFORMANCE OPTIMIZATIONS FOR DOCKER

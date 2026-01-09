@@ -25,12 +25,16 @@ interface UseWebSocketReturn {
   isConnecting: boolean;
 }
 
-export default function useWebSocket({ onMessage }: UseWebSocketProps): UseWebSocketReturn {
+export default function useWebSocket({
+  onMessage,
+}: UseWebSocketProps): UseWebSocketReturn {
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [isConnecting, setIsConnecting] = useState<boolean>(true);
   const ws = useRef<WebSocket | null>(null);
   const onMessageRef = useRef<(event: MessageEvent) => void>(onMessage);
-  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
   const isConnectingRef = useRef<boolean>(false);
   const connectRef = useRef<(() => void) | null>(null);
 

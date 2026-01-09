@@ -92,7 +92,7 @@ function NotificationSidebar({
               key={index}
               className={cn(
                 "flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition-colors hover:bg-muted/50",
-                !notif.read && "bg-primary/5"
+                !notif.read && "bg-primary/5",
               )}
               onClick={() => onNotificationClick(notif)}
             >

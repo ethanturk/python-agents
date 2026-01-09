@@ -1,7 +1,13 @@
 import React, { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Send, Trash2, FileText, Loader2, FileText as SummarizeIcon } from "lucide-react";
+import {
+  Send,
+  Trash2,
+  FileText,
+  Loader2,
+  FileText as SummarizeIcon,
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -81,10 +87,7 @@ export default function SummarizeView({
       <h2 className="text-xl font-semibold mb-4">Summarize Document</h2>
       <div className="flex gap-2 mb-4">
         <div className="flex-1">
-          <Select
-            value={selectedDoc || ""}
-            onValueChange={setSelectedDoc}
-          >
+          <Select value={selectedDoc || ""} onValueChange={setSelectedDoc}>
             <SelectTrigger>
               <SelectValue placeholder="Select Document" />
             </SelectTrigger>
@@ -161,11 +164,7 @@ export default function SummarizeView({
           <div className="border-t my-4" />
           <div className="flex justify-between mb-2">
             <h3 className="text-lg font-semibold">Summary Result</h3>
-            <Button
-              variant="outline"
-              size="sm"
-              asChild
-            >
+            <Button variant="outline" size="sm" asChild>
               <a
                 href={getWebLink(selectedDoc || "")}
                 target="_blank"
@@ -211,10 +210,7 @@ export default function SummarizeView({
               )}
             </div>
 
-            <form
-              onSubmit={handleChatSubmit}
-              className="flex gap-2 mt-4"
-            >
+            <form onSubmit={handleChatSubmit} className="flex gap-2 mt-4">
               <Input
                 placeholder="Ask a question about this summary..."
                 value={question}
