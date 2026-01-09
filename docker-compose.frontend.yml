@@ -31,10 +31,10 @@ services:
     deploy:
       resources:
         limits:
-          memory: 2G
-          cpus: "2.0"  # Limit CPU to prevent runaway processes
+          memory: 1G
+          cpus: "0.5"  # Limit CPU to prevent runaway processes
         reservations:
-          memory: 512M
+          memory: 256M
           cpus: "0.5"
 
     # Health check to detect when server stops responding
