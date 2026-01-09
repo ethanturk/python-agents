@@ -136,3 +136,7 @@ cython_debug/
 # User requested rules
 # Allow .env.example
 !.env.example
+
+# Traefik - Exclude sensitive data
+traefik/acme/
+traefik/logs/
