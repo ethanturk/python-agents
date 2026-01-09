@@ -30,7 +30,7 @@ certificatesResolvers:
   letsencrypt:
     acme:
       email: ethan.turk@gmail.com
-      storage: /acme/acme.json
+      storage: /data/acme.json
       httpChallenge:
         entryPoint: web
 
@@ -43,11 +43,11 @@ providers:
 # Logging
 log:
   level: INFO
-  filePath: /logs/traefik.log
+  filePath: /data/traefik.log
   format: json
 
 # Access Logs
 accessLog:
-  filePath: /logs/access.log
+  filePath: /data/access.log
   format: json
   bufferingSize: 100

@@ -11,13 +11,11 @@ services:
     environment:
       - TZ=America/Chicago
     volumes:
-      # Traefik configuration
+      # Traefik configuration files (bind mounts)
       - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
       - ./traefik/dynamic:/etc/traefik/dynamic:ro
-      # Let's Encrypt certificate storage
-      - ./traefik/acme:/acme
-      # Logs
-      - ./traefik/logs:/logs
+      # Traefik data (named volume for certificates and logs)
+      - traefik_data:/data
     labels:
       # Enable Traefik dashboard
       - "traefik.enable=true"
@@ -31,9 +29,13 @@ services:
       # Strip /traefik prefix for dashboard
       - "traefik.http.middlewares.dashboard-stripprefix.stripprefix.prefixes=/traefik"
 
-      # Basic auth for dashboard (username: admin, password: changeme)
-      # Generate new password with: htpasswd -nb admin yourpassword
+      # Basic auth for dashboard (username: admin, password: changeme)  # pragma: allowlist secret
+      # Generate new password with: htpasswd -nb admin yourpassword  # pragma: allowlist secret
       - "traefik.http.middlewares.dashboard-auth.basicauth.users=admin:$$apr1$$8EVjn/nj$$GiLUZqcbueTFeD23SuB6x0"
     extra_hosts:
       # Allow Traefik to reach services on host
       - "host.docker.internal:host-gateway"
+
+volumes:
+  traefik_data:
+    name: traefik_data
