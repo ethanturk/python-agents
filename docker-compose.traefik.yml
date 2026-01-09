@@ -55,13 +55,12 @@ configs:
 
           # Traefik Dashboard
           traefik-dashboard:
-            rule: "Host(`aidocs.ethanturk.com`) && PathPrefix(`/traefik`)"
+            rule: "Host(`aidocs.ethanturk.com`) && (PathPrefix(`/api`) || PathPrefix(`/dashboard`))"
             entryPoints:
               - websecure
             service: api@internal
             middlewares:
               - dashboard-auth
-              - dashboard-stripprefix
             tls:
               certResolver: letsencrypt
             priority: 100
