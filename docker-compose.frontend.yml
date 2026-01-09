@@ -16,14 +16,6 @@ services:
       VITE_FIREBASE_APP_ID: ${VITE_FIREBASE_APP_ID}
       VITE_BASE_PATH: ${VITE_BASE_PATH}
 
-      # Node.js memory optimizations for Docker
-      # CRITICAL: Set max-old-space-size BELOW container limit (1.5GB < 2GB)
-      # This prevents OOM kills while giving Node enough memory for esbuild
-      NODE_OPTIONS: "--max-old-space-size=1536"
-
-      # Reduce garbage collection overhead
-      NODE_ENV: "development"
-
       # Optimize esbuild specifically
       ESBUILD_BINARY_PATH: "/app/node_modules/esbuild/bin/esbuild"
 
