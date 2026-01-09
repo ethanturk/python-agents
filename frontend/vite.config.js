@@ -66,6 +66,11 @@ export default defineConfig(({ mode }) => {
       host: true,
       port: 3000,
       allowedHosts: [".ethanturk.com"],
+      watch: {
+        // Use polling for Docker environments to avoid file watcher crashes
+        usePolling: true,
+        interval: 1000,
+      },
     },
   };
 });
