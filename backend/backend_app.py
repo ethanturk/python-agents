@@ -11,12 +11,12 @@ from fastapi import (
     File,
     Form,
     HTTPException,
+    Response,
     UploadFile,
     WebSocket,
     WebSocketDisconnect,
 )
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 
 # Internal Imports
 import config
@@ -43,8 +43,8 @@ from async_tasks import (
 )
 from auth import get_current_user, init_firebase
 from database import get_all_summaries, get_summary, init_db, save_summary
-from file_watcher import start_watching
 from services.agent import perform_rag, run_qa_agent, run_sync_agent
+from services.azure_storage import azure_storage_service
 from services.file_management import file_service
 
 # Service Layer
@@ -56,7 +56,6 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 os.environ["USE_NNPACK"] = "0"
-MONITORED_DIR = config.MONITORED_DIR
 
 # Security: File upload configuration
 MAX_FILE_SIZE = int(os.getenv("MAX_FILE_SIZE", 100_000_000))  # 100MB default
@@ -114,8 +113,6 @@ async def lifespan(app: FastAPI):
     init_db()
     init_firebase()
 
-    observer = start_watching(MONITORED_DIR, lambda files: ingest_docs_task.delay(files))
-
     # Embedded Worker Logic
     worker_process = None
     if config.RUN_WORKER_EMBEDDED:
@@ -152,8 +149,6 @@ async def lifespan(app: FastAPI):
             worker_process.kill()
         logger.info("Embedded worker stopped.")
 
-    observer.stop()
-    observer.join()
     logger.info("Shutting down...")
 
 
@@ -162,7 +157,8 @@ app = FastAPI(lifespan=lifespan)
 # CORS Configuration - Restrict origins for security
 # Configure allowed origins via environment variable or use defaults
 ALLOWED_ORIGINS = os.getenv(
-    "ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:3001,https://apps.ethanturk.com"
+    "ALLOWED_ORIGINS",
+    "http://localhost:3000,http://localhost:3001,https://apps.ethanturk.com",
 ).split(",")
 
 app.add_middleware(
@@ -172,11 +168,6 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type", "Authorization"],
 )
-
-# Mount static files
-if not os.path.exists(MONITORED_DIR):
-    os.makedirs(MONITORED_DIR)
-app.mount("/agent/files", StaticFiles(directory=MONITORED_DIR), name="files")
 
 
 @app.get("/health")
@@ -262,13 +253,6 @@ async def list_document_sets():
 async def delete_document_endpoint(filename: str, document_set: str = "all"):
     try:
         file_service.delete_file(filename, document_set)
-
-        db_filename = filename
-        if not filename.startswith("/") and MONITORED_DIR.startswith("/"):
-            db_filename = "/" + filename
-
-        logger.info(f"Deleting from Vector DB: {db_filename} (set={document_set})")
-        await db_service.delete_document(db_filename, document_set)
         return {"status": "success", "message": f"Deleted {filename}"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -291,30 +275,78 @@ async def upload_files(files: list[UploadFile] = File(...), document_set: str = 
         logger.error(f"Failed to save file: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to save file: {str(e)}")
 
-    return {"status": "success", "uploaded": uploaded_files, "document_set": sanitized_set}
+    return {
+        "status": "success",
+        "uploaded": uploaded_files,
+        "document_set": sanitized_set,
+    }
 
 
-# --- Summarization and QA ---
+@app.get("/agent/files/{document_set}/{filename}")
+async def proxy_file(document_set: str, filename: str):
+    """
+    Proxy file from Azure Storage.
+    """
+    from utils.validation import sanitize_document_set
+
+    sanitized_set = sanitize_document_set(document_set) if document_set else "all"
+
+    # Fetch from Azure Storage
+    file_content = await azure_storage_service.download_file(filename, sanitized_set)
+
+    if not file_content:
+        raise HTTPException(
+            status_code=404, detail="File not found or storage temporarily unavailable"
+        )
+
+    # Determine content type based on file extension
+    ext = Path(filename).suffix.lower()
+    content_types = {
+        ".pdf": "application/pdf",
+        ".txt": "text/plain; charset=utf-8",
+        ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        ".doc": "application/msword",
+        ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        ".xls": "application/vnd.ms-excel",
+        ".csv": "text/csv; charset=utf-8",
+        ".md": "text/markdown; charset=utf-8",
+        ".json": "application/json",
+        ".xml": "application/xml",
+    }
+    content_type = content_types.get(ext, "application/octet-stream")
+
+    # Return file as streamed response
+    return Response(content=file_content, media_type=content_type)
 
 
 @app.post("/agent/summarize", dependencies=[Depends(get_current_user)])
-def summarize_document_endpoint(request: SummarizeRequest):
-    filepath = request.filename
-    if not os.path.isabs(filepath):
-        filepath = os.path.join(MONITORED_DIR, request.filename)
+async def summarize_document_endpoint(request: SummarizeRequest):
+    """
+    Summarize document using Azure Storage.
+    """
+    from utils.validation import sanitize_document_set
 
-    if not os.path.exists(filepath):
-        raise HTTPException(status_code=404, detail="File not found")
+    sanitized_set = sanitize_document_set(request.document_set) if request.document_set else "all"
 
-    try:
-        with open(filepath, "rb") as f:
-            content_b64 = base64.b64encode(f.read()).decode("utf-8")
+    filename = request.filename
 
-        notify_url = f"{config.API_URL}/internal/notify"
-        task = summarize_document_task.delay(request.filename, content_b64, notify_url)
-        return {"task_id": task.id, "message": "Summarization started"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    # Download file from Azure Storage
+    file_content = await azure_storage_service.download_file(filename, sanitized_set)
+
+    if not file_content:
+        raise HTTPException(
+            status_code=404, detail="File not found or storage temporarily unavailable"
+        )
+
+    # Encode content as base64 for task
+    content_b64 = base64.b64encode(file_content).decode("utf-8")
+
+    notify_url = f"{config.API_URL}/internal/notify"
+    task = summarize_document_task.delay(filename, content_b64, notify_url)
+    return {"task_id": task.id, "message": "Summarization started"}
+
+
+# --- Summarization and QA ---
 
 
 @app.get("/agent/summaries", dependencies=[Depends(get_current_user)])

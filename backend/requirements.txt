@@ -20,3 +20,4 @@ pytest-mock
 pytest-cov
 litellm
 supabase
+azure-storage-blob>=12.20.0

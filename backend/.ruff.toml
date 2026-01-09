@@ -17,5 +17,3 @@ ignore = [
     "S608",    # Supabase RPC calls are parameterized, not direct SQL
     "C401",    # Generator is fine for this use case
 ]
-
-[per-file-ignores]

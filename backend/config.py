@@ -33,8 +33,10 @@ DATABASE_CONN_STRING = os.getenv("DATABASE_CONN_STRING")
 VECTOR_TABLE_NAME = os.getenv("VECTOR_TABLE_NAME") or "documents"
 CELERY_QUEUE_NAME = os.getenv("CELERY_QUEUE_NAME") or "celery"
 
-# File Monitoring
-MONITORED_DIR = os.getenv("MONITORED_DIR", "/data/monitored")
+# Azure Storage Configuration (Central US region)
+AZURE_STORAGE_CONNECTION_STRING = os.getenv("AZURE_STORAGE_CONNECTION_STRING")
+AZURE_STORAGE_CONTAINER_NAME = os.getenv("AZURE_STORAGE_CONTAINER_NAME") or "documents"
+AZURE_STORAGE_ACCOUNT_NAME = os.getenv("AZURE_STORAGE_ACCOUNT_NAME")
 
 
 # Deployment Configuration

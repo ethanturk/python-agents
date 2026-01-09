@@ -10,8 +10,7 @@ from utils.validation import sanitize_document_set
 class FileManagementService:
     """Handles file upload, deletion, and filesystem operations."""
 
-    def __init__(self, monitored_dir: str):
-        self.monitored_dir = Path(monitored_dir)
+    def __init__(self):
         self.max_file_size = int(os.getenv("MAX_FILE_SIZE", 100_000_000))
         self.max_files_per_upload = int(os.getenv("MAX_FILES_PER_UPLOAD", 10))
         self.allowed_extensions = {

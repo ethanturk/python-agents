@@ -1,0 +1,28 @@
+# Backend - Python files are handled by Black
+backend/
+*.py
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+
+# Dependencies
+node_modules/
+venv/
+.venv/
+
+# Cache
+.pytest_cache/
+.ruff_cache/
+__pycache__/
+
+# Infrastructure
+infra/
+k8s/
+
+# Data
+data/
+
+# Git
+.git/

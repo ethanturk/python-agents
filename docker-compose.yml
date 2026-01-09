@@ -17,21 +17,11 @@ services:
       QDRANT_COLLECTION_NAME: ${QDRANT_COLLECTION_NAME:-documents}
       CELERY_QUEUE_NAME: ${CELERY_QUEUE_NAME:-celery}
       API_URL: ${API_URL}
-      GOOGLE_APPLICATION_CREDENTIALS: /app/service-account.json
+
+      # Azure Storage Configuration
+      AZURE_STORAGE_CONNECTION_STRING: ${AZURE_STORAGE_CONNECTION_STRING}
+      AZURE_STORAGE_CONTAINER_NAME: ${AZURE_STORAGE_CONTAINER_NAME:-documents}
+      AZURE_STORAGE_ACCOUNT_NAME: ${AZURE_STORAGE_ACCOUNT_NAME}
+
       SUPABASE_URL: ${SUPABASE_URL}
       SUPABASE_KEY: ${SUPABASE_KEY}
-    volumes:
-      - type: volume
-        source: nas
-        target: /data/monitored
-        volume:
-          subpath: ${NAS_SUBPATH}
-      - type: volume
-        source: nas
-        target: /app/service-account.json
-        volume:
-          subpath: configs/aidocsearch/service-account.json
-
-volumes:
-  nas:
-    external: true

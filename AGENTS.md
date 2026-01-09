@@ -371,7 +371,7 @@ Per session completion requirements:
 4. **MANDATORY**: `git pull --rebase && git push`
 5. Verify: `git status` shows "up to date with origin"
 
-### Legacy Files
-
-- `main.py` - CLI demo script (not used in production)
-- `stub_knowledge_base.txt` - Demo artifact from multi-step agent
+### Final steps of every run
+**IMPORTANT**
+Always validate pre-commit hooks before completing an iteration.
+Specifically, ensure that you run: `pre-commit run --all-files`
