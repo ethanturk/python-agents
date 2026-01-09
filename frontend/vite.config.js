@@ -59,8 +59,6 @@ export default defineConfig(({ mode }) => {
       esbuildOptions: {
         // Reduce memory pressure by disabling source maps during optimization
         sourcemap: false,
-        // Enable incremental builds
-        incremental: true,
         // Set lower memory limit for esbuild (works with container limits)
         logLevel: "error",
       },
