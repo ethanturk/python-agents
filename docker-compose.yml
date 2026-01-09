@@ -25,3 +25,10 @@ services:
 
       SUPABASE_URL: ${SUPABASE_URL}
       SUPABASE_KEY: ${SUPABASE_KEY}
+    networks:
+      - web
+
+networks:
+  web:
+    external: true
+    name: web

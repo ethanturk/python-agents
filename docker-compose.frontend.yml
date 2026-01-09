@@ -23,3 +23,10 @@ services:
           memory: 2G
         reservations:
           memory: 512M
+    networks:
+      - web
+
+networks:
+  web:
+    external: true
+    name: web

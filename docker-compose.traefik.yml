@@ -37,9 +37,13 @@ services:
     configs:
       - source: traefik_routes
         target: /etc/traefik/dynamic/routes.yml
-    extra_hosts:
-      # Allow Traefik to reach services on host
-      - "host.docker.internal:host-gateway"
+    networks:
+      - web
+
+networks:
+  web:
+    external: true
+    name: web
 
 volumes:
   traefik_data:
@@ -143,26 +147,26 @@ configs:
           southhaven-frontend-service:
             loadBalancer:
               servers:
-                - url: "http://host.docker.internal:3001"
+                - url: "http://southhaven-frontend:3000"
               passHostHeader: true
 
           southhaven-backend-service:
             loadBalancer:
               servers:
-                - url: "http://host.docker.internal:9998"
+                - url: "http://southhaven-backend:8000"
               passHostHeader: true
 
           # Demo Services
           demo-frontend-service:
             loadBalancer:
               servers:
-                - url: "http://host.docker.internal:3002"
+                - url: "http://demo-frontend:3000"
               passHostHeader: true
 
           demo-backend-service:
             loadBalancer:
               servers:
-                - url: "http://host.docker.internal:9997"
+                - url: "http://demo-backend:8000"
               passHostHeader: true
 
         # Middlewares
