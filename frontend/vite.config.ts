@@ -7,8 +7,9 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
   const appBase = process.env.VITE_BASE_PATH || env.VITE_BASE_PATH || "/";
 
-  // Validate required environment variables in production
-  if (mode === "production") {
+  // Validate required environment variables in production (skip for Vercel builds)
+  // Vercel env vars are injected at runtime, not build time
+  if (mode === "production" && !process.env.VERCEL) {
     const requiredEnvVars = ["VITE_API_BASE", "VITE_FIREBASE_API_KEY"];
     const missing = requiredEnvVars.filter((varName) => !env[varName]);
 
