@@ -35,7 +35,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 
 # Install all dependencies (including devDependencies for build)
-RUN npm ci --prefer-offline
+RUN npm ci --prefer-offline --include=dev
 
 # Copy application code
 COPY . .

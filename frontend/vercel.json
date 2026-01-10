@@ -1,6 +1,6 @@
 {
   "$schema": "https://vercel.com/schemas/v1/config.json",
-  "buildCommand": "vite build",
+  "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "framework": "vite",
   "regions": ["iad1"],
