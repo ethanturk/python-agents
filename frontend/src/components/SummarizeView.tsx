@@ -84,7 +84,9 @@ export default function SummarizeView({
 
   return (
     <Card className="p-4">
-      <h2 className="text-xl font-semibold mb-4">Summarize Document</h2>
+      <h2 className="text-xl font-bold tracking-tight mb-4">
+        Summarize Document
+      </h2>
       <div className="flex gap-2 mb-4">
         <div className="flex-1">
           <Select value={selectedDoc || ""} onValueChange={setSelectedDoc}>
@@ -130,7 +132,7 @@ export default function SummarizeView({
               <Badge
                 key={filename}
                 variant={selectedDoc === filename ? "default" : "outline"}
-                className="cursor-pointer pr-8 hover:bg-accent"
+                className="cursor-pointer pr-8 hover:bg-muted/80 transition-colors"
                 onClick={() => onSelectCachedSummary(filename)}
               >
                 {getFilenameOnly(filename)}
@@ -150,7 +152,7 @@ export default function SummarizeView({
       )}
 
       {showSpinner && (
-        <div className="flex flex-col items-center justify-center my-4 p-4 text-center">
+        <div className="flex flex-col items-center justify-center my-4 p-4 text-center border border-border/50 rounded-lg bg-muted/30">
           <Loader2 className="h-10 w-10 animate-spin mb-2" />
           <p className="text-muted-foreground">Summarization in progress...</p>
           <p className="text-sm text-muted-foreground">
@@ -161,9 +163,9 @@ export default function SummarizeView({
 
       {!showSpinner && summaryResult && (
         <div>
-          <div className="border-t my-4" />
+          <div className="border-t border-border/50 my-4" />
           <div className="flex justify-between mb-2">
-            <h3 className="text-lg font-semibold">Summary Result</h3>
+            <h3 className="text-lg font-bold tracking-tight">Summary Result</h3>
             <Button variant="outline" size="sm" asChild>
               <a
                 href={getWebLink(selectedDoc || "")}
@@ -171,11 +173,11 @@ export default function SummarizeView({
                 rel="noopener noreferrer"
               >
                 <FileText className="mr-2 h-4 w-4" />
-                View Original Document
+                View Document
               </a>
             </Button>
           </div>
-          <Card className="p-4">
+          <Card className="p-4 border-border/50">
             <div className="markdown-body markdown-summary prose dark:prose-invert max-w-none">
               <ReactMarkdown remarkPlugins={[remarkGfm]}>
                 {summaryResult}
@@ -184,16 +186,18 @@ export default function SummarizeView({
           </Card>
 
           <div className="summary-chat-container mt-6 space-y-4">
-            <h3 className="text-lg font-semibold">Chat with Summary</h3>
+            <h3 className="text-lg font-bold tracking-tight">
+              Chat with Summary
+            </h3>
 
-            <div className="summary-chat-history space-y-4">
+            <div className="summary-chat-history space-y-3">
               {chatHistory.map((msg, i) => (
                 <div
                   key={i}
                   className={`p-4 rounded-lg ${
                     msg.role === "user"
                       ? "bg-primary text-primary-foreground ml-8"
-                      : "bg-muted mr-8"
+                      : "bg-muted/50 mr-8 border border-border/50"
                   }`}
                 >
                   <div className="markdown-body prose dark:prose-invert max-w-none">
@@ -204,8 +208,8 @@ export default function SummarizeView({
                 </div>
               ))}
               {chatLoading && (
-                <div className="p-4 rounded-lg bg-muted mr-8">
-                  <p className="text-sm">Thinking...</p>
+                <div className="p-4 rounded-lg bg-muted/50 mr-8 border border-border/50">
+                  <p className="text-sm text-muted-foreground">Thinking...</p>
                 </div>
               )}
             </div>

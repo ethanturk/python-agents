@@ -99,7 +99,11 @@ const SearchView = memo(function SearchView({
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyPress={(e) => e.key === "Enter" && onSearch()}
-              className={validationError ? "border-destructive" : ""}
+              className={
+                validationError
+                  ? "border-destructive focus-visible:ring-destructive"
+                  : ""
+              }
             />
             {validationError && (
               <p className="text-sm text-destructive mt-1">{validationError}</p>
@@ -144,7 +148,9 @@ const SearchView = memo(function SearchView({
 
       {searchData.answer && (
         <Card className="p-6">
-          <h3 className="text-xl font-semibold mb-4">Generative Answer</h3>
+          <h3 className="text-xl font-bold tracking-tight mb-4">
+            Generative Answer
+          </h3>
           <div className="markdown-body markdown-search prose dark:prose-invert max-w-none">
             {renderedAnswer}
           </div>
@@ -169,17 +175,17 @@ const SearchView = memo(function SearchView({
                   </AlertDescription>
                 </Alert>
               ) : (
-                <ul className="space-y-3">
+                <ul className="space-y-2">
                   {uniqueFiles.map((filename, index) => (
                     <li
                       key={index}
-                      className="flex items-center justify-between p-3 rounded-lg border"
+                      className="flex items-center justify-between p-3 rounded-lg border border-border/50 hover:bg-muted/30 transition-colors"
                     >
-                      <div className="flex-1">
-                        <p className="font-medium">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium truncate">
                           {getFilenameOnly(filename)}
                         </p>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-sm text-muted-foreground truncate">
                           {filename}
                         </p>
                       </div>
@@ -190,7 +196,7 @@ const SearchView = memo(function SearchView({
                           rel="noopener noreferrer"
                         >
                           <FileText className="mr-2 h-4 w-4" />
-                          View Document
+                          View
                         </a>
                       </Button>
                     </li>
@@ -204,16 +210,18 @@ const SearchView = memo(function SearchView({
 
       {searchData.results && searchData.results.length > 0 && (
         <div className="mt-4 space-y-4">
-          <h3 className="text-lg font-semibold">Chat with Search Results</h3>
+          <h3 className="text-lg font-bold tracking-tight">
+            Chat with Search Results
+          </h3>
 
-          <div className="summary-chat-history space-y-4">
+          <div className="summary-chat-history space-y-3">
             {searchChatHistory.map((msg, i) => (
               <div
                 key={i}
                 className={`p-4 rounded-lg ${
                   msg.role === "user"
                     ? "bg-primary text-primary-foreground ml-8"
-                    : "bg-muted mr-8"
+                    : "bg-muted/50 mr-8 border border-border/50"
                 }`}
               >
                 <div className="markdown-body prose dark:prose-invert max-w-none">
@@ -224,8 +232,8 @@ const SearchView = memo(function SearchView({
               </div>
             ))}
             {searchChatLoading && (
-              <div className="p-4 rounded-lg bg-muted mr-8">
-                <p className="text-sm">Thinking...</p>
+              <div className="p-4 rounded-lg bg-muted/50 mr-8 border border-border/50">
+                <p className="text-sm text-muted-foreground">Thinking...</p>
               </div>
             )}
           </div>

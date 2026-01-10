@@ -63,11 +63,11 @@ function NavBar({
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="sticky top-0 z-50 w-full border-b border-border/80 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-14 items-center">
         {/* Logo */}
         <div className="mr-4 flex">
-          <h1 className="text-lg font-bold">AI Doc Search</h1>
+          <h1 className="text-lg font-bold tracking-tight">AI Doc Search</h1>
         </div>
 
         <div className="flex flex-1 items-center justify-between space-x-2 md:justify-end">
@@ -98,7 +98,7 @@ function NavBar({
           </div>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center gap-2">
+          <nav className="hidden md:flex items-center gap-1">
             <Button variant="ghost" onClick={onShowSearch}>
               Search
             </Button>
@@ -143,8 +143,11 @@ function NavBar({
             </Button>
 
             {/* User Email & Logout */}
-            <div className="flex items-center gap-2 ml-4 border-l pl-4">
-              <span className="text-sm text-muted-foreground">
+            <div className="flex items-center gap-2 ml-4 border-l border-border/80 pl-4">
+              <span
+                className="text-sm text-muted-foreground truncate max-w-[200px]"
+                title={currentUser?.email}
+              >
                 {currentUser?.email}
               </span>
               <Button
@@ -170,7 +173,7 @@ function NavBar({
               <SheetHeader>
                 <SheetTitle>Menu</SheetTitle>
               </SheetHeader>
-              <nav className="flex flex-col gap-2 mt-4">
+              <nav className="flex flex-col gap-1 mt-4">
                 <Button
                   variant="ghost"
                   className="justify-start"
@@ -200,8 +203,8 @@ function NavBar({
                   Notifications
                   {unreadCount > 0 && ` (${unreadCount})`}
                 </Button>
-                <div className="border-t my-2" />
-                <div className="text-sm text-muted-foreground px-4 py-2">
+                <div className="border-t border-border/50 my-3" />
+                <div className="text-sm text-muted-foreground px-4 py-2 truncate">
                   {currentUser?.email}
                 </div>
                 <Button

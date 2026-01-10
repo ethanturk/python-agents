@@ -36,9 +36,9 @@ const DocumentRow = memo(
     const [expanded, setExpanded] = useState(false);
 
     return (
-      <Card className="mb-2">
+      <Card className="mb-2 hover:border-border/80 transition-colors">
         <div
-          className="flex items-center p-3 pr-4 cursor-pointer hover:bg-muted/50"
+          className="flex items-center p-3 pr-4 cursor-pointer hover:bg-muted/30 transition-colors"
           onClick={() => setExpanded(!expanded)}
         >
           <Button
@@ -107,8 +107,8 @@ const DocumentRow = memo(
           </div>
         </div>
         {expanded && (
-          <div className="border-t p-3">
-            <p className="text-sm font-medium mb-1 text-secondary">
+          <div className="border-t border-border/50 p-3">
+            <p className="text-sm font-medium mb-1 text-muted-foreground">
               Full Path: {filename}
             </p>
             <p className="text-sm text-muted-foreground">
@@ -164,7 +164,7 @@ export default function DocumentListView({
   return (
     <Card className="p-4">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-semibold">
+        <h2 className="text-xl font-bold tracking-tight">
           Your Documents ({Object.keys(groupedDocs).length})
         </h2>
         <Button onClick={() => setUploadOpen(true)}>
@@ -193,9 +193,9 @@ export default function DocumentListView({
               >
                 <AccordionItem value={set}>
                   <AccordionTrigger
-                    className={`px-3 ${isExpanded ? "bg-muted/50" : ""}`}
+                    className={`px-3 ${isExpanded ? "bg-muted/30" : ""}`}
                   >
-                    <h3 className="font-semibold">
+                    <h3 className="font-semibold tracking-tight">
                       {set} ({docs.length})
                     </h3>
                   </AccordionTrigger>
