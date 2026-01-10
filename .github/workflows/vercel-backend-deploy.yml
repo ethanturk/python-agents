@@ -7,6 +7,8 @@ on:
       - 'backend/**'
   workflow_dispatch:
 
+if: false  # Disabled - using Vercel automatic GitHub integration instead
+
 permissions:
   contents: read
   packages: write
