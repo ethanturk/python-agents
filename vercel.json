@@ -8,6 +8,32 @@
   "trailingSlash": false,
   "headers": [
     {
+      "source": "/assets/js/(.*).js",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/javascript; charset=utf-8"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "/(.*)\\.(js)$",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/javascript; charset=utf-8"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
       "source": "/assets/(.*)",
       "headers": [
         {
@@ -17,7 +43,7 @@
       ]
     },
     {
-      "source": "/(.*)\\.(js|css|svg|png|jpg|jpeg|gif|ico|woff|woff2|ttf|eot)$",
+      "source": "/(.*)\\.(css|svg|png|jpg|jpeg|gif|ico|woff|woff2|ttf|eot)$",
       "headers": [
         {
           "key": "Cache-Control",
