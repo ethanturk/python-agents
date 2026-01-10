@@ -1,8 +1,9 @@
 services:
   backend:
-    build: ./backend
+    image: ethanturk/python-agents-backend:latest
+    pull_policy: always
     ports:
-      - "${BACKEND_PORT}:8000"
+      - "${BACKEND_PORT:-8000}:8000"
     command: [ "uvicorn", "backend_app:app", "--host", "0.0.0.0", "--port", "8000", "--loop", "asyncio" ]
     environment:
       BASE_URL: ${BASE_URL:-192.168.5.204}
@@ -26,6 +27,13 @@ services:
       SUPABASE_URL: ${SUPABASE_URL}
       SUPABASE_KEY: ${SUPABASE_KEY}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-https://aidocs.ethanturk.com,http://localhost:3000,http://localhost:3001}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8000/health", "||", "exit", "1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     networks:
       - web
 
