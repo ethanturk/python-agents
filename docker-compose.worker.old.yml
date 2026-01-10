@@ -1,0 +1,27 @@
+services:
+  worker:
+    build: ./backend
+    command: celery -A async_tasks worker --loglevel=info --concurrency=4
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+    environment:
+      CELERY_BROKER_URL: ${CELERY_BROKER_URL:-amqp://guest:guest@192.168.5.204:5672//}  # pragma: allowlist secret
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      OPENAI_API_BASE: ${OPENAI_API_BASE}
+      OPENAI_MODEL: ${OPENAI_MODEL}
+      OPENAI_EMBEDDING_MODEL: ${OPENAI_EMBEDDING_MODEL}
+      OPENAI_EMBEDDING_DIMENSIONS: ${OPENAI_EMBEDDING_DIMENSIONS}
+      QDRANT_HOST: ${QDRANT_HOST:-192.168.5.204}
+      USE_NNPACK: "0"
+      QDRANT_COLLECTION_NAME: ${QDRANT_COLLECTION_NAME:-documents}
+      CELERY_QUEUE_NAME: ${CELERY_QUEUE_NAME:-celery}
+      API_URL: ${API_URL}
+      SUPABASE_URL: ${SUPABASE_URL}
+      SUPABASE_KEY: ${SUPABASE_KEY}
+
+      # Azure Storage Configuration
+      AZURE_STORAGE_CONNECTION_STRING: ${AZURE_STORAGE_CONNECTION_STRING}
+      AZURE_STORAGE_CONTAINER_NAME: ${AZURE_STORAGE_CONTAINER_NAME:-documents}
+      AZURE_STORAGE_ACCOUNT_NAME: ${AZURE_STORAGE_ACCOUNT_NAME}
