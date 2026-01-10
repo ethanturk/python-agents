@@ -2,7 +2,6 @@
   "$schema": "https://vercel.com/schemas/v1/config.json",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "framework": "vite",
   "regions": ["iad1"],
   "functions": {
     "routes": [
