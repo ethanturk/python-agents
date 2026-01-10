@@ -373,5 +373,6 @@ Per session completion requirements:
 
 ### Final steps of every run
 **IMPORTANT**
+Validate that all linting (JS and Python) pass
 Always validate pre-commit hooks before completing an iteration.
 Specifically, ensure that you run: `pre-commit run --all-files`
