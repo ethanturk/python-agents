@@ -140,3 +140,5 @@ cython_debug/
 # Traefik - Exclude sensitive data
 traefik/acme/
 traefik/logs/
+.vercel
+.env*.local
