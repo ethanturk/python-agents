@@ -23,7 +23,6 @@ htmlcov
 # Skip cache
 .cache
 .temp
-dist
 
 # Skip documentation
 README.md
