@@ -4,12 +4,13 @@
 
 @layer base {
   :root {
+    /* Official shadcn/ui Slate color scheme - Light mode */
     --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    --foreground: 222.2 47.4% 11.2%;
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 222.2 47.4% 11.2%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 222.2 47.4% 11.2%;
     --primary: 222.2 47.4% 11.2%;
     --primary-foreground: 210 40% 98%;
     --secondary: 210 40% 96.1%;
@@ -22,16 +23,17 @@
     --destructive-foreground: 210 40% 98%;
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
-    --radius: 0.5rem;
+    --ring: 222.2 47.4% 11.2%;
+    --radius: 0.625rem;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
+    /* Official shadcn/ui Slate color scheme - Dark mode */
+    --background: 222.2 47.4% 11.2%;
     --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
+    --card: 222.2 47.4% 11.2%;
     --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
+    --popover: 222.2 47.4% 11.2%;
     --popover-foreground: 210 40% 98%;
     --primary: 210 40% 98%;
     --primary-foreground: 222.2 47.4% 11.2%;
@@ -54,6 +56,139 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans antialiased;
+    /* Smooth scrolling for better UX */
+    scroll-behavior: smooth;
+  }
+  /* Typography hierarchy */
+  h1 {
+    @apply text-3xl font-bold tracking-tight;
+  }
+  h2 {
+    @apply text-2xl font-bold tracking-tight;
+  }
+  h3 {
+    @apply text-xl font-semibold tracking-tight;
+  }
+  h4 {
+    @apply text-lg font-semibold tracking-tight;
+  }
+  h5 {
+    @apply text-base font-semibold tracking-tight;
+  }
+  h6 {
+    @apply text-sm font-semibold tracking-tight;
+  }
+  /* Improved focus states for accessibility */
+  :focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+  /* Subtle text selection */
+  ::selection {
+    @apply bg-foreground/10;
+  }
+}
+
+@layer utilities {
+  /* Improved markdown styling with better typography hierarchy */
+  .markdown-body {
+    max-width: none;
+  }
+
+  /* Apply prose styling using standard CSS classes instead of @apply */
+  .markdown-body.prose,
+  .dark .markdown-body.prose {
+    /* Typography plugin will add prose classes, we just override specific styles */
+  }
+
+  .markdown-body h1 {
+    @apply text-3xl font-bold tracking-tight mb-4;
+  }
+  .markdown-body h2 {
+    @apply text-2xl font-bold tracking-tight mb-3;
+  }
+  .markdown-body h3 {
+    @apply text-xl font-semibold tracking-tight mb-2;
+  }
+  .markdown-body p {
+    @apply leading-relaxed mb-4;
+  }
+  .markdown-body a {
+    @apply no-underline hover:underline text-foreground;
+  }
+  .markdown-body strong {
+    @apply font-semibold;
+  }
+  .markdown-body code {
+    @apply bg-muted/50 dark:bg-muted/50 px-1.5 py-0.5 rounded text-sm font-mono border border-border/50;
+  }
+  .markdown-body pre {
+    @apply bg-muted/50 dark:bg-muted/50 p-4 rounded-lg overflow-x-auto border border-border/50 mb-4;
+  }
+  .markdown-body pre code {
+    @apply bg-transparent border-none p-0;
+  }
+  .markdown-body blockquote {
+    @apply border-l-2 border-border pl-4 italic text-muted-foreground mb-4;
+  }
+  .markdown-body ul {
+    @apply list-disc pl-6 mb-4 space-y-1;
+  }
+  .markdown-body ol {
+    @apply list-decimal pl-6 mb-4 space-y-1;
+  }
+  .markdown-body li {
+    @apply mb-1;
+  }
+  .markdown-body table {
+    @apply w-full border-collapse mb-4;
+  }
+  .markdown-body th,
+  .markdown-body td {
+    @apply border px-3 py-2 text-left;
+  }
+  .markdown-body th {
+    @apply font-semibold bg-muted/30;
+  }
+
+  /* Custom utility for chat messages */
+  .summary-chat-history {
+    @apply space-y-4;
+  }
+
+  /* Better scrollbar for webkit browsers */
+  .scrollbar-thin::-webkit-scrollbar {
+    @apply w-2 h-2;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    @apply bg-muted-foreground/30 rounded-full;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    @apply bg-muted-foreground/50;
+  }
+
+  /* Subtle divider utilities */
+  .divider-vertical {
+    @apply w-px h-4 bg-border;
+  }
+  .divider-horizontal {
+    @apply h-px w-full bg-border;
+  }
+
+  /* Text truncation with ellipsis */
+  .truncate-2-lines {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .truncate-3-lines {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
 }
