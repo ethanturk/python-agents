@@ -7,9 +7,16 @@ load_dotenv()
 BASE_URL = os.getenv("BASE_URL") or "192.168.5.204"
 
 # Celery Configuration
-# RabbitMQ Broker URL
-CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", f"amqp://guest:guest@{BASE_URL}:5672//")
-CELERY_RESULT_BACKEND = "rpc://"
+# Redis Broker URL (supports both RabbitMQ and Redis for backwards compatibility)
+# For multi-instance deployment, use Redis: redis://default:password@host:port  # pragma: allowlist secret
+CELERY_BROKER_URL = os.getenv(  # pragma: allowlist secret
+    "CELERY_BROKER_URL", f"amqp://guest:guest@{BASE_URL}:5672//"  # pragma: allowlist secret
+)
+# Use Redis result backend when broker is Redis, otherwise use RPC
+if CELERY_BROKER_URL and CELERY_BROKER_URL.startswith("redis://"):
+    CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", CELERY_BROKER_URL)
+else:
+    CELERY_RESULT_BACKEND = "rpc://"
 
 # OpenAI / Local LLM Configuration
 # Pointing to LM Studio

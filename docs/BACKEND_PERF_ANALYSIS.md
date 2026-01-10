@@ -1573,7 +1573,7 @@ services:
     command: ["uvicorn", "backend_app:app", "--host", "0.0.0.0", "--port", "8000"]
     environment:
       BASE_URL: ${BASE_URL:-192.168.5.204}
-      CELERY_BROKER_URL: ${CELERY_BROKER_URL:-amqp://guest:guest@${BASE_URL}:5672//}
+      CELERY_BROKER_URL: ${CELERY_BROKER_URL:-amqp://guest:guest@${BASE_URL}:5672//}  # pragma: allowlist secret
       OPENAI_API_KEY: ${OPENAI_API_KEY}
       OPENAI_API_BASE: ${OPENAI_API_BASE}
       OPENAI_MODEL: ${OPENAI_MODEL}
@@ -2356,7 +2356,7 @@ services:
       API_URL: ${API_URL}
 
       # RabbitMQ Configuration
-      CELERY_BROKER_URL: ${CELERY_BROKER_URL:-amqp://guest:guest@${BASE_URL}:5672//}
+      CELERY_BROKER_URL: ${CELERY_BROKER_URL:-amqp://guest:guest@${BASE_URL}:5672//}  # pragma: allowlist secret
 
       # OpenAI / LLM Configuration
       OPENAI_API_KEY: ${OPENAI_API_KEY}
@@ -2457,7 +2457,7 @@ services:
       API_URL: ${API_URL}
 
       # RabbitMQ Configuration
-      CELERY_BROKER_URL: ${CELERY_BROKER_URL:-amqp://guest:guest@192.168.5.204:5672//}
+      CELERY_BROKER_URL: ${CELERY_BROKER_URL:-amqp://guest:guest@192.168.5.204:5672//}  # pragma: allowlist secret
       CELERY_QUEUE_NAME: ${CELERY_QUEUE_NAME:-celery}
 
       # Celery Performance Settings

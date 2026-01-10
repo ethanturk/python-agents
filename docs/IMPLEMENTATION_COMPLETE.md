@@ -120,7 +120,7 @@ AZURE_STORAGE_CONTAINER_NAME=documents
 AZURE_STORAGE_ACCOUNT_NAME=aidocsrch
 
 # Update RabbitMQ if needed (keep existing)
-CELERY_BROKER_URL=amqp://guest:guest@YOUR_RABBITMQ_HOST:5672//
+CELERY_BROKER_URL=amqp://guest:guest@YOUR_RABBITMQ_HOST:5672//  # pragma: allowlist secret
 
 # Keep all other Supabase, OpenAI, Firebase config as-is
 ```

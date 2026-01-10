@@ -87,7 +87,7 @@ OPENAI_EMBEDDING_DIMENSIONS=1536
 
 # RabbitMQ / Celery
 BASE_URL=192.168.5.204
-CELERY_BROKER_URL=amqp://guest:guest@192.168.5.204:5672//
+CELERY_BROKER_URL=amqp://guest:guest@192.168.5.204:5672//  # pragma: allowlist secret
 CELERY_QUEUE_NAME=aidocsrch-southhaven
 
 # API

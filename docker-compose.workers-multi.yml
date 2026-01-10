@@ -1,0 +1,200 @@
+version: '3.8'
+
+# Multi-Instance Worker Deployment
+# This Docker Compose file deploys multiple Celery workers on a single VPS,
+# each worker dedicated to a specific tenant instance.
+#
+# Usage:
+#   1. Create .env file with tenant-specific environment variables
+#   2. Deploy: docker-compose -f docker-compose.workers-multi.yml up -d
+#   3. Monitor: docker-compose -f docker-compose.workers-multi.yml logs -f
+#   4. Scale: Add new worker service for each tenant
+#
+# Environment Variables Required (per tenant):
+#   TENANT{N}_CELERY_BROKER_URL - Upstash Redis URL
+#   TENANT{N}_OPENAI_API_KEY - OpenAI API key
+#   TENANT{N}_OPENAI_API_BASE - OpenAI API base URL
+#   TENANT{N}_OPENAI_MODEL - LLM model name
+#   TENANT{N}_OPENAI_EMBEDDING_MODEL - Embedding model name
+#   TENANT{N}_OPENAI_EMBEDDING_DIMENSIONS - Embedding dimensions
+#   TENANT{N}_SUPABASE_URL - Supabase project URL
+#   TENANT{N}_SUPABASE_KEY - Supabase anon/service key
+#   TENANT{N}_AZURE_STORAGE_CONNECTION_STRING - Azure Storage connection string
+#   TENANT{N}_AZURE_STORAGE_ACCOUNT_NAME - Azure Storage account name
+
+services:
+  # Worker for tenant1
+  worker-tenant1:
+    image: ethanturk/python-agents-worker:latest
+    container_name: worker-tenant1
+    pull_policy: always
+    command: ["celery", "-A", "async_tasks", "worker", "--loglevel=info", "-Q", "tenant1_queue"]
+    environment:
+      CELERY_BROKER_URL: ${TENANT1_CELERY_BROKER_URL}
+      CELERY_QUEUE_NAME: tenant1_queue
+      OPENAI_API_KEY: ${TENANT1_OPENAI_API_KEY}
+      OPENAI_API_BASE: ${TENANT1_OPENAI_API_BASE:-https://api.openai.com/v1}
+      OPENAI_MODEL: ${TENANT1_OPENAI_MODEL:-gpt-4o-mini}
+      OPENAI_EMBEDDING_MODEL: ${TENANT1_OPENAI_EMBEDDING_MODEL:-text-embedding-3-small}
+      OPENAI_EMBEDDING_DIMENSIONS: ${TENANT1_OPENAI_EMBEDDING_DIMENSIONS:-1536}
+      SUPABASE_URL: ${TENANT1_SUPABASE_URL}
+      SUPABASE_KEY: ${TENANT1_SUPABASE_KEY}
+      AZURE_STORAGE_CONNECTION_STRING: ${TENANT1_AZURE_STORAGE_CONNECTION_STRING}
+      AZURE_STORAGE_ACCOUNT_NAME: ${TENANT1_AZURE_STORAGE_ACCOUNT_NAME}
+      AZURE_STORAGE_CONTAINER_NAME: ${TENANT1_AZURE_STORAGE_CONTAINER_NAME:-documents}
+      VECTOR_TABLE_NAME: ${TENANT1_VECTOR_TABLE_NAME:-documents}
+    restart: unless-stopped
+    networks:
+      - workers
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A async_tasks inspect ping -d celery@$$HOSTNAME || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Worker for tenant2
+  worker-tenant2:
+    image: ethanturk/python-agents-worker:latest
+    container_name: worker-tenant2
+    pull_policy: always
+    command: ["celery", "-A", "async_tasks", "worker", "--loglevel=info", "-Q", "tenant2_queue"]
+    environment:
+      CELERY_BROKER_URL: ${TENANT2_CELERY_BROKER_URL}
+      CELERY_QUEUE_NAME: tenant2_queue
+      OPENAI_API_KEY: ${TENANT2_OPENAI_API_KEY}
+      OPENAI_API_BASE: ${TENANT2_OPENAI_API_BASE:-https://api.openai.com/v1}
+      OPENAI_MODEL: ${TENANT2_OPENAI_MODEL:-gpt-4o-mini}
+      OPENAI_EMBEDDING_MODEL: ${TENANT2_OPENAI_EMBEDDING_MODEL:-text-embedding-3-small}
+      OPENAI_EMBEDDING_DIMENSIONS: ${TENANT2_OPENAI_EMBEDDING_DIMENSIONS:-1536}
+      SUPABASE_URL: ${TENANT2_SUPABASE_URL}
+      SUPABASE_KEY: ${TENANT2_SUPABASE_KEY}
+      AZURE_STORAGE_CONNECTION_STRING: ${TENANT2_AZURE_STORAGE_CONNECTION_STRING}
+      AZURE_STORAGE_ACCOUNT_NAME: ${TENANT2_AZURE_STORAGE_ACCOUNT_NAME}
+      AZURE_STORAGE_CONTAINER_NAME: ${TENANT2_AZURE_STORAGE_CONTAINER_NAME:-documents}
+      VECTOR_TABLE_NAME: ${TENANT2_VECTOR_TABLE_NAME:-documents}
+    restart: unless-stopped
+    networks:
+      - workers
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A async_tasks inspect ping -d celery@$$HOSTNAME || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Worker for tenant3
+  worker-tenant3:
+    image: ethanturk/python-agents-worker:latest
+    container_name: worker-tenant3
+    pull_policy: always
+    command: ["celery", "-A", "async_tasks", "worker", "--loglevel=info", "-Q", "tenant3_queue"]
+    environment:
+      CELERY_BROKER_URL: ${TENANT3_CELERY_BROKER_URL}
+      CELERY_QUEUE_NAME: tenant3_queue
+      OPENAI_API_KEY: ${TENANT3_OPENAI_API_KEY}
+      OPENAI_API_BASE: ${TENANT3_OPENAI_API_BASE:-https://api.openai.com/v1}
+      OPENAI_MODEL: ${TENANT3_OPENAI_MODEL:-gpt-4o-mini}
+      OPENAI_EMBEDDING_MODEL: ${TENANT3_OPENAI_EMBEDDING_MODEL:-text-embedding-3-small}
+      OPENAI_EMBEDDING_DIMENSIONS: ${TENANT3_OPENAI_EMBEDDING_DIMENSIONS:-1536}
+      SUPABASE_URL: ${TENANT3_SUPABASE_URL}
+      SUPABASE_KEY: ${TENANT3_SUPABASE_KEY}
+      AZURE_STORAGE_CONNECTION_STRING: ${TENANT3_AZURE_STORAGE_CONNECTION_STRING}
+      AZURE_STORAGE_ACCOUNT_NAME: ${TENANT3_AZURE_STORAGE_ACCOUNT_NAME}
+      AZURE_STORAGE_CONTAINER_NAME: ${TENANT3_AZURE_STORAGE_CONTAINER_NAME:-documents}
+      VECTOR_TABLE_NAME: ${TENANT3_VECTOR_TABLE_NAME:-documents}
+    restart: unless-stopped
+    networks:
+      - workers
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A async_tasks inspect ping -d celery@$$HOSTNAME || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Worker for tenant4
+  worker-tenant4:
+    image: ethanturk/python-agents-worker:latest
+    container_name: worker-tenant4
+    pull_policy: always
+    command: ["celery", "-A", "async_tasks", "worker", "--loglevel=info", "-Q", "tenant4_queue"]
+    environment:
+      CELERY_BROKER_URL: ${TENANT4_CELERY_BROKER_URL}
+      CELERY_QUEUE_NAME: tenant4_queue
+      OPENAI_API_KEY: ${TENANT4_OPENAI_API_KEY}
+      OPENAI_API_BASE: ${TENANT4_OPENAI_API_BASE:-https://api.openai.com/v1}
+      OPENAI_MODEL: ${TENANT4_OPENAI_MODEL:-gpt-4o-mini}
+      OPENAI_EMBEDDING_MODEL: ${TENANT4_OPENAI_EMBEDDING_MODEL:-text-embedding-3-small}
+      OPENAI_EMBEDDING_DIMENSIONS: ${TENANT4_OPENAI_EMBEDDING_DIMENSIONS:-1536}
+      SUPABASE_URL: ${TENANT4_SUPABASE_URL}
+      SUPABASE_KEY: ${TENANT4_SUPABASE_KEY}
+      AZURE_STORAGE_CONNECTION_STRING: ${TENANT4_AZURE_STORAGE_CONNECTION_STRING}
+      AZURE_STORAGE_ACCOUNT_NAME: ${TENANT4_AZURE_STORAGE_ACCOUNT_NAME}
+      AZURE_STORAGE_CONTAINER_NAME: ${TENANT4_AZURE_STORAGE_CONTAINER_NAME:-documents}
+      VECTOR_TABLE_NAME: ${TENANT4_VECTOR_TABLE_NAME:-documents}
+    restart: unless-stopped
+    networks:
+      - workers
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A async_tasks inspect ping -d celery@$$HOSTNAME || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Worker for tenant5
+  worker-tenant5:
+    image: ethanturk/python-agents-worker:latest
+    container_name: worker-tenant5
+    pull_policy: always
+    command: ["celery", "-A", "async_tasks", "worker", "--loglevel=info", "-Q", "tenant5_queue"]
+    environment:
+      CELERY_BROKER_URL: ${TENANT5_CELERY_BROKER_URL}
+      CELERY_QUEUE_NAME: tenant5_queue
+      OPENAI_API_KEY: ${TENANT5_OPENAI_API_KEY}
+      OPENAI_API_BASE: ${TENANT5_OPENAI_API_BASE:-https://api.openai.com/v1}
+      OPENAI_MODEL: ${TENANT5_OPENAI_MODEL:-gpt-4o-mini}
+      OPENAI_EMBEDDING_MODEL: ${TENANT5_OPENAI_EMBEDDING_MODEL:-text-embedding-3-small}
+      OPENAI_EMBEDDING_DIMENSIONS: ${TENANT5_OPENAI_EMBEDDING_DIMENSIONS:-1536}
+      SUPABASE_URL: ${TENANT5_SUPABASE_URL}
+      SUPABASE_KEY: ${TENANT5_SUPABASE_KEY}
+      AZURE_STORAGE_CONNECTION_STRING: ${TENANT5_AZURE_STORAGE_CONNECTION_STRING}
+      AZURE_STORAGE_ACCOUNT_NAME: ${TENANT5_AZURE_STORAGE_ACCOUNT_NAME}
+      AZURE_STORAGE_CONTAINER_NAME: ${TENANT5_AZURE_STORAGE_CONTAINER_NAME:-documents}
+      VECTOR_TABLE_NAME: ${TENANT5_VECTOR_TABLE_NAME:-documents}
+    restart: unless-stopped
+    networks:
+      - workers
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A async_tasks inspect ping -d celery@$$HOSTNAME || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Flower - Celery monitoring dashboard
+  # Access via SSH tunnel: ssh -L 5555:localhost:5555 root@<vps-ip>
+  # Then open: http://localhost:5555
+  flower:
+    image: mher/flower:latest
+    container_name: flower
+    command:
+      - celery
+      - --broker=${TENANT1_CELERY_BROKER_URL}
+      - flower
+      - --port=5555
+      - --broker_api=${TENANT1_CELERY_BROKER_URL}
+    ports:
+      - "5555:5555"
+    environment:
+      CELERY_BROKER_URL: ${TENANT1_CELERY_BROKER_URL}
+      FLOWER_BASIC_AUTH: ${FLOWER_BASIC_AUTH:-admin:admin}
+    restart: unless-stopped
+    networks:
+      - workers
+    depends_on:
+      - worker-tenant1
+      - worker-tenant2
+      - worker-tenant3
+      - worker-tenant4
+      - worker-tenant5
+
+networks:
+  workers:
+    driver: bridge
