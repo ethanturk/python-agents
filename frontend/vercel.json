@@ -1,9 +1,0 @@
-{
-  "$schema": "https://vercel.com/schemas/v1/config.json",
-  "framework": null,
-  "buildCommand": "npm run build",
-  "devCommand": "npm run dev",
-  "outputDirectory": "dist",
-  "installCommand": "npm install",
-  "regions": ["iad1"]
-}
