@@ -1,10 +1,8 @@
 # dependency-management Specification
 
 ## Purpose
-Define requirements for managing dependencies across serverless functions with lazy loading patterns.
-
-## ADDED Requirements
-
+TBD - created by archiving change optimize-serverless-dependencies. Update Purpose after archive.
+## Requirements
 ### Requirement: Lazy Import Pattern for Heavy Dependencies
 Shared backend modules MUST use lazy imports for heavy dependencies like firebase-admin, boto3, and azure.queue.
 
@@ -80,8 +78,6 @@ When installed
 Then only fastapi is installed
 And all other dependencies are excluded
 
-## MODIFIED Requirements
-
 ### Requirement: Dependency Version Management
 Dependency versions MUST be consistent across all functions for shared packages.
 
@@ -95,4 +91,4 @@ And version conflicts are avoided
 Given shared backend services are used
 When different functions install requirements
 Then transitive dependencies are aligned
- And runtime errors are prevented
+And runtime errors are prevented

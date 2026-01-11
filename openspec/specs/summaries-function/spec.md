@@ -1,10 +1,8 @@
 # summaries-function Specification
 
 ## Purpose
-Define requirements for the summaries serverless function with minimal dependencies.
-
-## ADDED Requirements
-
+TBD - created by archiving change optimize-serverless-dependencies. Update Purpose after archive.
+## Requirements
 ### Requirement: Minimal Summaries Function Dependencies
 The summaries serverless function MUST only include dependencies required for summarization and QA operations.
 
@@ -65,8 +63,6 @@ Given the summaries function is deployed with minimal dependencies
 When a cold start occurs
 Then the cold start time is reduced compared to loading all dependencies
 And the function initializes within 4 seconds
-
-## MODIFIED Requirements
 
 ### Requirement: Summaries Function Configuration
 The summaries serverless function MUST load configuration without importing heavy dependencies.

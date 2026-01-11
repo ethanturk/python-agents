@@ -1,10 +1,8 @@
 # agent-function Specification
 
 ## Purpose
-Define requirements for the agent serverless function with minimal dependencies.
-
-## ADDED Requirements
-
+TBD - created by archiving change optimize-serverless-dependencies. Update Purpose after archive.
+## Requirements
 ### Requirement: Minimal Agent Function Dependencies
 The agent serverless function MUST only include dependencies required for LLM and RAG operations.
 
@@ -51,15 +49,3 @@ Given the agent function is deployed with minimal dependencies
 When a cold start occurs
 Then the cold start time is reduced compared to loading all dependencies
 And the function initializes within 5 seconds
-
-## MODIFIED Requirements
-
-### Requirement: Agent Function Configuration
-The agent serverless function MUST load configuration without importing heavy dependencies.
-
-#### Scenario: Configuration loads without heavy imports
-Given the agent function is starting
-When the configuration module is imported
-Then only pydantic-ai and supabase configuration are loaded
-And document processing configuration is not loaded
-And queue service configuration uses lazy loading

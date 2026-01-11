@@ -1,10 +1,8 @@
 # documents-function Specification
 
 ## Purpose
-Define requirements for the documents serverless function with minimal dependencies.
-
-## ADDED Requirements
-
+TBD - created by archiving change optimize-serverless-dependencies. Update Purpose after archive.
+## Requirements
 ### Requirement: Minimal Documents Function Dependencies
 The documents serverless function MUST only include dependencies required for file storage and vector database operations.
 
@@ -59,8 +57,6 @@ Given the documents function is deployed with minimal dependencies
 When a cold start occurs
 Then the cold start time is reduced compared to loading all dependencies
 And the function initializes within 3 seconds
-
-## MODIFIED Requirements
 
 ### Requirement: Documents Function Configuration
 The documents serverless function MUST load configuration without importing heavy dependencies.

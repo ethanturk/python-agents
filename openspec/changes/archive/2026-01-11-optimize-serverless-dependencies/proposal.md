@@ -3,6 +3,20 @@
 ## Summary
 Refactor serverless functions to use minimal, function-specific dependencies instead of loading all backend dependencies, resolving the 250MB unzipped size limit error.
 
+## Why
+Current deployment fails with "Serverless Function has exceeded the unzipped maximum size of 250 MB" error because all functions load all backend dependencies regardless of usage, causing excessive bundle sizes and slow cold starts.
+
+## What Changes
+- Split `backend/requirements.txt` into function-specific `requirements.txt` files in each `api/{function}/` directory
+- Move shared code to `backend/common/` with lazy imports for optional dependencies
+- Extract function-specific logic from backend modules into `api/{function}/` subdirectories
+- Create thin wrappers around shared services to minimize imports
+- Update configuration loading to avoid importing unused dependencies
+
+## Impact
+- Affected specs: agent-function, dependency-management, documents-function, notifications-function, summaries-function
+- Affected code: backend/, api/agent/, api/documents/, api/summaries/, api/notifications/
+
 ## Problem Statement
 The current serverless deployment architecture loads all Python dependencies from `backend/requirements.txt` into each serverless function, including:
 - Document processing dependencies (docling[vlm], pypdfium2, pandas, xlrd, openpyxl)
