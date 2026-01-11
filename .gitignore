@@ -16,8 +16,8 @@ dist/
 downloads/
 eggs/
 .eggs/
-/lib/
-/lib64/
+lib/
+lib64/
 parts/
 sdist/
 var/
@@ -142,3 +142,6 @@ traefik/acme/
 traefik/logs/
 .vercel
 .env*.local
+
+# Exception for frontend library
+!frontend/src/lib/
