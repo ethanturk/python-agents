@@ -45,24 +45,8 @@
   ],
   "rewrites": [
     {
-      "source": "/southhaven/api/(.*)",
-      "destination": "/backend/api/index.py"
-    },
-    {
-      "source": "/southhaven/agent/(.*)",
-      "destination": "/backend/api/index.py"
-    },
-    {
-      "source": "/southhaven/ws",
-      "destination": "/backend/api/index.py"
-    },
-    {
-      "source": "/southhaven/sse",
-      "destination": "/backend/api/index.py"
-    },
-    {
-      "source": "/southhaven/internal/(.*)",
-      "destination": "/backend/api/index.py"
+      "source": "/southhaven/:path*",
+      "destination": "/backend/api/index.py/:path*"
     },
     {
       "source": "/southhaven/assets/:path*",
