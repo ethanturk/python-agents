@@ -69,8 +69,8 @@ class APIPathPrefixMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         path = request.url.path
 
-        # Hardcode for Vercel deployment (can also be overridden by API_PATH_PREFIX env var)
-        api_prefix = os.getenv("API_PATH_PREFIX", "southhaven").strip("/")
+        # Only strip prefix if explicitly configured
+        api_prefix = os.getenv("API_PATH_PREFIX", "").strip("/")
 
         if api_prefix and path.startswith(f"/{api_prefix}"):
             new_path = path[len(f"/{api_prefix}") :] or "/"
