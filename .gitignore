@@ -142,6 +142,3 @@ traefik/acme/
 traefik/logs/
 .vercel
 .env*.local
-
-# Exception for frontend library
-!frontend/src/lib/
