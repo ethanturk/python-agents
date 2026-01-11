@@ -43,27 +43,22 @@
       ]
     }
   ],
-  "functions": {
-    "api/index.py": {
-      "includeFiles": "backend/**"
-    }
-  },
   "rewrites": [
     {
       "source": "/agent/:path*",
-      "destination": "/api/index.py"
+      "destination": "/backend/api/index.py"
     },
     {
       "source": "/sse",
-      "destination": "/api/index.py"
+      "destination": "/backend/api/index.py"
     },
     {
       "source": "/ws",
-      "destination": "/api/index.py"
+      "destination": "/backend/api/index.py"
     },
     {
       "source": "/internal/:path*",
-      "destination": "/api/index.py"
+      "destination": "/backend/api/index.py"
     },
     {
       "source": "/(.*)",
