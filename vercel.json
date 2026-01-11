@@ -3,7 +3,7 @@
   "buildCommand": "cd frontend && VITE_BASE_PATH=/southhaven npm run build",
   "devCommand": "cd frontend && npm run dev",
   "installCommand": "cd frontend && npm install",
-  "outputDirectory": "frontend/dist",
+  "outputDirectory": "frontend/dist/southhaven",
   "cleanUrls": true,
   "trailingSlash": false,
   "headers": [
@@ -45,11 +45,7 @@
   ],
   "rewrites": [
     {
-      "source": "/southhaven/:path*",
-      "destination": "/backend/api/index.py"
-    },
-    {
-      "source": "/:path*",
+      "source": "/(.*)",
       "destination": "/index.html"
     }
   ]
