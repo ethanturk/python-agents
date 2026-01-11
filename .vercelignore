@@ -1,50 +1,24 @@
-# Test files and coverage
-backend/tests/
-backend/.pytest_cache/
-backend/.coverage
-backend/htmlcov/
-backend/*.coverage
+__pycache__
 *.pyc
-*.pyo
-*.pyd
-__pycache__/
-
-# Documentation
-docs/
-*.md
-!README.md
-
-# Development files
-.git/
-.github/
-.vscode/
-.idea/
+tests
+htmlcov
+.ruff_cache
 *.log
-
-# Docker files (not needed on Vercel)
+.DS_Store
+.git
+.pytest_cache
+data
 docker-compose*.yml
 Dockerfile*
-.dockerignore
-
-# Local environment
-.env.local
-.env.*.local
-venv/
-env/
-
-# Frontend cache (node_modules will be installed by Vercel)
-frontend/.vite/
-
-# Backend files not needed for serverless
-backend/file_watcher.py
-backend/preload_models.py
-backend/worker.py
+Makefile
+scripts
+docs
+*.md
+.github
+# Exclude backend source code (only common/ and services/ needed for shared logic)
 backend/async_tasks.py
-backend/services/ingestion*.py
-backend/services/docling_utils.py
-
-# Large model files
-*.bin
-*.onnx
-*.pt
-*.pth
+backend/backend_app.py
+backend/test_*.py
+backend/tests
+# Exclude heavy files from deployment
+backend/scripts
