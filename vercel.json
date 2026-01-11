@@ -83,7 +83,7 @@
       "destination": "/backend/api/index.py"
     },
     {
-      "source": "/southhaven/(.*)",
+      "source": "/southhaven/:path((?!assets).*)",
       "destination": "/index.html"
     }
   ]
