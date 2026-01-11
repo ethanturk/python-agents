@@ -2,7 +2,7 @@
 # Used for LLM queries and RAG operations
 fastapi
 pydantic-ai
-litellm
+openai>=1.0.0
 supabase
 nest_asyncio
 mangum
