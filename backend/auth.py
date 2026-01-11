@@ -2,7 +2,7 @@ import logging
 import os
 
 import firebase_admin
-from fastapi import HTTPException, Security
+from fastapi import HTTPException, Query, Security
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from firebase_admin import auth, credentials
 
@@ -58,3 +58,33 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Security(securi
             detail="Invalid authentication credentials",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+
+async def get_current_user_from_query(
+    token: str = Query(None),
+    credentials: HTTPAuthorizationCredentials = Security(security, auto_error=False),
+) -> dict:
+    """
+    Verifies Firebase ID token from either:
+    1. Authorization header (Bearer token) - for API calls
+    2. Query parameter ?token=xxx - for EventSource (SSE)
+
+    EventSource API cannot set custom headers, so we must support query params.
+    """
+    # Try header first, then query param
+    id_token = None
+    if credentials:
+        id_token = credentials.credentials
+    elif token:
+        id_token = token
+    else:
+        raise HTTPException(
+            status_code=401, detail="No authentication token provided (header or query param)"
+        )
+
+    try:
+        decoded_token = auth.verify_id_token(id_token)
+        return decoded_token
+    except Exception as e:
+        logger.error(f"Token verification failed: {e}")
+        raise HTTPException(status_code=401, detail=f"Invalid authentication token: {str(e)}")

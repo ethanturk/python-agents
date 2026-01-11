@@ -45,7 +45,7 @@ from async_tasks import (
 from async_tasks import (
     app as celery_app,
 )
-from auth import get_current_user, init_firebase
+from auth import get_current_user, get_current_user_from_query, init_firebase
 from database import get_all_summaries, get_summary, init_db, save_summary
 from services.agent import perform_rag, run_qa_agent, run_sync_agent
 from services.azure_storage import azure_storage_service
@@ -69,12 +69,14 @@ class APIPathPrefixMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         path = request.url.path
 
-        api_prefix = os.getenv("API_PATH_PREFIX", "").strip("/")
+        # Hardcode for Vercel deployment (can also be overridden by API_PATH_PREFIX env var)
+        api_prefix = os.getenv("API_PATH_PREFIX", "southhaven").strip("/")
 
         if api_prefix and path.startswith(f"/{api_prefix}"):
             new_path = path[len(f"/{api_prefix}") :] or "/"
             request.scope["path"] = new_path
             request.scope["root_path"] = request.scope.get("root_path", "") + f"/{api_prefix}"
+            logger.debug(f"Path rewrite: {path} → {new_path}")
 
         response = await call_next(request)
         return response
@@ -414,11 +416,12 @@ async def websocket_endpoint(websocket: WebSocket):
         manager.disconnect(websocket)
 
 
-@app.get("/sse", dependencies=[Depends(get_current_user)])
-async def sse_endpoint(request: Request, current_user: dict = Depends(get_current_user)):
+@app.get("/sse")
+async def sse_endpoint(request: Request, current_user: dict = Depends(get_current_user_from_query)):
     """
     Server-Sent Events endpoint for real-time notifications.
-    Sends keepalive every 15s to maintain Vercel connection (25s timeout).
+    Sends keepalive every 10s to maintain Vercel connection (25s timeout).
+    Accepts authentication via query parameter (?token=xxx) for EventSource compatibility.
     """
     connection_id = str(uuid.uuid4())
     user_id = current_user.get("uid")
@@ -438,13 +441,13 @@ async def sse_endpoint(request: Request, current_user: dict = Depends(get_curren
             while True:
                 # Wait for message or timeout for keepalive
                 try:
-                    message = await asyncio.wait_for(queue.get(), timeout=15.0)
+                    message = await asyncio.wait_for(queue.get(), timeout=10.0)
                     yield {
                         "event": message.get("type", "message"),
                         "data": json.dumps(message),
                     }
                 except asyncio.TimeoutError:
-                    # Send keepalive comment every 15s (within Vercel's 25s limit)
+                    # Send keepalive comment every 10s (within Vercel's 25s limit)
                     yield {"comment": "keepalive"}
         except asyncio.CancelledError:
             logger.info(f"SSE connection {connection_id} cancelled")
