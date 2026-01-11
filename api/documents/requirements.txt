@@ -2,5 +2,6 @@
 # Used for file upload, document listing, and file proxy
 fastapi
 supabase
+azure-storage-blob==12.19.0
 mangum
 python-dotenv
