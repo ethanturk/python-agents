@@ -7,3 +7,5 @@ supabase
 nest_asyncio
 mangum
 python-dotenv
+# System dependencies (for transitive packages)
+cffi

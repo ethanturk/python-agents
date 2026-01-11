@@ -5,3 +5,5 @@ pydantic-ai
 supabase
 mangum
 python-dotenv
+# System dependencies (for transitive packages)
+cffi
