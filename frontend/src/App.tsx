@@ -15,7 +15,7 @@ const SearchView = lazy(() => import("./components/SearchView"));
 const DocumentListView = lazy(() => import("./components/DocumentListView"));
 const SummarizeView = lazy(() => import("./components/SummarizeView"));
 
-import useWebSocket from "./hooks/useWebSocket";
+import useServerSentEvents from "./hooks/useServerSentEvents";
 import useDocuments from "./hooks/useDocuments";
 import useSearch from "./hooks/useSearch";
 import useSummarization from "./hooks/useSummarization";
@@ -98,8 +98,9 @@ function App() {
     [handleNewNotification, setActiveSummaries],
   );
 
-  const { isConnected, isConnecting } = useWebSocket({
-    onMessage: handleWsMessage,
+  const { isConnected, isConnecting } = useServerSentEvents({
+    onMessage: (data) =>
+      handleWsMessage({ data: JSON.stringify(data) } as MessageEvent),
   });
   const isOnline = useOnlineStatus();
   const [showWsWarning, setShowWsWarning] = useState(false);

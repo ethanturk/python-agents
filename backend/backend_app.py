@@ -1,6 +1,7 @@
 import base64
 import logging
 import os
+import uuid
 from contextlib import asynccontextmanager
 
 from celery import chain
@@ -11,12 +12,15 @@ from fastapi import (
     File,
     Form,
     HTTPException,
+    Request,
     Response,
     UploadFile,
     WebSocket,
     WebSocketDisconnect,
 )
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
+from sse_starlette.sse import EventSourceResponse
 
 # Internal Imports
 import config
@@ -46,6 +50,7 @@ from database import get_all_summaries, get_summary, init_db, save_summary
 from services.agent import perform_rag, run_qa_agent, run_sync_agent
 from services.azure_storage import azure_storage_service
 from services.file_management import file_service
+from services.sse_manager import sse_manager
 
 # Service Layer
 from services.vector_db import db_service
@@ -56,6 +61,22 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 os.environ["USE_NNPACK"] = "0"
+
+
+class SouthhavenPathMiddleware(BaseHTTPMiddleware):
+    """Strip /southhaven prefix from request paths for Vercel deployment."""
+
+    async def dispatch(self, request: Request, call_next):
+        path = request.url.path
+
+        if path.startswith("/southhaven"):
+            new_path = path[len("/southhaven") :] or "/"
+            request.scope["path"] = new_path
+            request.scope["root_path"] = request.scope.get("root_path", "") + "/southhaven"
+
+        response = await call_next(request)
+        return response
+
 
 # Security: File upload configuration
 MAX_FILE_SIZE = int(os.getenv("MAX_FILE_SIZE", 100_000_000))  # 100MB default
@@ -161,6 +182,7 @@ ALLOWED_ORIGINS = os.getenv(
     "http://localhost:3000,http://localhost:3001,https://aidocs.ethanturk.com",
 ).split(",")
 
+app.add_middleware(SouthhavenPathMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
@@ -390,6 +412,46 @@ async def websocket_endpoint(websocket: WebSocket):
         manager.disconnect(websocket)
 
 
+@app.get("/sse", dependencies=[Depends(get_current_user)])
+async def sse_endpoint(request: Request, current_user: dict = Depends(get_current_user)):
+    """
+    Server-Sent Events endpoint for real-time notifications.
+    Sends keepalive every 15s to maintain Vercel connection (25s timeout).
+    """
+    connection_id = str(uuid.uuid4())
+    user_id = current_user.get("uid")
+
+    async def event_generator():
+        import json
+        import asyncio
+
+        queue = await sse_manager.connect(connection_id, user_id)
+        try:
+            # Send initial connection confirmation
+            yield {
+                "event": "connected",
+                "data": json.dumps({"connection_id": connection_id}),
+            }
+
+            while True:
+                # Wait for message or timeout for keepalive
+                try:
+                    message = await asyncio.wait_for(queue.get(), timeout=15.0)
+                    yield {
+                        "event": message.get("type", "message"),
+                        "data": json.dumps(message),
+                    }
+                except asyncio.TimeoutError:
+                    # Send keepalive comment every 15s (within Vercel's 25s limit)
+                    yield {"comment": "keepalive"}
+        except asyncio.CancelledError:
+            logger.info(f"SSE connection {connection_id} cancelled")
+        finally:
+            sse_manager.disconnect(connection_id, user_id)
+
+    return EventSourceResponse(event_generator())
+
+
 @app.post("/internal/notify")
 async def notify_endpoint(notification: NotificationRequest):
     logger.info(f"Notification: {notification.type} for {notification.filename}")
@@ -399,5 +461,6 @@ async def notify_endpoint(notification: NotificationRequest):
         except Exception as e:
             logger.error(f"DB Error: {e}")
 
-    await manager.broadcast(notification.dict())
+    # Broadcast via SSE instead of WebSocket
+    await sse_manager.broadcast(notification.dict())
     return {"status": "ok"}

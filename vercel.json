@@ -57,6 +57,10 @@
       "destination": "/backend/api/index.py"
     },
     {
+      "source": "/southhaven/sse",
+      "destination": "/backend/api/index.py"
+    },
+    {
       "source": "/southhaven/internal/(.*)",
       "destination": "/backend/api/index.py"
     },
