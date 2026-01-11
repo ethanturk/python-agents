@@ -1,6 +1,6 @@
 {
   "$schema": "https://vercel.com/schemas/v1/config.json",
-  "buildCommand": "cd frontend && VITE_BASE_PATH=/southhaven npm run build && cd frontend/dist && mv * southhaven/ 2>/dev/null || true",
+  "buildCommand": "cd frontend && VITE_BASE_PATH=/southhaven npm run build && cd frontend/dist && mkdir -p southhaven && mv * southhaven/ 2>/dev/null || true",
   "devCommand": "cd frontend && npm run dev",
   "installCommand": "cd frontend && npm install",
   "outputDirectory": "frontend/dist/southhaven",
