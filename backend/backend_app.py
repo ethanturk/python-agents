@@ -19,6 +19,7 @@ from fastapi import (
     WebSocketDisconnect,
 )
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
 from sse_starlette.sse import EventSourceResponse
 
 # Internal Imports
@@ -60,6 +61,23 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 os.environ["USE_NNPACK"] = "0"
+
+
+class APIPathPrefixMiddleware(BaseHTTPMiddleware):
+    """Strip API path prefix for multi-tenant deployments."""
+
+    async def dispatch(self, request: Request, call_next):
+        path = request.url.path
+
+        api_prefix = os.getenv("API_PATH_PREFIX", "").strip("/")
+
+        if api_prefix and path.startswith(f"/{api_prefix}"):
+            new_path = path[len(f"/{api_prefix}") :] or "/"
+            request.scope["path"] = new_path
+            request.scope["root_path"] = request.scope.get("root_path", "") + f"/{api_prefix}"
+
+        response = await call_next(request)
+        return response
 
 
 # Security: File upload configuration
@@ -166,6 +184,7 @@ ALLOWED_ORIGINS = os.getenv(
     "http://localhost:3000,http://localhost:3001,https://aidocs.ethanturk.com",
 ).split(",")
 
+app.add_middleware(APIPathPrefixMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
