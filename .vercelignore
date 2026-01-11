@@ -1,0 +1,56 @@
+# Test files and coverage
+backend/tests/
+backend/.pytest_cache/
+backend/.coverage
+backend/htmlcov/
+backend/*.coverage
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# Development files
+.git/
+.github/
+.vscode/
+.idea/
+*.log
+
+# Docker files (not needed on Vercel)
+docker-compose*.yml
+Dockerfile*
+.dockerignore
+
+# Local environment
+.env.local
+.env.*.local
+venv/
+env/
+
+# Frontend dev files (we only need dist)
+frontend/node_modules/
+frontend/src/
+frontend/public/
+frontend/.vite/
+frontend/tsconfig.json
+frontend/vite.config.ts
+frontend/package-lock.json
+
+# Backend files not needed for serverless
+backend/file_watcher.py
+backend/preload_models.py
+backend/worker.py
+backend/async_tasks.py
+backend/services/ingestion*.py
+backend/services/docling_utils.py
+
+# Large model files
+*.bin
+*.onnx
+*.pt
+*.pth

@@ -1,0 +1,31 @@
+# Minimal dependencies for Vercel serverless deployment
+# Only includes what's needed for read-only API endpoints
+
+# Core web framework
+fastapi
+mangum
+sse-starlette==2.1.3
+
+# LLM and agent framework
+pydantic-ai
+langchain-openai
+langchain-text-splitters
+litellm
+
+# Database and storage
+supabase
+azure-storage-blob>=12.20.0
+firebase-admin
+
+# Utilities
+python-dotenv
+httpx
+nest_asyncio
+
+# Note: Heavy dependencies removed for fast builds
+# - docling[vlm]: Not needed (no document ingestion on serverless)
+# - celery[redis]: Not supported (no background workers on serverless)
+# - pypdfium2, pandas, xlrd, openpyxl: Not needed (no file processing)
+# - pytest*: Not needed (test dependencies)
+# - uvicorn: Not needed (Mangum handles ASGI)
+# - watchdog: Not needed (no file watching)

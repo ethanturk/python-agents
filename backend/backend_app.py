@@ -7,8 +7,6 @@ import uuid
 from collections import deque
 from contextlib import asynccontextmanager
 
-from celery import chain
-from celery.result import AsyncResult
 from fastapi import (
     Depends,
     FastAPI,
@@ -40,15 +38,24 @@ from api.models import (
     SummaryQARequest,
     TaskResponse,
 )
-from async_tasks import (
-    answer_question,
-    check_knowledge_base,
-    ingest_docs_task,
-    summarize_document_task,
-)
-from async_tasks import (
-    app as celery_app,
-)
+
+# Conditional imports for Celery (not available on Vercel)
+CELERY_AVAILABLE = False
+try:
+    from celery import chain
+    from celery.result import AsyncResult
+    from async_tasks import (
+        answer_question,
+        check_knowledge_base,
+        ingest_docs_task,
+        summarize_document_task,
+    )
+    from async_tasks import app as celery_app
+
+    CELERY_AVAILABLE = True
+except ImportError:
+    logger = logging.getLogger(__name__)
+    logger.warning("Celery not available - async task endpoints will be disabled")
 from auth import get_current_user, get_current_user_from_query, init_firebase
 from database import get_all_summaries, get_summary, init_db, save_summary
 from services.agent import perform_rag, run_qa_agent, run_sync_agent
@@ -249,6 +256,11 @@ def run_sync(request: AgentRequest):
 
 @app.post("/agent/async", dependencies=[Depends(get_current_user)])
 def run_async(request: AgentRequest):
+    if not CELERY_AVAILABLE:
+        raise HTTPException(
+            status_code=503,
+            detail="Async task processing not available in serverless deployment. Use /agent/sync instead.",
+        )
     logger.info(f"Received async request: {request.prompt}")
     workflow = chain(check_knowledge_base.s(request.prompt) | answer_question.s())
     task = workflow.apply_async()
@@ -257,6 +269,10 @@ def run_async(request: AgentRequest):
 
 @app.get("/agent/status/{task_id}", response_model=TaskResponse)
 def get_status(task_id: str):
+    if not CELERY_AVAILABLE:
+        raise HTTPException(
+            status_code=503, detail="Async task status not available in serverless deployment."
+        )
     task_result = AsyncResult(task_id, app=celery_app)
     return {
         "task_id": task_id,
@@ -270,6 +286,11 @@ def get_status(task_id: str):
 
 @app.post("/agent/ingest", dependencies=[Depends(get_current_user)])
 def ingest_documents(request: IngestRequest):
+    if not CELERY_AVAILABLE:
+        raise HTTPException(
+            status_code=503,
+            detail="Document ingestion not available in serverless deployment. Please use file upload instead.",
+        )
     logger.info(f"Ingesting {len(request.files)} files")
     task = ingest_docs_task.delay(request.files)
     return {"task_id": task.id}
@@ -387,6 +408,12 @@ async def summarize_document_endpoint(request: SummarizeRequest):
     """
     Summarize document using Azure Storage.
     """
+    if not CELERY_AVAILABLE:
+        raise HTTPException(
+            status_code=503,
+            detail="Document summarization not available in serverless deployment. Use cached summaries instead.",
+        )
+
     from utils.validation import sanitize_document_set
 
     sanitized_set = sanitize_document_set(request.document_set) if request.document_set else "all"
