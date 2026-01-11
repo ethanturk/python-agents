@@ -1,7 +1,0 @@
-# Summaries Function - Minimal Dependencies
-# Used for document summaries and QA
-fastapi
-pydantic-ai
-supabase
-mangum
-python-dotenv

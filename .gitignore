@@ -142,3 +142,4 @@ traefik/acme/
 traefik/logs/
 .vercel
 .env*.local
+node_modules/
