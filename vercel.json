@@ -45,11 +45,15 @@
   ],
   "rewrites": [
     {
-      "source": "/southhaven/(?!assets).*",
+      "source": "/southhaven/assets/:path*",
+      "destination": "/assets/:path*"
+    },
+    {
+      "source": "/southhaven/:path*",
       "destination": "/backend/api/index.py"
     },
     {
-      "source": "/(.*)",
+      "source": "/:path*",
       "destination": "/index.html"
     }
   ]
