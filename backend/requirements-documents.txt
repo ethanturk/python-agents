@@ -1,0 +1,24 @@
+# Minimal dependencies for Documents Vercel serverless deployment
+# Only includes what's needed for document operations (upload, list, delete, proxy)
+
+# Core web framework
+fastapi
+mangum
+
+# Storage and database
+supabase
+azure-storage-blob>=12.20.0
+
+# Utilities
+python-dotenv
+
+# Note: Heavy dependencies removed for fast builds
+# - pydantic-ai, langchain-openai: Not needed (no agent operations)
+# - celery[redis]: Not supported (no background workers on serverless)
+# - redis: Not needed
+# - docling[vlm]: Not needed (ingestion moved to queue service)
+# - pypdfium2, pandas, xlrd, openpyxl: Not needed (no file processing)
+# - firebase-admin: Only needed for auth, included if required
+# - pytest*: Not needed (test dependencies)
+# - uvicorn: Not needed (Mangum handles ASGI)
+# - watchdog: Not needed (no file watching)

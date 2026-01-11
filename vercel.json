@@ -49,24 +49,64 @@
       "destination": "/api/index.py"
     },
     {
-      "source": "/agent/:path*",
-      "destination": "/api/index.py"
+      "source": "/agent/sync",
+      "destination": "/api/agent/index.py"
     },
     {
-      "source": "/sse",
-      "destination": "/api/index.py"
+      "source": "/agent/search",
+      "destination": "/api/agent/index.py"
+    },
+    {
+      "source": "/agent/async",
+      "destination": "/api/agent/index.py"
+    },
+    {
+      "source": "/agent/status/:path*",
+      "destination": "/api/agent/index.py"
+    },
+    {
+      "source": "/agent/upload",
+      "destination": "/api/documents/index.py"
+    },
+    {
+      "source": "/agent/documents",
+      "destination": "/api/documents/index.py"
+    },
+    {
+      "source": "/agent/documentsets",
+      "destination": "/api/documents/index.py"
+    },
+    {
+      "source": "/agent/documents/:path*",
+      "destination": "/api/documents/index.py"
+    },
+    {
+      "source": "/agent/files/:path*",
+      "destination": "/api/documents/index.py"
+    },
+    {
+      "source": "/agent/summaries",
+      "destination": "/api/summaries/index.py"
+    },
+    {
+      "source": "/agent/summary_qa",
+      "destination": "/api/summaries/index.py"
+    },
+    {
+      "source": "/agent/search_qa",
+      "destination": "/api/summaries/index.py"
+    },
+    {
+      "source": "/agent/summarize",
+      "destination": "/api/summaries/index.py"
     },
     {
       "source": "/poll",
-      "destination": "/api/index.py"
+      "destination": "/api/notifications/index.py"
     },
     {
-      "source": "/ws",
-      "destination": "/api/index.py"
-    },
-    {
-      "source": "/internal/:path*",
-      "destination": "/api/index.py"
+      "source": "/internal/notify",
+      "destination": "/api/notifications/index.py"
     },
     {
       "source": "/:path*",

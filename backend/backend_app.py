@@ -25,10 +25,18 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from sse_starlette.sse import EventSourceResponse
 
 # Internal Imports
+import sys
+from pathlib import Path
+
+# Add backend directory to path for common imports
+backend_dir = Path(__file__).resolve().parent
+if str(backend_dir) not in sys.path:
+    sys.path.insert(0, str(backend_dir))
+
 import config
 
-# API Models
-from api.models import (
+# API Models (from common layer)
+from common import (
     AgentRequest,
     IngestRequest,
     NotificationRequest,
@@ -56,7 +64,7 @@ try:
 except ImportError:
     logger = logging.getLogger(__name__)
     logger.warning("Celery not available - async task endpoints will be disabled")
-from auth import get_current_user, get_current_user_from_query, init_firebase
+from common.auth import get_current_user, get_current_user_from_query, init_firebase
 from database import get_all_summaries, get_summary, init_db, save_summary
 from services.agent import perform_rag, run_qa_agent, run_sync_agent
 from services.azure_storage import azure_storage_service
@@ -271,7 +279,8 @@ def run_async(request: AgentRequest):
 def get_status(task_id: str):
     if not CELERY_AVAILABLE:
         raise HTTPException(
-            status_code=503, detail="Async task status not available in serverless deployment."
+            status_code=503,
+            detail="Async task status not available in serverless deployment.",
         )
     task_result = AsyncResult(task_id, app=celery_app)
     return {

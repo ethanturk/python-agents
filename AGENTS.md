@@ -140,6 +140,35 @@ docker-compose -f docker-compose.worker.yml up -d --build
 docker-compose -f docker-compose.frontend.yml up -d --build
 ```
 
+### Serverless Deployment
+
+The backend is now split into domain-specific Vercel serverless functions:
+
+| Function | Endpoints | Dependencies | Purpose |
+|----------|-----------|--------------|---------|
+| `api/agent` | `/agent/sync`, `/agent/async`, `/agent/status`, `/agent/search` | pydantic-ai, langchain-openai, supabase | LLM queries and RAG |
+| `api/documents` | `/agent/upload`, `/agent/documents`, `/agent/delete`, `/agent/files` | azure-storage-blob, supabase | File operations |
+| `api/summaries` | `/agent/summaries`, `/agent/summary_qa`, `/agent/search_qa` | pydantic-ai, supabase | Cached summaries |
+| `api/notifications` | `/poll`, `/internal/notify` | FastAPI only | Notifications (polling) |
+
+**Deployment:**
+```bash
+# Deploy to Vercel
+vercel --prod
+```
+
+**Environment Variables Required for Serverless:**
+- `OPENAI_API_KEY` - LLM API key
+- `SUPABASE_URL`, `SUPABASE_KEY` - Vector DB credentials
+- `AZURE_STORAGE_CONNECTION_STRING` - File storage
+- `QUEUE_PROVIDER` - "mock" | "sqs" | "azure" (default: mock)
+
+**Important Notes:**
+1. WebSocket (`/ws`) and SSE (`/sse`) endpoints are NOT available in serverless
+2. Use `/poll` endpoint for notifications instead
+3. Async tasks use external queue service (not Celery)
+4. See `backend/SERVERLESS_DEPLOYMENT.md` for full deployment guide
+
 ### Testing
 
 **Pre-Commit Hooks** (MANDATORY):

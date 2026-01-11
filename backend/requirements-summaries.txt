@@ -1,0 +1,28 @@
+# Minimal dependencies for Summaries Vercel serverless deployment
+# Only includes what's needed for summary operations (list, qa, search_qa)
+
+# Core web framework
+fastapi
+mangum
+
+# LLM and agent framework
+pydantic-ai
+
+# Database
+supabase
+
+# Utilities
+python-dotenv
+nest_asyncio
+
+# Note: Heavy dependencies removed for fast builds
+# - langchain-openai, litellm: Not needed (only basic QA)
+# - celery[redis]: Not supported (no background workers on serverless)
+# - redis: Not needed
+# - azure-storage-blob: Not needed (retrieving cached summaries only)
+# - docling[vlm]: Not needed (summarization moved to queue service)
+# - pypdfium2, pandas, xlrd, openpyxl: Not needed
+# - firebase-admin: Only needed for auth, included if required
+# - pytest*: Not needed (test dependencies)
+# - uvicorn: Not needed (Mangum handles ASGI)
+# - watchdog: Not needed (no file watching)
