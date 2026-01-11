@@ -45,10 +45,6 @@
   ],
   "rewrites": [
     {
-      "source": "/southhaven/assets/:path*",
-      "destination": "/assets/:path*"
-    },
-    {
       "source": "/southhaven/:path*",
       "destination": "/backend/api/index.py"
     },
