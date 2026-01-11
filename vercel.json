@@ -3,7 +3,7 @@
   "buildCommand": "cd frontend && VITE_BASE_PATH=/southhaven npm run build",
   "devCommand": "cd frontend && npm run dev",
   "installCommand": "cd frontend && npm install",
-  "outputDirectory": "frontend/dist/southhaven",
+  "outputDirectory": "frontend/dist",
   "cleanUrls": true,
   "trailingSlash": false,
   "headers": [
