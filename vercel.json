@@ -45,6 +45,26 @@
   ],
   "rewrites": [
     {
+      "source": "/api/(.*)",
+      "destination": "/backend/api/index.py"
+    },
+    {
+      "source": "/agent/(.*)",
+      "destination": "/backend/api/index.py"
+    },
+    {
+      "source": "/sse",
+      "destination": "/backend/api/index.py"
+    },
+    {
+      "source": "/ws",
+      "destination": "/backend/api/index.py"
+    },
+    {
+      "source": "/internal/(.*)",
+      "destination": "/backend/api/index.py"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
