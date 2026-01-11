@@ -63,11 +63,13 @@ function NavBar({
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border/80 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-sm">
       <div className="container flex h-14 items-center">
         {/* Logo */}
         <div className="mr-4 flex">
-          <h1 className="text-lg font-bold tracking-tight">AI Doc Search</h1>
+          <h1 className="text-lg font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+            AI Doc Search
+          </h1>
         </div>
 
         <div className="flex flex-1 items-center justify-between space-x-2 md:justify-end">
