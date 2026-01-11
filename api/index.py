@@ -1,11 +1,20 @@
-from mangum import Mangum
+"""
+Vercel serverless function handler for FastAPI application.
+
+This module wraps the FastAPI app with Mangum to make it compatible
+with Vercel's serverless function runtime.
+"""
+
 import sys
-import os
+from pathlib import Path
 
-# Add backend directory to Python path for imports
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "backend"))
+# Add backend directory to path to import backend_app
+root_dir = Path(__file__).resolve().parent.parent
+backend_dir = root_dir / "backend"
+sys.path.insert(0, str(backend_dir))
 
+from mangum import Mangum
 from backend_app import app
 
-# Wrap FastAPI app with Mangum for Vercel
+# Vercel serverless handler
 handler = Mangum(app, lifespan="off")

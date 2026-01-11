@@ -46,27 +46,27 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "/backend/api/index.py"
+      "destination": "/api/index.py"
     },
     {
       "source": "/agent/:path*",
-      "destination": "/backend/api/index.py"
+      "destination": "/api/index.py"
     },
     {
       "source": "/sse",
-      "destination": "/backend/api/index.py"
+      "destination": "/api/index.py"
     },
     {
       "source": "/poll",
-      "destination": "/backend/api/index.py"
+      "destination": "/api/index.py"
     },
     {
       "source": "/ws",
-      "destination": "/backend/api/index.py"
+      "destination": "/api/index.py"
     },
     {
       "source": "/internal/:path*",
-      "destination": "/backend/api/index.py"
+      "destination": "/api/index.py"
     },
     {
       "source": "/:path*",
