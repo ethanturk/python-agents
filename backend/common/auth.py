@@ -1,14 +1,42 @@
 import logging
 import os
-
-import firebase_admin
-from fastapi import HTTPException, Query, Security
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from firebase_admin import auth, credentials
+from typing import Optional, Dict, Any
 
 logger = logging.getLogger(__name__)
 
-security = HTTPBearer()
+# Try to import firebase_admin - will be None if not available
+firebase_admin = None
+auth = None
+credentials = None
+security = None
+HTTPBearer = None
+HTTPException = None
+
+try:
+    import firebase_admin
+    from firebase_admin import auth, credentials
+
+    # Try to import FastAPI security components
+    try:
+        from fastapi.security import HTTPBearer
+
+        security = HTTPBearer()
+    except ImportError:
+        logger.warning("fastapi not available for security")
+
+    try:
+        from fastapi import HTTPException as _HTTPException
+
+        HTTPException = _HTTPException
+    except ImportError:
+        logger.warning("fastapi HTTPException not available")
+
+    logger.info("firebase_admin imported successfully")
+except ImportError:
+    logger.warning(
+        "firebase_admin not available. Authentication will be disabled. "
+        "Install firebase-admin for production deployments."
+    )
 
 
 def init_firebase():
@@ -18,13 +46,14 @@ def init_firebase():
     Raises:
         RuntimeError: If Firebase initialization fails and FIREBASE_REQUIRED=true
     """
+    if firebase_admin is None:
+        logger.warning("firebase_admin not available, skipping initialization")
+        return
+
     try:
         # Check if already initialized
         if not firebase_admin._apps:
             # Use default credentials (GOOGLE_APPLICATION_CREDENTIALS) or no-arg for ADC
-            # In production/docker, we expect credentials to be mounted or ADC to work.
-            # If developing locally without ADC, user might need to point to a service account key.
-            # For now, we'll assume ADC or a service account path in env var.
             cred = credentials.ApplicationDefault()
             firebase_admin.initialize_app(cred)
             logger.info("Firebase Admin initialized successfully.")
@@ -45,8 +74,12 @@ def init_firebase():
             )
 
 
-def get_current_user(credentials: HTTPAuthorizationCredentials = Security(security)):
+def get_current_user(credentials) -> Optional[Dict[str, Any]]:
     """Verifies Firebase ID token."""
+    if firebase_admin is None or auth is None or HTTPException is None or credentials is None:
+        # Return None if firebase is not available
+        return None
+
     token = credentials.credentials
     try:
         decoded_token = auth.verify_id_token(token)
@@ -61,9 +94,8 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Security(securi
 
 
 async def get_current_user_from_query(
-    token: str = Query(None),
-    credentials: HTTPAuthorizationCredentials = Security(security, auto_error=False),
-) -> dict:
+    token: Optional[str] = None, credentials=None
+) -> Optional[Dict[str, Any]]:
     """
     Verifies Firebase ID token from either:
     1. Authorization header (Bearer token) - for API calls
@@ -71,9 +103,13 @@ async def get_current_user_from_query(
 
     EventSource API cannot set custom headers, so we must support query params.
     """
+    if firebase_admin is None or auth is None or HTTPException is None:
+        # Return None if firebase is not available
+        return None
+
     # Try header first, then query param
     id_token = None
-    if credentials:
+    if credentials and hasattr(credentials, "credentials"):
         id_token = credentials.credentials
     elif token:
         id_token = token

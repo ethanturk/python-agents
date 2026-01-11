@@ -15,3 +15,10 @@ scripts
 docs
 *.md
 .github
+# Exclude backend source code (only common/ and services/ needed for shared logic)
+backend/async_tasks.py
+backend/backend_app.py
+backend/test_*.py
+backend/tests
+# Exclude heavy files from deployment
+backend/scripts

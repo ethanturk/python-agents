@@ -1,0 +1,5 @@
+# Notifications Function - Minimal Dependencies
+# Used for polling and internal notifications
+fastapi
+mangum
+python-dotenv

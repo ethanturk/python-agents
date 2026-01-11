@@ -4,14 +4,40 @@ This guide explains how to deploy the backend to Vercel serverless functions.
 
 ## Architecture Overview
 
+The backend is split into 4 domain-specific Vercel functions with minimal dependencies:
+
+### Minimal Dependency Strategy
+Each serverless function has its own `requirements.txt` with only necessary dependencies:
+- **Agent**: `api/agent/requirements.txt` - pydantic-ai, litellm, supabase, nest_asyncio
+- **Documents**: `api/documents/requirements.txt` - fastapi, azure-storage-blob, supabase
+- **Summaries**: `api/summaries/requirements.txt` - pydantic-ai, supabase, fastapi
+- **Notifications**: `api/notifications/requirements.txt` - fastapi only
+
+### Lazy Loading Pattern
+Heavy dependencies use lazy imports to minimize cold start time and bundle size:
+- **firebase-admin**: Only imported when auth is used (optional for dev)
+- **boto3/azure.queue**: Only loaded when `QUEUE_PROVIDER=sqs` or `azure`
+- **Embedding models**: Initialized on first use, not import time
+
+### Function Isolation
+Each function has:
+- `api/{function}/requirements.txt` - Minimal dependencies
+- `api/{function}/models.py` - Pydantic models (duplicated for minimal size)
+- `api/{function}/service.py` - Thin wrapper calling backend services
+- `api/{function}/index.py` - Vercel handler with Mangum
+
+Shared code remains in `backend/` directory:
+- `backend/common/` - Config and auth with lazy imports
+- `backend/services/` - Business logic services
+
 The backend is split into 4 domain-specific Vercel functions:
 
 | Function | Endpoints | Dependencies | Purpose |
 |----------|-----------|--------------|---------|
-| `api/agent` | `/agent/sync`, `/agent/async`, `/agent/status`, `/agent/search` | pydantic-ai, langchain-openai, supabase | LLM queries and RAG |
-| `api/documents` | `/agent/upload`, `/agent/documents`, `/agent/delete`, `/agent/files` | azure-storage-blob, supabase | File operations |
-| `api/summaries` | `/agent/summaries`, `/agent/summary_qa`, `/agent/search_qa` | pydantic-ai, supabase | Cached summaries |
-| `api/notifications` | `/poll`, `/internal/notify` | FastAPI only | Notifications (polling) |
+| `api/agent` | `/agent/sync`, `/agent/async`, `/agent/status`, `/agent/search` | pydantic-ai, litellm, supabase, nest_asyncio, fastapi | LLM queries and RAG |
+| `api/documents` | `/agent/upload`, `/agent/documents`, `/agent/documentsets`, `/agent/delete`, `/agent/files` | fastapi, azure-storage-blob, supabase | File operations |
+| `api/summaries` | `/agent/summaries`, `/agent/summary_qa`, `/agent/search_qa`, `/agent/summarize` | pydantic-ai, supabase, fastapi | Cached summaries |
+| `api/notifications` | `/poll`, `/internal/notify` | fastapi only | Notifications (polling) |
 
 ## Deployment Steps
 
@@ -114,9 +140,10 @@ If migrating from Docker Compose to Vercel:
 ### Function Size Exceeds 250MB
 
 If a function exceeds Vercel's limit:
-- Check `requirements-{function}.txt` for unnecessary dependencies
-- Use `requirements-vercel.txt` as a starting point
-- Remove development dependencies like pytest, black, etc.
+- Verify `api/{function}/requirements.txt` only contains necessary dependencies
+- Heavy dependencies like `docling[vlm]`, `pandas`, `celery` are excluded from serverless functions
+- Use `.vercelignore` to exclude unnecessary files from deployment
+- Check `backend/services/` for accidental heavy imports (should use lazy loading)
 
 ### Queue Tasks Not Processing
 
