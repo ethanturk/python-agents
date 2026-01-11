@@ -7,6 +7,8 @@ on:
     branches: [ main, develop ]
   workflow_dispatch:
 
+if: false  # Disabled - using Vercel automatic deployment
+
 permissions:
   contents: read
   pull-requests: write
