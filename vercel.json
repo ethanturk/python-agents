@@ -65,8 +65,12 @@
       "destination": "/assets/:path*"
     },
     {
-      "source": "/southhaven/:path(.*\\.(svg|png|jpg|jpeg|gif|ico|woff|woff2|ttf|eot))",
-      "destination": "/:path"
+      "source": "/southhaven/icon.svg",
+      "destination": "/icon.svg"
+    },
+    {
+      "source": "/southhaven/vite.svg",
+      "destination": "/vite.svg"
     },
     {
       "source": "/southhaven/:path*",
