@@ -32,14 +32,8 @@ Dockerfile*
 venv/
 env/
 
-# Frontend dev files (we only need dist)
-frontend/node_modules/
-frontend/src/
-frontend/public/
+# Frontend cache (node_modules will be installed by Vercel)
 frontend/.vite/
-frontend/tsconfig.json
-frontend/vite.config.ts
-frontend/package-lock.json
 
 # Backend files not needed for serverless
 backend/file_watcher.py
