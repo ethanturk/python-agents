@@ -19,7 +19,6 @@ from fastapi import (
     WebSocketDisconnect,
 )
 from fastapi.middleware.cors import CORSMiddleware
-from starlette.middleware.base import BaseHTTPMiddleware
 from sse_starlette.sse import EventSourceResponse
 
 # Internal Imports
@@ -61,21 +60,6 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 os.environ["USE_NNPACK"] = "0"
-
-
-class SouthhavenPathMiddleware(BaseHTTPMiddleware):
-    """Strip /southhaven prefix from request paths for Vercel deployment."""
-
-    async def dispatch(self, request: Request, call_next):
-        path = request.url.path
-
-        if path.startswith("/southhaven"):
-            new_path = path[len("/southhaven") :] or "/"
-            request.scope["path"] = new_path
-            request.scope["root_path"] = request.scope.get("root_path", "") + "/southhaven"
-
-        response = await call_next(request)
-        return response
 
 
 # Security: File upload configuration
@@ -182,7 +166,6 @@ ALLOWED_ORIGINS = os.getenv(
     "http://localhost:3000,http://localhost:3001,https://aidocs.ethanturk.com",
 ).split(",")
 
-app.add_middleware(SouthhavenPathMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,

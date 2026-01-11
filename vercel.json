@@ -45,23 +45,11 @@
   ],
   "rewrites": [
     {
-      "source": "/southhaven/assets/:path*",
-      "destination": "/assets/:path*"
+      "source": "/southhaven/(.*)",
+      "destination": "/backend/api/index.py"
     },
     {
-      "source": "/southhaven/icon.svg",
-      "destination": "/icon.svg"
-    },
-    {
-      "source": "/southhaven/vite.svg",
-      "destination": "/vite.svg"
-    },
-    {
-      "source": "/southhaven/:path*",
-      "destination": "/backend/api/index.py/:path*"
-    },
-    {
-      "source": "/:path*",
+      "source": "/(.*)",
       "destination": "/index.html"
     }
   ]
