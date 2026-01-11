@@ -1,6 +1,6 @@
 {
   "$schema": "https://vercel.com/schemas/v1/config.json",
-  "buildCommand": "cd frontend && VITE_BASE_PATH=/ npm run build",
+  "buildCommand": "cd frontend && VITE_BASE_PATH=/southhaven/ npm run build",
   "devCommand": "cd frontend && npm run dev",
   "installCommand": "cd frontend && npm install",
   "outputDirectory": "frontend/dist",
@@ -54,11 +54,23 @@
   ],
   "rewrites": [
     {
-      "source": "/api/(.*)",
+      "source": "/southhaven/api/(.*)",
       "destination": "/backend/api/index.py"
     },
     {
-      "source": "/(.*)",
+      "source": "/southhaven/agent/(.*)",
+      "destination": "/backend/api/index.py"
+    },
+    {
+      "source": "/southhaven/ws",
+      "destination": "/backend/api/index.py"
+    },
+    {
+      "source": "/southhaven/internal/(.*)",
+      "destination": "/backend/api/index.py"
+    },
+    {
+      "source": "/southhaven/(.*)",
       "destination": "/index.html"
     }
   ]
