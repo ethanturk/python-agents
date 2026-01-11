@@ -15,7 +15,7 @@ const SearchView = lazy(() => import("./components/SearchView"));
 const DocumentListView = lazy(() => import("./components/DocumentListView"));
 const SummarizeView = lazy(() => import("./components/SummarizeView"));
 
-import useServerSentEvents from "./hooks/useServerSentEvents";
+import usePolling from "./hooks/usePolling";
 import useDocuments from "./hooks/useDocuments";
 import useSearch from "./hooks/useSearch";
 import useSummarization from "./hooks/useSummarization";
@@ -98,7 +98,7 @@ function App() {
     [handleNewNotification, setActiveSummaries],
   );
 
-  const { isConnected, isConnecting } = useServerSentEvents({
+  const { isConnected, isConnecting } = usePolling({
     onMessage: (data) =>
       handleWsMessage({ data: JSON.stringify(data) } as MessageEvent),
   });
