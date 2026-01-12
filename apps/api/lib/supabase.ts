@@ -36,12 +36,12 @@ export async function matchDocuments(
   documentSet: string = "all",
 ): Promise<SearchResult[]> {
   try {
-    const { data, error } = await getSupabase().rpc("match_documents" as any, {
+    const { data, error } = await getSupabase().rpc("match_documents", {
       query_embedding: queryEmbedding,
       match_threshold: threshold,
       match_count: matchCount,
       filter_document_set: documentSet,
-    } as any);
+    } as unknown);
 
     if (error) {
       logger.error({ error: error.message }, "Supabase RPC error");
