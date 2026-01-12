@@ -15,6 +15,7 @@ scripts
 docs
 *.md
 .github
+dist
 # Exclude backend source code (only common/ and services/ needed for shared logic)
 backend/async_tasks.py
 backend/backend_app.py
