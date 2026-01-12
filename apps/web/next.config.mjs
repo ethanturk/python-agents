@@ -1,7 +1,7 @@
 import path from "path";
 import { fileURLToPath } from "url";
 
-// Get the directory of this config file
+// Get directory of this config file
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -12,10 +12,8 @@ const nextConfig = {
   // For monorepo setups - tells Next.js where the app root is
   outputFileTracingRoot: path.join(__dirname, ".."),
 
-  turbopack: {
-    // Set Turbopack root to parent directory for monorepo
-    root: path.join(__dirname, ".."),
-  },
+  // Explicitly disable Turbopack for now due to workspace issues
+  // turbopack: false,
 };
 
 export default nextConfig;
