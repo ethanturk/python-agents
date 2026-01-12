@@ -303,7 +303,9 @@ export default function useSummarization({
       setNotifications((prev) => {
         const existingFiles = new Set(prev.map((p) => p.filename));
 
-        const newItems = history.filter((h) => !existingFiles.has(h.filename));
+        const newItems = history.filter(
+          (h: Notification) => !existingFiles.has(h.filename),
+        );
         return [...prev, ...newItems];
       });
     } catch (error) {

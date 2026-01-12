@@ -1,6 +1,12 @@
 # Development Dependencies
 # Install with: pip install -r requirements-dev.txt
 
+# Testing
+pytest
+pytest-asyncio
+pytest-mock
+pytest-cov
+
 # Code Quality Tools
 black>=24.0.0                # Code formatting
 mypy>=1.8.0                  # Static type checking
