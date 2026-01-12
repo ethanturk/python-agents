@@ -1,40 +1,25 @@
 {
-  "buildCommand": "pnpm run build",
-  "outputDirectory": "dist",
-  "functions": {
-    "agent/index.js": {
-      "runtime": "nodejs20.x"
-    },
-    "documents/index.js": {
-      "runtime": "nodejs20.x"
-    },
-    "summaries/index.js": {
-      "runtime": "nodejs20.x"
-    },
-    "notifications/index.js": {
-      "runtime": "nodejs20.x"
-    }
-  },
+  "buildCommand": "pnpm run build && mkdir -p api && cp -r dist/* api/",
   "rewrites": [
     {
       "source": "/api/agent/:path*",
-      "destination": "/agent/index.js"
+      "destination": "/api/agent/index.js"
     },
     {
       "source": "/api/documents/:path*",
-      "destination": "/documents/index.js"
+      "destination": "/api/documents/index.js"
     },
     {
       "source": "/api/summaries/:path*",
-      "destination": "/summaries/index.js"
+      "destination": "/api/summaries/index.js"
     },
     {
       "source": "/api/notifications/:path*",
-      "destination": "/notifications/index.js"
+      "destination": "/api/notifications/index.js"
     },
     {
       "source": "/health",
-      "destination": "/agent/index.js"
+      "destination": "/api/agent/index.js"
     }
   ]
 }
