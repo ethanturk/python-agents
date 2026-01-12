@@ -19,6 +19,8 @@ The system is composed of several independent services, each deployable via Dock
 ## Prerequisites
 
 - Docker & Docker Compose
+- Node.js 16.9+ (for pnpm support)
+- pnpm 9.0.0+ (or enable Corepack: `corepack enable && corepack prepare pnpm@9.0.0 --activate`)
 - OpenAI API Key (or compatible endpoint)
 
 ## Setup
@@ -91,15 +93,15 @@ The backend uses `pytest` for unit testing. Tests cover API endpoints, agents, s
 ### Frontend Tests
 The frontend uses `Vitest` and `React Testing Library`.
 
-1.  Navigate to the frontend directory:
+1.  Navigate to frontend directory:
     ```bash
     cd frontend
     ```
 2.  Install dependencies:
     ```bash
-    npm install
+    pnpm install
     ```
 3.  Run tests:
     ```bash
-    npm test
+    pnpm test
     ```

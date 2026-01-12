@@ -62,14 +62,15 @@ repos:
     rev: v1.4.0
     hooks:
       - id: detect-secrets
-        exclude: (package.lock.json|\.env$)  # Exclude .env file (not committed)
+        args: ['--baseline', '.secrets.baseline']
+        exclude: ^(.*package-lock\.json|.*pnpm-lock\.yaml|.*yarn\.lock|\.env.*|\.secrets\.baseline)$
 
   # JavaScript/TypeScript linting (frontend)
   - repo: local
     hooks:
       - id: eslint-frontend
         name: ESLint (Frontend)
-        entry: sh -c 'cd frontend && npm run lint -- --fix || true'
+        entry: sh -c 'cd frontend && pnpm run lint -- --fix || true'
         language: system
         files: ^frontend/
         types: [javascript, jsx, ts, tsx]
@@ -80,7 +81,7 @@ repos:
     hooks:
       - id: prettier-frontend
         name: Prettier (Frontend)
-        entry: sh -c 'cd frontend && npx prettier --write "**/*.{js,jsx,ts,tsx,json,css,scss,md}" || true'
+        entry: sh -c 'cd frontend && pnpm exec prettier --write "**/*.{js,jsx,ts,tsx,json,css,scss,md}" || true'
         language: system
         files: ^frontend/
         pass_filenames: false
@@ -90,7 +91,7 @@ repos:
     hooks:
       - id: test-frontend
         name: Test Frontend
-        entry: sh -c 'cd frontend && npm test -- --run --passWithNoTests || true'
+        entry: sh -c 'cd frontend && pnpm test -- --run --passWithNoTests || true'
         language: system
         files: ^frontend/
         pass_filenames: false

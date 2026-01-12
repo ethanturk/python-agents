@@ -55,12 +55,12 @@ lint-fix:
 format:
 	@echo "Formatting code..."
 	cd backend && black .
-	cd frontend && npm run format || echo "No format script defined in frontend"
+	cd frontend && pnpm run format || echo "No format script defined in frontend"
 
 format-check:
 	@echo "Checking code formatting..."
 	cd backend && black --check .
-	cd frontend && npm run lint || echo "Running lint check..."
+	cd frontend && pnpm run lint || echo "Running lint check..."
 
 # Type checking
 typecheck:

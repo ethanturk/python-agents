@@ -75,13 +75,13 @@ pytest --cov=. --cov-report=html
 cd frontend
 
 # Run tests
-npm test
+pnpm test
 
 # Run in watch mode
-npm test -- --watch
+pnpm test -- --watch
 
 # Run with coverage
-npm test -- --coverage
+pnpm test -- --coverage
 ```
 
 ## Test Organization

@@ -163,8 +163,8 @@ pytest -m integration             # Integration tests (requires containers)
 **Frontend tests** (Vitest + React Testing Library):
 ```bash
 cd frontend
-npm install
-npm test
+pnpm install
+pnpm test
 ```
 
 **Test Environment**:
