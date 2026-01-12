@@ -1,89 +1,29 @@
 {
-  "version": 2,
-  "name": "python-agents-backend",
-  "buildCommand": "npm run build",
-  "devCommand": "vercel dev",
-  "installCommand": "npm install",
-  "cleanUrls": true,
-  "trailingSlash": false,
-  "functions": {
-    "api/**": {
-      "runtime": "nodejs18.x"
-    }
-  },
-  "rewrites": [
+  "frameworks": [
     {
-      "source": "/agent/sync",
-      "destination": "/api/agent/index.ts"
-    },
-    {
-      "source": "/agent/search",
-      "destination": "/api/agent/index.ts"
-    },
-    {
-      "source": "/agent/async",
-      "destination": "/api/agent/index.ts"
-    },
-    {
-      "source": "/agent/status/:path*",
-      "destination": "/api/agent/index.ts"
-    },
-    {
-      "source": "/agent/upload",
-      "destination": "/api/documents/index.ts"
-    },
-    {
-      "source": "/agent/documents",
-      "destination": "/api/documents/index.ts"
-    },
-    {
-      "source": "/agent/documentsets",
-      "destination": "/api/documents/index.ts"
-    },
-    {
-      "source": "/agent/documents/:path*",
-      "destination": "/api/documents/index.ts"
-    },
-    {
-      "source": "/agent/files/:path*",
-      "destination": "/api/documents/index.ts"
-    },
-    {
-      "source": "/agent/summaries",
-      "destination": "/api/summaries/index.ts"
-    },
-    {
-      "source": "/agent/summary_qa",
-      "destination": "/api/summaries/index.ts"
-    },
-    {
-      "source": "/agent/search_qa",
-      "destination": "/api/summaries/index.ts"
-    },
-    {
-      "source": "/agent/summarize",
-      "destination": "/api/summaries/index.ts"
-    },
-    {
-      "source": "/poll",
-      "destination": "/api/notifications/index.ts"
-    },
-    {
-      "source": "/internal/notify",
-      "destination": "/api/notifications/index.ts"
+      "src": "frontend",
+      "use": "@vercel/next"
     }
   ],
-  "env": {
-    "OPENAI_API_KEY": "@openai-api-key",
-    "OPENAI_API_BASE": "@openai-api-base",
-    "OPENAI_MODEL": "@openai-model",
-    "OPENAI_EMBEDDING_MODEL": "@openai-embedding-model",
-    "OPENAI_EMBEDDING_DIMENSIONS": "@openai-embedding-dimensions",
-    "SUPABASE_URL": "@supabase-url",
-    "SUPABASE_KEY": "@supabase-key",
-    "AZURE_STORAGE_CONNECTION_STRING": "@azure-storage-connection-string",
-    "AZURE_STORAGE_CONTAINER_NAME": "@azure-storage-container-name",
-    "QUEUE_SERVICE_URL": "@queue-service-url",
-    "SQLITE_DB_PATH": "@sqlite-db-path"
-  }
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/index.py"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Cross-Origin-Opener-Policy",
+          "value": "same-origin"
+        },
+        {
+          "key": "Cross-Origin-Embedder-Policy",
+          "value": "require-corp"
+        }
+      ]
+    }
+  ]
 }
