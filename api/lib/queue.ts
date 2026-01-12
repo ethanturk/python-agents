@@ -4,7 +4,6 @@
  */
 
 import type { TaskResponse } from "./types";
-import { config } from "./config";
 import logger from "./logger";
 
 // Mock implementation for local development
@@ -56,7 +55,7 @@ class HttpQueueService {
   private baseUrl: string;
 
   constructor() {
-    this.baseUrl = config.QUEUE_SERVICE_URL || "http://localhost:8000";
+    this.baseUrl = process.env.QUEUE_SERVICE_URL || "http://localhost:8000";
   }
 
   async submitTask(
@@ -119,7 +118,7 @@ export function initQueueService(): MockQueueService | HttpQueueService {
     return queueService;
   }
 
-  const provider = config.QUEUE_PROVIDER || "mock";
+  const provider = process.env.QUEUE_PROVIDER || "mock";
 
   if (provider === "mock") {
     logger.info("Using mock queue service");

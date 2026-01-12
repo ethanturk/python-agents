@@ -8,7 +8,6 @@ import {
   ContainerClient,
   BlockBlobClient,
 } from "@azure/storage-blob";
-import { config } from "./config";
 import logger from "./logger";
 
 // Initialize Azure Blob Service Client
@@ -22,11 +21,11 @@ function initAzure(): void {
 
   try {
     blobServiceClient = BlobServiceClient.fromConnectionString(
-      config.AZURE_STORAGE_CONNECTION_STRING || "",
+      process.env.AZURE_STORAGE_CONNECTION_STRING || "",
     );
 
     containerClient = blobServiceClient.getContainerClient(
-      config.AZURE_STORAGE_CONTAINER_NAME,
+      process.env.AZURE_STORAGE_CONTAINER_NAME || "documents",
     );
 
     logger.info("Azure Storage initialized");

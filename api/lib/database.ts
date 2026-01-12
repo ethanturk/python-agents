@@ -7,7 +7,6 @@ import initSqlJs, { Database as SqlJsDatabase } from "sql.js";
 import fs from "fs";
 import path from "path";
 import type { Summary } from "./types";
-import { config } from "./config";
 import logger from "./logger";
 
 // In-memory database (sql.js)
@@ -19,7 +18,7 @@ async function initDatabase(): Promise<void> {
     return;
   }
 
-  dbPath = config.SQLITE_DB_PATH;
+  dbPath = process.env.SQLITE_DB_PATH || "/tmp/summaries.db";
 
   try {
     const SQL = await initSqlJs();

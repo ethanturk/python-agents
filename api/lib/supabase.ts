@@ -5,7 +5,6 @@
 
 import { createClient } from "@supabase/supabase-js";
 import type { SearchResult } from "./types";
-import { config } from "./config";
 import logger from "./logger";
 
 // Lazy Supabase client initialization
@@ -13,12 +12,12 @@ let supabase: ReturnType<typeof createClient> | null = null;
 
 function getSupabase() {
   if (!supabase) {
-    if (!config.SUPABASE_URL || !config.SUPABASE_KEY) {
+    if (!process.env.SUPABASE_URL || !process.env.SUPABASE_KEY) {
       // For tests, return a mock client that throws on operations
       const mock = createClient("https://mock.supabase.co", "mock-key");
       return mock;
     }
-    supabase = createClient(config.SUPABASE_URL, config.SUPABASE_KEY);
+    supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
   }
   return supabase;
 }
@@ -82,7 +81,7 @@ export async function getDocuments(
   try {
     const client = getSupabase();
     let query = client
-      .from(config.VECTOR_TABLE_NAME)
+      .from(process.env.VECTOR_TABLE_NAME || "documents")
       .select("filename, document_set")
       .not("filename", "is", null);
 
@@ -131,7 +130,7 @@ export async function getDocumentSets(): Promise<string[]> {
   try {
     const client = getSupabase();
     const { data, error } = await client
-      .from(config.VECTOR_TABLE_NAME)
+      .from(process.env.VECTOR_TABLE_NAME || "documents")
       .select("document_set")
       .not("document_set", "is", null);
 
@@ -169,7 +168,7 @@ export async function deleteDocuments(
   try {
     const client = getSupabase();
     let query = client
-      .from(config.VECTOR_TABLE_NAME)
+      .from(process.env.VECTOR_TABLE_NAME || "documents")
       .delete()
       .eq("filename", filename);
 

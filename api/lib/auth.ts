@@ -5,7 +5,6 @@
 
 import type { FastifyRequest, FastifyReply } from "fastify";
 import type { User, ErrorResponse } from "./types";
-import { config } from "./config";
 import logger from "./logger";
 
 // Firebase Admin SDK - will be undefined if not available
@@ -34,7 +33,7 @@ async function initFirebase(): Promise<void> {
       `firebase-admin not available: ${err.message}. Authentication will be disabled.`,
     );
 
-    if (config.FIREBASE_REQUIRED) {
+    if (process.env.FIREBASE_REQUIRED === "true") {
       throw new Error(
         "Firebase authentication is required but initialization failed. " +
           "Set GOOGLE_APPLICATION_CREDENTIALS or disable FIREBASE_REQUIRED.",

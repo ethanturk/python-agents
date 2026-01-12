@@ -4,13 +4,12 @@
  */
 
 import OpenAI from "openai";
-import { config } from "./config";
 import logger from "./logger";
 
 // Initialize OpenAI client
 const openai = new OpenAI({
-  baseURL: config.OPENAI_API_BASE,
-  apiKey: config.OPENAI_API_KEY,
+  baseURL: process.env.OPENAI_API_BASE,
+  apiKey: process.env.OPENAI_API_KEY,
 });
 
 /**
@@ -23,7 +22,7 @@ export async function runSyncAgent(prompt: string): Promise<string> {
     logger.info({ prompt }, "Running sync agent");
 
     const response = await openai.chat.completions.create({
-      model: config.OPENAI_MODEL,
+      model: process.env.OPENAI_MODEL || "gpt-3.5-turbo",
       messages: [
         {
           role: "system",
@@ -61,7 +60,7 @@ export async function runSyncAgent(prompt: string): Promise<string> {
 export async function generateEmbedding(text: string): Promise<number[]> {
   try {
     const response = await openai.embeddings.create({
-      model: config.OPENAI_EMBEDDING_MODEL,
+      model: process.env.OPENAI_EMBEDDING_MODEL || "text-embedding-3-small",
       input: text,
     });
 
@@ -97,7 +96,7 @@ export async function runQAAgent(
     );
 
     const response = await openai.chat.completions.create({
-      model: config.OPENAI_MODEL,
+      model: process.env.OPENAI_MODEL || "gpt-3.5-turbo",
       messages: [
         {
           role: "system",
