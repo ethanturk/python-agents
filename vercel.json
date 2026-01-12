@@ -1,8 +1,5 @@
 {
-  "installCommand": "pnpm install",
-  "buildCommand": "turbo build --filter=web",
-  "outputDirectory": "apps/web/.next",
-  "framework": "nextjs",
+  "buildCommand": "pnpm turbo build --filter=web",
   "rewrites": [
     {
       "source": "/agent/summaries",
