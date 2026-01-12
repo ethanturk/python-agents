@@ -203,6 +203,83 @@ vercel --prod
 3. Async tasks use external queue service (not Celery)
 4. See `backend/SERVERLESS_DEPLOYMENT.md` for full deployment guide
 
+### Queue Worker Deployment
+
+The system includes a dedicated async queue worker for processing long-running tasks (document ingestion, summarization) on a VPS.
+
+**Architecture:**
+```
+Frontend Server (Vercel)
+  ↓ Submit task
+Azure Queue ({CLIENT_ID}-tasks)
+  ↓ Worker polls
+Queue Worker (VPS)
+  ↓ Process task
+  ↓ Send webhook
+Frontend Server (/internal/notify)
+  → Update database/notify clients
+```
+
+**Key Features:**
+- **Per-client queue isolation**: Each CLIENT_ID has its own queue (e.g., `southhaven-tasks`)
+- **Task handlers**: Document ingestion, summarization
+- **Webhook notifications**: Worker notifies frontend on task completion
+- **Systemd service**: Auto-restart on failure, auto-start on boot
+
+**Environment Variables:**
+- `CLIENT_ID` - Unique client identifier for queue isolation
+- `WORKER_POLLING_INTERVAL` - Seconds between queue polls (default: 5)
+- `WORKER_VISIBILITY_TIMEOUT` - Message visibility timeout (default: 30)
+- `WORKER_MAX_MESSAGES` - Max messages per poll (default: 10)
+- `QUEUE_PROVIDER` - "azure" | "mock" (default: mock)
+
+**Deployment:**
+```bash
+# On VPS:
+cd /opt/worker
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+
+# Configure environment
+cp .env.worker.example .env
+nano .env  # Fill in required values
+
+# Install systemd service
+chmod +x install-worker-service.sh
+sudo ./install-worker-service.sh southhaven /opt/worker
+
+# Start worker
+sudo systemctl start queue-worker-southhaven
+
+# View logs
+sudo journalctl -u queue-worker-southhaven -f
+```
+
+**Task Submission:**
+```python
+from services.queue_service import get_queue_service
+
+queue = get_queue_service()
+
+# Submit task to worker
+task_id = await queue.submit_task(
+    task_type="ingest",
+    payload={
+        "filename": "document.pdf",
+        "document_set": "southhaven"
+    },
+    webhook_url="https://api.example.com/internal/notify"
+)
+```
+
+**Monitoring:**
+- Worker logs: `sudo journalctl -u queue-worker-{CLIENT_ID} -f`
+- Queue depth: Check via Azure Portal or Azure CLI
+- Task status: Worker sends webhook to `/internal/notify` on completion
+
+For full deployment guide, see `worker/WORKER_DEPLOYMENT.md`.
+
 
 ### Testing
 

@@ -1,0 +1,31 @@
+[Unit]
+Description=Async Worker for {{CLIENT_ID}}
+After=network.target
+
+[Service]
+Type=simple
+User=worker
+Group=worker
+WorkingDirectory=/opt/worker
+ExecStart=/usr/bin/python3 /opt/worker/queue_worker.py
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=queue-worker
+
+# Environment variables
+Environment="CLIENT_ID={{CLIENT_ID}}"
+Environment="WORKER_POLLING_INTERVAL=5"
+Environment="WORKER_VISIBILITY_TIMEOUT=30"
+Environment="WORKER_MAX_MESSAGES=10"
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/worker
+
+[Install]
+WantedBy=multi-user.target

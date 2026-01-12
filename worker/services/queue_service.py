@@ -5,11 +5,46 @@ This module provides a unified interface for queue services (AWS SQS, Azure Queu
 to replace Celery in serverless deployments.
 """
 
+import asyncio
+import json
 import logging
-from typing import Any, Dict, Optional
 import os
+from functools import wraps
+from typing import Any, Dict, Optional
+
+import httpx
 
 logger = logging.getLogger(__name__)
+
+
+def retry_with_backoff(
+    max_retries: int = 3, base_delay: float = 1.0, max_delay: float = 10.0
+):
+    """Decorator for retrying operations with exponential backoff."""
+
+    def decorator(func):
+        @wraps(func)
+        async def wrapper(*args, **kwargs):
+            last_error: Optional[Exception] = None
+            for attempt in range(max_retries):
+                try:
+                    return await func(*args, **kwargs)
+                except Exception as e:
+                    last_error = e
+                    if attempt < max_retries - 1:
+                        delay = min(base_delay * (2**attempt), max_delay)
+                        logger.warning(
+                            f"Attempt {attempt + 1}/{max_retries} failed: {e}. Retrying in {delay}s..."
+                        )
+                        await asyncio.sleep(delay)
+                    else:
+                        logger.error(f"All {max_retries} attempts failed: {e}")
+                        raise last_error
+            raise RuntimeError("Unexpected error in retry logic")
+
+        return wrapper
+
+    return decorator
 
 
 class QueueService:
@@ -101,15 +136,36 @@ class SQSService(QueueService):
 class AzureQueueService(QueueService):
     """
     Azure Queue Storage implementation of queue service.
+    Supports per-client queue isolation via CLIENT_ID environment variable.
+    Queue naming convention: {CLIENT_ID}-tasks
     """
+
+    MAX_MESSAGE_SIZE = 64 * 1024  # 64KB Azure Queue limit
 
     def __init__(self):
         self.connection_string = os.getenv("AZURE_STORAGE_CONNECTION_STRING")
-        self.queue_name = os.getenv("AZURE_QUEUE_NAME", "tasks")
+        self.client_id = os.getenv("CLIENT_ID", "default").lower()
+        self.queue_name = f"{self.client_id}-tasks"
 
         if not self.connection_string:
             logger.warning("AZURE_STORAGE_CONNECTION_STRING not configured")
 
+        logger.info(
+            f"AzureQueueService initialized for client '{self.client_id}' with queue '{self.queue_name}'"
+        )
+
+    def _validate_message_size(self, message: str) -> None:
+        """Validate message is under 64KB limit."""
+        message_size = len(message.encode("utf-8"))
+        if message_size > self.MAX_MESSAGE_SIZE:
+            logger.warning(
+                f"Message size {message_size} bytes exceeds Azure Queue limit of {self.MAX_MESSAGE_SIZE} bytes"
+            )
+            raise ValueError(
+                f"Message too large: {message_size} bytes (max {self.MAX_MESSAGE_SIZE} bytes)"
+            )
+
+    @retry_with_backoff(max_retries=3, base_delay=1.0, max_delay=10.0)
     async def submit_task(self, task_type: str, payload: Dict[str, Any]) -> str:
         if not self.connection_string:
             raise RuntimeError("Azure Queue not configured")
@@ -119,16 +175,47 @@ class AzureQueueService(QueueService):
 
         from azure.storage.queue import QueueServiceClient
 
-        queue_client = QueueServiceClient.from_connection_string(
-            self.connection_string, self.queue_name
-        )
+        queue_client = QueueServiceClient.from_connection_string(self.connection_string)
+        queue_client = queue_client.get_queue_client(self.queue_name)
 
         task_id = str(uuid.uuid4())
         message = json.dumps({"task_type": task_type, "payload": payload})
 
+        self._validate_message_size(message)
         queue_client.send_message(task_id + "|" + message)
         logger.info(f"Submitted task {task_type} with ID {task_id}")
         return task_id
+
+    @retry_with_backoff(max_retries=3, base_delay=1.0, max_delay=10.0)
+    async def receive_messages(
+        self, max_messages: int = 10, visibility_timeout: int = 30
+    ) -> list:
+        """Receive messages from the queue."""
+        if not self.connection_string:
+            raise RuntimeError("Azure Queue not configured")
+
+        from azure.storage.queue import QueueServiceClient
+
+        queue_client = QueueServiceClient.from_connection_string(self.connection_string)
+        queue_client = queue_client.get_queue_client(self.queue_name)
+
+        messages = queue_client.receive_messages(
+            messages_per_page=max_messages, visibility_timeout=visibility_timeout
+        )
+        return list(messages)
+
+    @retry_with_backoff(max_retries=3, base_delay=1.0, max_delay=10.0)
+    async def delete_message(self, message) -> None:
+        """Delete a message from the queue."""
+        if not self.connection_string:
+            raise RuntimeError("Azure Queue not configured")
+
+        from azure.storage.queue import QueueServiceClient
+
+        queue_client = QueueServiceClient.from_connection_string(self.connection_string)
+        queue_client = queue_client.get_queue_client(self.queue_name)
+
+        queue_client.delete_message(message)
 
     async def get_task_status(self, task_id: str) -> Dict[str, Any]:
         # Azure Queue doesn't have built-in task status tracking
@@ -153,7 +240,9 @@ class MockQueueService(QueueService):
         import uuid
 
         task_id = str(uuid.uuid4())
-        logger.info(f"[MOCK] Submitted task {task_type} with ID {task_id}, payload: {payload}")
+        logger.info(
+            f"[MOCK] Submitted task {task_type} with ID {task_id}, payload: {payload}"
+        )
         return task_id
 
     async def get_task_status(self, task_id: str) -> Dict[str, Any]:

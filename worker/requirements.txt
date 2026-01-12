@@ -21,6 +21,7 @@ openpyxl
 # Storage Clients
 supabase
 azure-storage-blob>=12.20.0
+azure-storage-queue>=12.20.0
 
 # Utilities
 httpx                 # HTTP client for webhooks
