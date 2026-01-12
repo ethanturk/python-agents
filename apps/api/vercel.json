@@ -1,25 +1,44 @@
 {
-  "buildCommand": "pnpm run build && mkdir -p api && cp -r dist/* api/",
-  "rewrites": [
+  "version": 2,
+  "buildCommand": "pnpm run build",
+  "builds": [
     {
-      "source": "/api/agent/:path*",
-      "destination": "/api/agent/index.js"
+      "src": "agent/index.ts",
+      "use": "@vercel/node"
     },
     {
-      "source": "/api/documents/:path*",
-      "destination": "/api/documents/index.js"
+      "src": "documents/index.ts",
+      "use": "@vercel/node"
     },
     {
-      "source": "/api/summaries/:path*",
-      "destination": "/api/summaries/index.js"
+      "src": "summaries/index.ts",
+      "use": "@vercel/node"
     },
     {
-      "source": "/api/notifications/:path*",
-      "destination": "/api/notifications/index.js"
+      "src": "notifications/index.ts",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/agent/(.*)",
+      "dest": "/agent/index.ts"
     },
     {
-      "source": "/health",
-      "destination": "/api/agent/index.js"
+      "src": "/api/documents/(.*)?",
+      "dest": "/documents/index.ts"
+    },
+    {
+      "src": "/api/summaries/(.*)?",
+      "dest": "/summaries/index.ts"
+    },
+    {
+      "src": "/api/notifications/(.*)?",
+      "dest": "/notifications/index.ts"
+    },
+    {
+      "src": "/health",
+      "dest": "/agent/index.ts"
     }
   ]
 }
