@@ -1,10 +1,4 @@
 {
-  "frameworks": [
-    {
-      "src": "frontend",
-      "use": "@vercel/next"
-    }
-  ],
   "rewrites": [
     {
       "source": "/api/(.*)",
