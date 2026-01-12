@@ -4,7 +4,7 @@
  */
 
 import OpenAI from "openai";
-import logger from "./logger";
+import logger from "./logger.js";
 
 // Initialize OpenAI client
 const openai = new OpenAI({

@@ -4,8 +4,8 @@
  */
 
 import { createClient } from "@supabase/supabase-js";
-import type { SearchResult } from "./types";
-import logger from "./logger";
+import type { SearchResult } from "./types.js";
+import logger from "./logger.js";
 
 // Lazy Supabase client initialization
 let supabase: ReturnType<typeof createClient> | null = null;

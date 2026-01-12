@@ -8,7 +8,7 @@ import {
   ContainerClient,
   BlockBlobClient,
 } from "@azure/storage-blob";
-import logger from "./logger";
+import logger from "./logger.js";
 
 // Initialize Azure Blob Service Client
 let blobServiceClient: BlobServiceClient | null = null;

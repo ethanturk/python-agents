@@ -7,7 +7,7 @@ import notificationQueue, {
   pollNotifications,
   notify,
 } from "./notifications.js";
-import type { NotificationData } from "./types";
+import type { NotificationData } from "./types.js";
 
 describe("NotificationQueue - Integration Tests", () => {
   beforeEach(() => {

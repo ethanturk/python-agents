@@ -6,8 +6,8 @@
 import initSqlJs, { Database as SqlJsDatabase } from "sql.js";
 import fs from "fs";
 import path from "path";
-import type { Summary } from "./types";
-import logger from "./logger";
+import type { Summary } from "./types.js";
+import logger from "./logger.js";
 
 // In-memory database (sql.js)
 let db: SqlJsDatabase | null = null;

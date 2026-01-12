@@ -3,8 +3,8 @@
  * Ported from api/notifications/service.py
  */
 
-import type { Notification, NotificationData } from "./types";
-import logger from "./logger";
+import type { Notification, NotificationData } from "./types.js";
+import logger from "./logger.js";
 
 class NotificationQueue {
   private queue: Notification[] = [];

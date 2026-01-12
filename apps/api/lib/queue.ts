@@ -3,8 +3,8 @@
  * Provides HTTP interface to the external queue service.
  */
 
-import type { TaskResponse } from "./types";
-import logger from "./logger";
+import type { TaskResponse } from "./types.js";
+import logger from "./logger.js";
 
 // Mock implementation for local development
 class MockQueueService {

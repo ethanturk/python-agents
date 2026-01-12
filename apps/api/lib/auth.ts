@@ -4,8 +4,8 @@
  */
 
 import type { FastifyRequest, FastifyReply } from "fastify";
-import type { User, ErrorResponse } from "./types";
-import logger from "./logger";
+import type { User, ErrorResponse } from "./types.js";
+import logger from "./logger.js";
 
 // Firebase Admin SDK - will be undefined if not available
 let firebaseAdmin: typeof import("firebase-admin") | null = null;
