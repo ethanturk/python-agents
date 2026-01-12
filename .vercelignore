@@ -1,29 +1,51 @@
+# Python
 __pycache__
 *.pyc
+.pytest_cache
+.ruff_cache
+
+# Tests
 tests
 htmlcov
-.ruff_cache
-*.log
-.DS_Store
-.git
-.pytest_cache
-data
-docker-compose*.yml
-Dockerfile*
-Makefile
-scripts
-docs
-*.md
-.github
-dist
 **/*.test.ts
 **/*.test.js
 **/*.spec.ts
 **/*.spec.js
-# Exclude backend source code (only common/ and services/ needed for shared logic)
-backend/async_tasks.py
-backend/backend_app.py
-backend/test_*.py
-backend/tests
-# Exclude heavy files from deployment
-backend/scripts
+
+# Logs
+*.log
+
+# OS files
+.DS_Store
+
+# Git
+.git
+
+# Data
+data
+
+# Docker
+docker-compose*.yml
+Dockerfile*
+
+# CI/CD
+.github
+
+# Docs
+docs
+*.md
+
+# Build artifacts
+dist
+
+# Scripts and tools
+scripts
+Makefile
+
+# Exclude worker (Python-based, deployed separately)
+apps/worker
+
+# Exclude packages (only needed at build time)
+packages
+
+# Turbo config is needed for deployment

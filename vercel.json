@@ -1,6 +1,8 @@
 {
-  "installCommand": "npm install && cd frontend && npm install",
-  "buildCommand": "cd frontend && npm run build && cp -r .next public node_modules ../",
+  "installCommand": "npm install",
+  "buildCommand": "turbo run build --filter=web",
+  "outputDirectory": "apps/web/.next",
+  "framework": "nextjs",
   "rewrites": [
     {
       "source": "/agent/summaries",
