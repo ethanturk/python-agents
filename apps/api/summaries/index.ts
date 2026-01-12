@@ -32,7 +32,8 @@ export default async function handler(request: Request, _context: unknown) {
   );
 
   try {
-    const url = new URL(request.url);
+    // Handle both absolute and relative URLs
+    const url = new URL(request.url, `https://${request.headers.get('host') || 'localhost'}`);
     const pathname = url.pathname;
 
     // Health endpoint

@@ -30,7 +30,8 @@ export default async function handler(request: Request, _context: unknown) {
   logger.info({ method: request.method, url: request.url }, "Agent request");
 
   try {
-    const url = new URL(request.url);
+    // Handle both absolute and relative URLs
+    const url = new URL(request.url, `https://${request.headers.get('host') || 'localhost'}`);
     const pathname = url.pathname;
 
     // Health endpoint
