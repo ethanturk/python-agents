@@ -38,7 +38,7 @@ describe("Documents API - Unit Tests", () => {
     it("should return ok status", async () => {
       const request = new Request("http://localhost/health");
       const response = await handler(request, {});
-      const data = await response.json();
+      const data = (await response.json()) as { status: "ok" };
 
       expect(response.status).toBe(200);
       expect(data).toEqual({ status: "ok" });
@@ -47,7 +47,7 @@ describe("Documents API - Unit Tests", () => {
     it("should return ok status from /documents/health", async () => {
       const request = new Request("http://localhost/documents/health");
       const response = await handler(request, {});
-      const data = await response.json();
+      const data = (await response.json()) as { status: "ok" };
 
       expect(response.status).toBe(200);
       expect(data).toEqual({ status: "ok" });
@@ -78,7 +78,7 @@ describe("Documents API - Unit Tests", () => {
         "http://localhost/agent/documents?document_set=research",
       );
       const response = await handler(request, {});
-      const data = await response.json();
+      const data = (await response.json()) as { documents: unknown[] };
 
       expect(supabaseModule.getDocuments).toHaveBeenCalledWith("research");
       expect(data.documents).toHaveLength(2);
@@ -109,7 +109,7 @@ describe("Documents API - Unit Tests", () => {
 
       const request = new Request("http://localhost/agent/documents");
       const response = await handler(request, {});
-      const data = await response.json();
+      const data = (await response.json()) as { documents: unknown[] };
 
       expect(data.documents).toEqual([]);
     });
@@ -121,7 +121,7 @@ describe("Documents API - Unit Tests", () => {
 
       const request = new Request("http://localhost/agent/documents");
       const response = await handler(request, {});
-      const data = await response.json();
+      const data = (await response.json()) as { detail: string };
 
       expect(response.status).toBe(500);
       expect(data.detail).toBe("Database error");
@@ -135,7 +135,7 @@ describe("Documents API - Unit Tests", () => {
 
       const request = new Request("http://localhost/agent/documentsets");
       const response = await handler(request, {});
-      const data = await response.json();
+      const data = (await response.json()) as { document_sets: unknown[] };
 
       expect(supabaseModule.getDocumentSets).toHaveBeenCalled();
       expect(data.document_sets).toEqual(mockSets);
@@ -146,7 +146,7 @@ describe("Documents API - Unit Tests", () => {
 
       const request = new Request("http://localhost/agent/documentsets");
       const response = await handler(request, {});
-      const data = await response.json();
+      const data = (await response.json()) as { document_sets: unknown[] };
 
       expect(data.document_sets).toEqual([]);
     });
@@ -158,7 +158,7 @@ describe("Documents API - Unit Tests", () => {
 
       const request = new Request("http://localhost/agent/documentsets");
       const response = await handler(request, {});
-      const data = await response.json();
+      const data = (await response.json()) as { detail: string };
 
       expect(response.status).toBe(500);
       expect(data.detail).toBe("Database error");
@@ -186,7 +186,11 @@ describe("Documents API - Unit Tests", () => {
         body: formData,
       });
       const response = await handler(request, {});
-      const data = await response.json();
+      const data = (await response.json()) as {
+        status: string;
+        files_uploaded: number;
+        document_set: string;
+      };
 
       expect(azureModule.uploadFile).toHaveBeenCalledTimes(2);
       expect(azureModule.uploadFile).toHaveBeenCalledWith(
@@ -216,7 +220,7 @@ describe("Documents API - Unit Tests", () => {
         body: formData,
       });
       const response = await handler(request, {});
-      const data = await response.json();
+      const data = (await response.json()) as { document_set: string };
 
       expect(data.document_set).toBe("my_document_set");
       expect(azureModule.uploadFile).toHaveBeenCalledWith(
@@ -242,7 +246,7 @@ describe("Documents API - Unit Tests", () => {
         body: formData,
       });
       const response = await handler(request, {});
-      const data = await response.json();
+      const data = (await response.json()) as { files_uploaded: number };
 
       expect(data.files_uploaded).toBe(1);
     });
@@ -264,7 +268,7 @@ describe("Documents API - Unit Tests", () => {
         body: formData,
       });
       const response = await handler(request, {});
-      const data = await response.json();
+      const data = (await response.json()) as { detail: string };
 
       expect(response.status).toBe(500);
       expect(data.detail).toBe("Storage error");
@@ -283,7 +287,7 @@ describe("Documents API - Unit Tests", () => {
         },
       );
       const response = await handler(request, {});
-      const data = await response.json();
+      const data = (await response.json()) as { status: "ok" };
 
       expect(azureModule.deleteFile).toHaveBeenCalledWith(
         "test.pdf",
@@ -321,7 +325,7 @@ describe("Documents API - Unit Tests", () => {
         method: "DELETE",
       });
       const response = await handler(request, {});
-      const data = await response.json();
+      const data = (await response.json()) as { detail: string };
 
       expect(response.status).toBe(500);
       expect(data.detail).toBe("Delete failed");
@@ -381,7 +385,7 @@ describe("Documents API - Unit Tests", () => {
         "http://localhost/agent/files/default/test.pdf",
       );
       const response = await handler(request, {});
-      const data = await response.json();
+      const data = (await response.json()) as { detail: string };
 
       expect(response.status).toBe(500);
       expect(data.detail).toBe("File not found");
@@ -392,7 +396,7 @@ describe("Documents API - Unit Tests", () => {
     it("should return 404 for unknown paths", async () => {
       const request = new Request("http://localhost/unknown");
       const response = await handler(request, {});
-      const data = await response.json();
+      const data = (await response.json()) as { detail: string };
 
       expect(response.status).toBe(404);
       expect(data).toEqual({ detail: "Not found" });
