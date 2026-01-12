@@ -148,7 +148,7 @@ export default async function handler(request: Request, _context: unknown) {
         const arrayBuffer = buffer.buffer.slice(
           buffer.byteOffset,
           buffer.byteOffset + buffer.byteLength
-        );
+        ) as ArrayBuffer;
         return new Response(arrayBuffer, {
           headers: {
             "Content-Type": contentType,
