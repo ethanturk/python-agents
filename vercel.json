@@ -1,5 +1,5 @@
 {
-  "buildCommand": "pnpm turbo build --filter=web",
+  "buildCommand": "pnpm run build",
   "rewrites": [
     {
       "source": "/agent/summaries",
