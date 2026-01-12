@@ -1,56 +1,6 @@
 {
   "buildCommand": "cd ../.. && pnpm turbo build --filter=web",
   "outputDirectory": ".next",
-  "rewrites": [
-    {
-      "source": "/agent/summaries",
-      "destination": "/api/summaries"
-    },
-    {
-      "source": "/agent/summary_qa",
-      "destination": "/api/summaries"
-    },
-    {
-      "source": "/agent/search_qa",
-      "destination": "/api/summaries"
-    },
-    {
-      "source": "/agent/summarize",
-      "destination": "/api/summaries"
-    },
-    {
-      "source": "/agent/documents",
-      "destination": "/api/documents"
-    },
-    {
-      "source": "/agent/documentsets",
-      "destination": "/api/documents"
-    },
-    {
-      "source": "/agent/upload",
-      "destination": "/api/documents"
-    },
-    {
-      "source": "/agent/documents/:filename",
-      "destination": "/api/documents"
-    },
-    {
-      "source": "/agent/files/:path*",
-      "destination": "/api/documents"
-    },
-    {
-      "source": "/agent/:path*",
-      "destination": "/api/agent"
-    },
-    {
-      "source": "/poll",
-      "destination": "/api/notifications"
-    },
-    {
-      "source": "/internal/notify",
-      "destination": "/api/notifications"
-    }
-  ],
   "headers": [
     {
       "source": "/(.*)",
