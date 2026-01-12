@@ -61,7 +61,7 @@ export default async function handler(request: Request, _context: unknown) {
         id: `${r.document_set}/${r.filename}`,
         filename: r.filename,
         document_set: r.document_set,
-        chunk_count: (r as Record<string, unknown>).chunk_count as number || 1,
+        chunk_count: (r as unknown as Record<string, unknown>).chunk_count as number || 1,
       }));
 
       return Response.json({ documents } as DocumentListResponse);

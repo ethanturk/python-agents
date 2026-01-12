@@ -48,9 +48,9 @@ export default async function handler(request: Request, _context: unknown) {
     ) {
       const body = (await request.json()) as Record<string, unknown>;
       const notification = {
-        type: body.type as string,
+        type: body.type as "ingestion" | "summarization",
         filename: body.filename as string,
-        status: body.status as string,
+        status: body.status as "completed" | "failed",
         result: body.result as string | undefined,
         error: body.error as string | undefined,
       };

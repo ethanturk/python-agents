@@ -2,13 +2,11 @@ import asyncio
 import os
 import sys
 import tempfile
-import time
 from unittest.mock import MagicMock
 
 import pytest
-from fastapi.testclient import TestClient
 
-# Add backend to path so we can import modules
+# Add worker to path so we can import modules
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Set up test environment
@@ -36,10 +34,8 @@ os.environ.setdefault("SUPABASE_KEY", "test-key")  # pragma: allowlist secret
 USE_TEST_CONTAINERS = os.getenv("USE_TEST_CONTAINERS", "false").lower() == "true"
 
 if not USE_TEST_CONTAINERS:
-    # Mock nest_asyncio to prevent conflict with TestClient
+    # Mock nest_asyncio to prevent conflicts
     sys.modules["nest_asyncio"] = MagicMock()
-    sys.modules["firebase_admin"] = MagicMock()
-    sys.modules["auth"] = MagicMock()
 
     # Mock docling and heavy dependencies
     sys.modules["docling"] = MagicMock()
@@ -56,17 +52,6 @@ if not USE_TEST_CONTAINERS:
     sys.modules["postgrest"] = MagicMock()
     sys.modules["gotrue"] = MagicMock()
     sys.modules["storage3"] = MagicMock()
-
-
-# Import after environment setup
-from auth import get_current_user
-from backend_app import app
-
-# Mock Authentication
-app.dependency_overrides[get_current_user] = lambda: {
-    "uid": "test-user",
-    "email": "test@example.com",
-}
 
 
 @pytest.fixture(scope="session")
@@ -110,20 +95,11 @@ def mock_celery_task(mocker):
     mock_task = MagicMock()
     mock_task.id = "mock-task-id"
 
-    mocker.patch("backend_app.ingest_docs_task.delay", return_value=mock_task)
-    mocker.patch("backend_app.summarize_document_task.delay", return_value=mock_task)
-
-    mock_workflow = MagicMock()
-    mock_workflow.apply_async.return_value = mock_task
-    mocker.patch("backend_app.chain", return_value=mock_workflow)
+    # Mock Celery task delays
+    mocker.patch("async_tasks.ingest_docs_task.delay", return_value=mock_task)
+    mocker.patch("async_tasks.summarize_document_task.delay", return_value=mock_task)
 
     return mock_task
-
-
-@pytest.fixture
-def client():
-    """Create test client for FastAPI app."""
-    return TestClient(app)
 
 
 @pytest.fixture
@@ -165,37 +141,6 @@ def test_pdf_file(tmp_path):
     file_path = tmp_path / "test.pdf"
     file_path.write_bytes(b"%PDF-1.4\nfake pdf content")
     return file_path
-
-
-@pytest.fixture(scope="session")
-def test_rabbitmq_connection():
-    """
-    Integration fixture for RabbitMQ connection.
-    Skips tests if USE_TEST_CONTAINERS is not set to true.
-    """
-    if not USE_TEST_CONTAINERS:
-        pytest.skip("Set USE_TEST_CONTAINERS=true to run integration tests")
-
-    import pika
-
-    max_retries = 10
-    for i in range(max_retries):
-        try:
-            connection = pika.BlockingConnection(
-                pika.ConnectionParameters(
-                    host="localhost",
-                    port=5673,
-                    credentials=pika.PlainCredentials("test_user", "test_pass"),
-                )
-            )
-            yield connection
-            connection.close()
-            break
-        except pika.exceptions.AMQPConnectionError:
-            if i < max_retries - 1:
-                time.sleep(2)
-            else:
-                pytest.skip("Could not connect to test RabbitMQ")
 
 
 def pytest_configure(config):
