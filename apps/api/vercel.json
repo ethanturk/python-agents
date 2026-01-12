@@ -1,0 +1,40 @@
+{
+  "buildCommand": "pnpm run build",
+  "outputDirectory": "dist",
+  "functions": {
+    "agent/index.js": {
+      "runtime": "nodejs20.x"
+    },
+    "documents/index.js": {
+      "runtime": "nodejs20.x"
+    },
+    "summaries/index.js": {
+      "runtime": "nodejs20.x"
+    },
+    "notifications/index.js": {
+      "runtime": "nodejs20.x"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/agent/:path*",
+      "destination": "/agent/index.js"
+    },
+    {
+      "source": "/api/documents/:path*",
+      "destination": "/documents/index.js"
+    },
+    {
+      "source": "/api/summaries/:path*",
+      "destination": "/summaries/index.js"
+    },
+    {
+      "source": "/api/notifications/:path*",
+      "destination": "/notifications/index.js"
+    },
+    {
+      "source": "/health",
+      "destination": "/agent/index.js"
+    }
+  ]
+}
