@@ -10,11 +10,11 @@ const nextConfig = {
   /* config options here */
 
   // For monorepo setups - tells Next.js where the app root is
-  outputFileTracingRoot: __dirname,
+  outputFileTracingRoot: path.join(__dirname, ".."),
 
   turbopack: {
-    // Set Turbopack root to current directory
-    root: __dirname,
+    // Set Turbopack root to parent directory for monorepo
+    root: path.join(__dirname, ".."),
   },
 };
 

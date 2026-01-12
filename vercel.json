@@ -1,6 +1,5 @@
 {
-  "buildCommand": "cd frontend && npm run build",
-  "installCommand": "npm install --prefix frontend && npm install",
+  "buildCommand": "cd frontend && npm run build && cp -r .next public ../",
   "rewrites": [
     {
       "source": "/agent/summaries",
