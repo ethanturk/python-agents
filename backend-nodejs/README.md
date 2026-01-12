@@ -49,6 +49,7 @@ The `backend-nodejs/common/` directory contains shared utilities:
 See `.env.nodejs.example` for all required environment variables.
 
 Key variables:
+
 - `OPENAI_API_BASE`, `OPENAI_API_KEY`, `OPENAI_MODEL` - LLM configuration
 - `SUPABASE_URL`, `SUPABASE_KEY` - Vector database
 - `AZURE_STORAGE_CONNECTION_STRING`, `AZURE_STORAGE_CONTAINER_NAME` - File storage
@@ -78,6 +79,7 @@ vercel dev
 ## Deployment
 
 Deploy to Vercel:
+
 ```bash
 vercel --prod
 ```
@@ -93,4 +95,17 @@ Each function is deployed as an independent Vercel serverless function.
 
 ## Testing
 
-Tests are not yet implemented (tasks 11, 16, 22, 29 pending).
+Unit tests are implemented for all API functions:
+
+- `api/agent/index.test.ts` - 14 tests (sync, async, search endpoints)
+- `api/summaries/index.test.ts` - 15 tests (summaries, QA endpoints)
+- `api/documents/index.test.ts` - 20 tests (upload, list, delete, file proxy)
+- `backend-nodejs/common/notifications.test.ts` - 13 tests (notification queue)
+
+Run tests:
+
+```bash
+npm test              # Run all tests
+npm test -- api/     # Run only API tests
+npm test:watch       # Watch mode for development
+```

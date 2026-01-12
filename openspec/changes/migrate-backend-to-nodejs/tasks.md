@@ -130,11 +130,11 @@
 
 - [x] Test agent function
 
-- [ ] - [x] Write unit tests for sync agent endpoint
-- [ ] - [x] Write integration tests for async agent endpoints (skipped - queue not configured)
-- [ ] - [x] Write tests for search/RAG endpoint
-- [ ] - [x] Test authentication with valid/invalid tokens (N/A - no auth required)
-- [ ] - [x] - [x] - [x] - [x] Validate: All tests pass
+- [x] Write unit tests for sync agent endpoint
+- [x] Write integration tests for async agent endpoints (skipped - queue not configured)
+- [x] Write tests for search/RAG endpoint
+- [x] Test authentication with valid/invalid tokens (N/A - no auth required)
+- [x] Validate: All tests pass
 
 ## Phase 4: Migrate Summaries Function
 
@@ -178,10 +178,10 @@
 
 - [x] Test summaries function
 
-- [ ] Write unit tests for all endpoints
-- [ ] - [x] Write integration tests for SQLite operations (skipped - handled in endpoint tests)
-- [ ] - [x] Test authentication with valid/invalid tokens (N/A - no auth required)
-- [ ] - [x] - [x] - [x] - [x] Validate: All tests pass
+- [x] Write unit tests for all endpoints
+- [x] Write integration tests for SQLite operations (skipped - handled in endpoint tests)
+- [x] Test authentication with valid/invalid tokens (N/A - no auth required)
+- [x] Validate: All tests pass
 
 ## Phase 5: Migrate Documents Function
 
@@ -232,10 +232,10 @@
 
 - [x] Test documents function
 
-- [ ] Write unit tests for all endpoints
-- [ ] - [x] Write integration tests for file upload/delete (skipped - requires Azure/Queue)
-- [ ] - [x] Test authentication with valid/invalid tokens (N/A - no auth required)
-- [ ] - [x] - [x] - [x] - [x] Validate: All tests pass
+- [x] Write unit tests for all endpoints
+- [x] Write integration tests for file upload/delete (skipped - requires Azure/Queue)
+- [x] Test authentication with valid/invalid tokens (N/A - no auth required)
+- [x] Validate: All tests pass
 
 ## Phase 6: Integration Testing
 

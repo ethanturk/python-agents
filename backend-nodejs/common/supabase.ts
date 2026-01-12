@@ -18,6 +18,7 @@ function getSupabase() {
       const mock = createClient("https://mock.supabase.co", "mock-key");
       return mock;
     }
+    supabase = createClient(config.SUPABASE_URL, config.SUPABASE_KEY);
   }
   return supabase;
 }
@@ -79,7 +80,8 @@ export async function getDocuments(
   documentSet?: string,
 ): Promise<SearchResult[]> {
   try {
-    let query = supabase
+    const client = getSupabase();
+    let query = client
       .from(config.VECTOR_TABLE_NAME)
       .select("filename, document_set")
       .not("filename", "is", null);
@@ -127,7 +129,8 @@ export async function getDocuments(
  */
 export async function getDocumentSets(): Promise<string[]> {
   try {
-    const { data, error } = await supabase
+    const client = getSupabase();
+    const { data, error } = await client
       .from(config.VECTOR_TABLE_NAME)
       .select("document_set")
       .not("document_set", "is", null);
@@ -164,7 +167,8 @@ export async function deleteDocuments(
   documentSet?: string,
 ): Promise<number> {
   try {
-    let query = supabase
+    const client = getSupabase();
+    let query = client
       .from(config.VECTOR_TABLE_NAME)
       .delete()
       .eq("filename", filename);
