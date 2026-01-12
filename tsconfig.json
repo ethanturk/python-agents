@@ -27,10 +27,10 @@
     "isolatedModules": true,
     "allowSyntheticDefaultImports": true,
     "paths": {
-      "@common/*": ["./backend-nodejs/common/*"]
+      "@common/*": ["./api/common/*"]
     }
   },
-  "include": ["backend-nodejs/**/*", "api/*/index.ts"],
+  "include": ["api/**/*", "api/*/index.ts"],
   "exclude": ["node_modules", "dist", "**/*.test.ts"],
   "ts-node": {
     "esm": true,

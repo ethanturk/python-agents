@@ -24,7 +24,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      "@common": path.resolve(__dirname, "./backend-nodejs/common"),
+      "@common": path.resolve(__dirname, "./api/common"),
     },
   },
 });

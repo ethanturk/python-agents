@@ -4,24 +4,24 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import handler from "./index.js";
-import * as supabaseModule from "../../backend-nodejs/common/supabase.js";
-import * as azureModule from "../../backend-nodejs/common/azure.js";
-import * as queueModule from "../../backend-nodejs/common/queue.js";
+import * as supabaseModule from "../lib/supabase.js";
+import * as azureModule from "../lib/azure.js";
+import * as queueModule from "../lib/queue.js";
 
 // Mock modules
-vi.mock("../../backend-nodejs/common/supabase.js", () => ({
+vi.mock("../lib/supabase.js", () => ({
   getDocuments: vi.fn(),
   getDocumentSets: vi.fn(),
   deleteDocuments: vi.fn(),
 }));
 
-vi.mock("../../backend-nodejs/common/azure.js", () => ({
+vi.mock("../lib/azure.js", () => ({
   uploadFile: vi.fn(),
   downloadFile: vi.fn(),
   deleteFile: vi.fn(),
 }));
 
-vi.mock("../../backend-nodejs/common/queue.js", () => ({
+vi.mock("../lib/queue.js", () => ({
   submitTask: vi.fn(),
 }));
 

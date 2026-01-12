@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   # Backend linting and type checking
-  backend-lint:
+  worker-lint:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -28,23 +28,23 @@ jobs:
 
       - name: Install dependencies
         run: |
-          cd backend
+          cd worker
           pip3 install --no-cache-dir -r requirements.txt
 
       - name: Run unit tests
         run: |
-          cd backend
+          cd worker
           pytest -m unit -v
 
       - name: Generate coverage
         run: |
-          cd backend
+          cd worker
           pytest -m unit --cov=. --cov-report=xml --cov-report=term
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
         with:
-          files: ./backend/coverage.xml
+          files: ./worker/coverage.xml
           flags: unit-tests
           name: codecov-unit-tests
 
@@ -79,7 +79,7 @@ jobs:
   # Integration tests (with containers)
   integration-tests:
     runs-on: ubuntu-latest
-    needs: [backend-lint, frontend-lint]
+    needs: [worker-lint, frontend-lint]
     steps:
       - uses: actions/checkout@v4
 
@@ -90,7 +90,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          cd backend
+          cd worker
           pip3 install --no-cache-dir -r requirements.txt
 
       - name: Start test containers
@@ -151,7 +151,7 @@ jobs:
           DATABASE_CONN_STRING: "postgresql://test_user:test_pass@localhost:5433/test_db"  # pragma: allowlist secret
           CELERY_BROKER_URL: "amqp://test_user:test_pass@localhost:5673//"  # pragma: allowlist secret
         run: |
-          cd backend
+          cd worker
           pytest -m integration -v --tb=short
 
       - name: Upload integration test logs
@@ -160,8 +160,8 @@ jobs:
         with:
           name: integration-test-logs
           path: |
-            backend/pytest-logs.txt
-            backend/htmlcov/
+            worker/pytest-logs.txt
+            worker/htmlcov/
 
       - name: Stop containers and cleanup
         if: always()
@@ -180,11 +180,11 @@ jobs:
 
       - name: Build backend image
         run: |
-          docker build -t backend-test ./backend
+          docker build -t backend-test ./worker
 
       - name: Build worker image
         run: |
-          docker build -t worker-test ./backend
+          docker build -t worker-test ./worker
 
       - name: Build frontend image
         run: |
@@ -207,7 +207,7 @@ jobs:
 
       - name: Run security checks with bandit
         run: |
-          bandit -r backend/ -f json -o bandit-report.json || true
+          bandit -r worker/ -f json -o bandit-report.json || true
 
       - name: Upload bandit report
         uses: actions/upload-artifact@v4
@@ -218,7 +218,7 @@ jobs:
 
       - name: Check dependencies for vulnerabilities
         run: |
-          cd backend
+          cd worker
           safety check --json || true
 
   # Full test suite (optional, manually triggered)
@@ -235,7 +235,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          cd backend
+          cd worker
           pip3 install --no-cache-dir -r requirements.txt
 
       - name: Start test containers
@@ -254,7 +254,7 @@ jobs:
       - name: Upload coverage
         uses: codecov/codecov-action@v4
         with:
-          files: ./backend/coverage.xml
+          files: ./worker/coverage.xml
 
       - name: Stop containers and cleanup
         if: always()
@@ -265,19 +265,19 @@ jobs:
   test-summary:
     name: Test Summary
     runs-on: ubuntu-latest
-    needs: [backend-lint, integration-tests, frontend-lint]
+    needs: [worker-lint, integration-tests, frontend-lint]
     if: always()
     steps:
       - name: Check test results
         run: |
-          if [ "${{ needs.backend-lint.result }}" != "success" ] || \
+          if [ "${{ needs.worker-lint.result }}" != "success" ] || \
              [ "${{ needs.integration-tests.result }}" != "success" ] || \
              [ "${{ needs.frontend-lint.result }}" != "success" ]; then
             echo "❌ Some tests failed"
-            echo "Backend Lint/Tests: ${{ needs.backend-lint.result }}"
+            echo "Backend Lint/Tests: ${{ needs.worker-lint.result }}"
             echo "Integration Tests: ${{ needs.integration-tests.result }}"
             echo "Frontend Lint: ${{ needs.frontend-lint.result }}"
-            echo "Backend Lint: ${{ needs.backend-lint.result }}"
+            echo "Backend Lint: ${{ needs.worker-lint.result }}"
             exit 1
           else
             echo "✅ All tests passed!"
@@ -287,14 +287,14 @@ jobs:
   pr-comment:
     name: PR Comment
     runs-on: ubuntu-latest
-    needs: [backend-lint, integration-tests, frontend-lint]
+    needs: [worker-lint, integration-tests, frontend-lint]
     if: github.event_name == 'pull_request'
     steps:
       - name: Comment on PR
         uses: actions/github-script@v7
         with:
           script: |
-            const backendLint = '${{ needs.backend-lint.result }}';
+            const backendLint = '${{ needs.worker-lint.result }}';
             const integrationTests = '${{ needs.integration-tests.result }}';
             const frontendLint = '${{ needs.frontend-lint.result }}';
 

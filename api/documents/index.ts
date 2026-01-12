@@ -9,19 +9,19 @@ import type {
   DocumentSetsResponse,
   ErrorResponse,
   HealthResponse,
-} from "../../backend-nodejs/common/types.js";
+} from "../lib/types.js";
 import {
   getDocuments,
   getDocumentSets,
   deleteDocuments,
-} from "../../backend-nodejs/common/supabase.js";
+} from "../lib/supabase.js";
 import {
   uploadFile,
   downloadFile,
   deleteFile,
-} from "../../backend-nodejs/common/azure.js";
-import { submitTask } from "../../backend-nodejs/common/queue.js";
-import logger from "../../backend-nodejs/common/logger.js";
+} from "../lib/azure.js";
+import { submitTask } from "../lib/queue.js";
+import logger from "../lib/logger.js";
 
 export const vercelConfig = {
   runtime: "nodejs18.x",
@@ -36,7 +36,7 @@ function sanitizeDocumentSet(name: string): string {
     .replace(/^_|_$/g, "");
 }
 
-export default async function handler(request: Request, context: any) {
+export default async function handler(request: Request, _context: unknown) {
   logger.info(
     { method: request.method, url: request.url },
     "Documents request",
@@ -61,7 +61,7 @@ export default async function handler(request: Request, context: any) {
         id: `${r.document_set}/${r.filename}`,
         filename: r.filename,
         document_set: r.document_set,
-        chunk_count: (r as any).chunk_count || 1,
+        chunk_count: (r as Record<string, unknown>).chunk_count as number || 1,
       }));
 
       return Response.json({ documents } as DocumentListResponse);
@@ -85,7 +85,7 @@ export default async function handler(request: Request, context: any) {
       const files: Array<{ name: string; buffer: Buffer }> = [];
 
       // Process uploaded files
-      for (const [key, value] of formData.entries()) {
+      for (const [_key, value] of formData.entries()) {
         if (value instanceof File) {
           const buffer = Buffer.from(await value.arrayBuffer());
           files.push({ name: value.name, buffer });

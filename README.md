@@ -77,7 +77,7 @@ The backend uses `pytest` for unit testing. Tests cover API endpoints, agents, s
 
 1.  Navigate to the backend directory:
     ```bash
-    cd backend
+    cd worker
     ```
 2.  Install dependencies (if running locally):
     ```bash

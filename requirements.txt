@@ -1,1 +1,1 @@
-backend/requirements-vercel.txt
+worker/requirements.txt

@@ -4,27 +4,27 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import handler from "./index.js";
-import * as llmModule from "../../backend-nodejs/common/llm.js";
-import * as dbModule from "../../backend-nodejs/common/database.js";
-import * as supabaseModule from "../../backend-nodejs/common/supabase.js";
-import * as queueModule from "../../backend-nodejs/common/queue.js";
+import * as llmModule from "../lib/llm.js";
+import * as dbModule from "../lib/database.js";
+import * as supabaseModule from "../lib/supabase.js";
+import * as queueModule from "../lib/queue.js";
 
 // Mock modules
-vi.mock("../../backend-nodejs/common/llm.js", () => ({
+vi.mock("../lib/llm.js", () => ({
   runQAAgent: vi.fn(),
   generateEmbedding: vi.fn(),
 }));
 
-vi.mock("../../backend-nodejs/common/database.js", () => ({
+vi.mock("../lib/database.js", () => ({
   getAllSummaries: vi.fn(),
   getSummaryByFilename: vi.fn(),
 }));
 
-vi.mock("../../backend-nodejs/common/supabase.js", () => ({
+vi.mock("../lib/supabase.js", () => ({
   matchDocuments: vi.fn(),
 }));
 
-vi.mock("../../backend-nodejs/common/queue.js", () => ({
+vi.mock("../lib/queue.js", () => ({
   submitTask: vi.fn(),
 }));
 

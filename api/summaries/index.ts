@@ -10,22 +10,22 @@ import type {
   SearchQARequest,
   ErrorResponse,
   HealthResponse,
-} from "../../backend-nodejs/common/types.js";
+} from "../lib/types.js";
 import {
   getAllSummaries,
   getSummaryByFilename,
-} from "../../backend-nodejs/common/database.js";
-import { runQAAgent } from "../../backend-nodejs/common/llm.js";
-import { matchDocuments } from "../../backend-nodejs/common/supabase.js";
-import { submitTask } from "../../backend-nodejs/common/queue.js";
-import { generateEmbedding } from "../../backend-nodejs/common/llm.js";
-import logger from "../../backend-nodejs/common/logger.js";
+} from "../lib/database.js";
+import { runQAAgent } from "../lib/llm.js";
+import { matchDocuments } from "../lib/supabase.js";
+import { submitTask } from "../lib/queue.js";
+import { generateEmbedding } from "../lib/llm.js";
+import logger from "../lib/logger.js";
 
 export const vercelConfig = {
   runtime: "nodejs18.x",
 };
 
-export default async function handler(request: Request, context: any) {
+export default async function handler(request: Request, _context: unknown) {
   logger.info(
     { method: request.method, url: request.url },
     "Summaries request",

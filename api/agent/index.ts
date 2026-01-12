@@ -7,28 +7,26 @@
 import type {
   AgentRequest,
   AgentResponse,
-  TaskResponse,
   SearchRequest,
   ErrorResponse,
   HealthResponse,
-} from "../../backend-nodejs/common/types.js";
+} from "../lib/types.js";
 import {
   runSyncAgent,
   generateEmbedding,
-} from "../../backend-nodejs/common/llm.js";
-import { matchDocuments } from "../../backend-nodejs/common/supabase.js";
+} from "../lib/llm.js";
+import { matchDocuments } from "../lib/supabase.js";
 import {
   submitTask,
   getTaskStatus,
-} from "../../backend-nodejs/common/queue.js";
-import { config } from "../../backend-nodejs/common/config.js";
-import logger from "../../backend-nodejs/common/logger.js";
+} from "../lib/queue.js";
+import logger from "../lib/logger.js";
 
 export const vercelConfig = {
   runtime: "nodejs18.x",
 };
 
-export default async function handler(request: Request, context: any) {
+export default async function handler(request: Request, _context: unknown) {
   logger.info({ method: request.method, url: request.url }, "Agent request");
 
   try {

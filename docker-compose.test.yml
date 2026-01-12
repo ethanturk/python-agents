@@ -18,7 +18,7 @@ services:
       retries: 5
     volumes:
       - test_db_data:/var/lib/postgresql/data
-      - ./backend/tests/test_db_setup.sql:/docker-entrypoint-initdb.d/01-init.sql
+      - ./worker/tests/test_db_setup.sql:/docker-entrypoint-initdb.d/01-init.sql
 
   # Test RabbitMQ for Celery
   test-rabbitmq:

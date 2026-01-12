@@ -24,6 +24,12 @@ interface Notification {
   timestamp: number;
 }
 
+interface BackendSummary {
+  filename: string;
+  summary_text: string;
+  created_at: number;
+}
+
 interface UseSummarizationProps {
   onShowSnackbar?: (message: string) => void;
 }
@@ -286,8 +292,8 @@ export default function useSummarization({
   const fetchBackendSummaries = useCallback(async () => {
     try {
       const res = await axios.get(`${API_BASE}/agent/summaries`);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const history = res.data.summaries.map((s: any) => ({
+
+      const history = res.data.summaries.map((s: BackendSummary) => ({
         filename: s.filename,
         result: s.summary_text || "No text",
         status: "completed",
@@ -296,10 +302,8 @@ export default function useSummarization({
       }));
       setNotifications((prev) => {
         const existingFiles = new Set(prev.map((p) => p.filename));
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const newItems = history.filter(
-          (h: any) => !existingFiles.has(h.filename),
-        );
+
+        const newItems = history.filter((h) => !existingFiles.has(h.filename));
         return [...prev, ...newItems];
       });
     } catch (error) {

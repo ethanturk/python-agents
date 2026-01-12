@@ -8,18 +8,18 @@ import type {
   PollResponse,
   ErrorResponse,
   HealthResponse,
-} from "../../backend-nodejs/common/types.js";
+} from "../lib/types.js";
 import {
   pollNotifications,
   notify,
-} from "../../backend-nodejs/common/notifications.js";
-import logger from "../../backend-nodejs/common/logger.js";
+} from "../lib/notifications.js";
+import logger from "../lib/logger.js";
 
 export const vercelConfig = {
   runtime: "nodejs18.x",
 };
 
-export default async function handler(request: Request, context: any) {
+export default async function handler(request: Request, _context: unknown) {
   logger.info(
     { method: request.method, url: request.url },
     "Notifications request",
@@ -48,12 +48,12 @@ export default async function handler(request: Request, context: any) {
     ) {
       const body = (await request.json()) as Record<string, unknown>;
       const notification = {
-        type: body.type,
-        filename: body.filename,
-        status: body.status,
-        result: body.result,
-        error: body.error,
-      } as any;
+        type: body.type as string,
+        filename: body.filename as string,
+        status: body.status as string,
+        result: body.result as string | undefined,
+        error: body.error as string | undefined,
+      };
       const result = await notify(notification);
       return Response.json(result);
     }
