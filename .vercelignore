@@ -16,6 +16,10 @@ docs
 *.md
 .github
 dist
+**/*.test.ts
+**/*.test.js
+**/*.spec.ts
+**/*.spec.js
 # Exclude backend source code (only common/ and services/ needed for shared logic)
 backend/async_tasks.py
 backend/backend_app.py
