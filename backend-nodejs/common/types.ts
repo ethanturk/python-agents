@@ -28,7 +28,7 @@ export interface SearchResult {
 
 export interface TaskResponse {
   task_id: string;
-  status: 'pending' | 'processing' | 'completed' | 'failed';
+  status: "pending" | "processing" | "completed" | "failed";
   result?: unknown;
 }
 
@@ -82,9 +82,9 @@ export interface Notification {
 }
 
 export interface NotificationData {
-  type: 'ingestion' | 'summarization';
+  type: "ingestion" | "summarization";
   filename?: string;
-  status: 'completed' | 'failed';
+  status: "completed" | "failed";
   result?: string;
   error?: string;
 }
@@ -118,5 +118,5 @@ export interface ErrorResponse {
 
 // Health Response Type
 export interface HealthResponse {
-  status: 'ok';
+  status: "ok";
 }

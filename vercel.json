@@ -1,11 +1,16 @@
 {
-  "$schema": "https://vercel.com/schemas/v1/config.json",
-  "buildCommand": "cd frontend && npm install && npm run build",
-  "outputDirectory": "frontend/dist",
+  "version": 2,
+  "name": "python-agents-backend",
+  "buildCommand": "npm run build",
   "devCommand": "vercel dev",
   "installCommand": "npm install",
   "cleanUrls": true,
   "trailingSlash": false,
+  "functions": {
+    "api/**": {
+      "runtime": "nodejs18.x"
+    }
+  },
   "rewrites": [
     {
       "source": "/agent/sync",
@@ -66,10 +71,19 @@
     {
       "source": "/internal/notify",
       "destination": "/api/notifications/index.ts"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
     }
-  ]
+  ],
+  "env": {
+    "OPENAI_API_KEY": "@openai-api-key",
+    "OPENAI_API_BASE": "@openai-api-base",
+    "OPENAI_MODEL": "@openai-model",
+    "OPENAI_EMBEDDING_MODEL": "@openai-embedding-model",
+    "OPENAI_EMBEDDING_DIMENSIONS": "@openai-embedding-dimensions",
+    "SUPABASE_URL": "@supabase-url",
+    "SUPABASE_KEY": "@supabase-key",
+    "AZURE_STORAGE_CONNECTION_STRING": "@azure-storage-connection-string",
+    "AZURE_STORAGE_CONTAINER_NAME": "@azure-storage-container-name",
+    "QUEUE_SERVICE_URL": "@queue-service-url",
+    "SQLITE_DB_PATH": "@sqlite-db-path"
+  }
 }

@@ -3,16 +3,24 @@
  * Provides direct access to Supabase for vector DB and operations.
  */
 
-import { createClient } from '@supabase/supabase-js';
-import type { SearchResult } from './types';
-import { config } from './config';
-import logger from './logger';
+import { createClient } from "@supabase/supabase-js";
+import type { SearchResult } from "./types";
+import { config } from "./config";
+import logger from "./logger";
 
-// Initialize Supabase client
-const supabase = createClient(
-  config.SUPABASE_URL || '',
-  config.SUPABASE_KEY || ''
-);
+// Lazy Supabase client initialization
+let supabase: ReturnType<typeof createClient> | null = null;
+
+function getSupabase() {
+  if (!supabase) {
+    if (!config.SUPABASE_URL || !config.SUPABASE_KEY) {
+      // For tests, return a mock client that throws on operations
+      const mock = createClient("https://mock.supabase.co", "mock-key");
+      return mock;
+    }
+  }
+  return supabase;
+}
 
 /**
  * Perform vector search on documents using Supabase RPC function.
@@ -25,10 +33,10 @@ export async function matchDocuments(
   queryEmbedding: number[],
   threshold: number = 0.7,
   matchCount: number = 10,
-  documentSet: string = 'all'
+  documentSet: string = "all",
 ): Promise<SearchResult[]> {
   try {
-    const { data, error } = await supabase.rpc('match_documents', {
+    const { data, error } = await getSupabase().rpc("match_documents", {
       query_embedding: queryEmbedding,
       match_threshold: threshold,
       match_count: matchCount,
@@ -36,12 +44,12 @@ export async function matchDocuments(
     });
 
     if (error) {
-      logger.error({ error: error.message }, 'Supabase RPC error');
+      logger.error({ error: error.message }, "Supabase RPC error");
       return [];
     }
 
     if (!data) {
-      logger.warn('No data returned from match_documents');
+      logger.warn("No data returned from match_documents");
       return [];
     }
 
@@ -49,16 +57,16 @@ export async function matchDocuments(
     return data.map((row: unknown) => {
       const r = row as Record<string, unknown>;
       return {
-        content: (r.content as string) || '',
-        filename: (r.filename as string) || '',
-        document_set: (r.document_set as string) || '',
+        content: (r.content as string) || "",
+        filename: (r.filename as string) || "",
+        document_set: (r.document_set as string) || "",
         similarity: (r.similarity as number) || 0,
         metadata: (r.metadata as Record<string, unknown>) || undefined,
       };
     });
   } catch (error) {
     const err = error as Error;
-    logger.error({ error: err.message }, 'Vector search error');
+    logger.error({ error: err.message }, "Vector search error");
     return [];
   }
 }
@@ -67,21 +75,23 @@ export async function matchDocuments(
  * Get distinct filenames from documents.
  * @param documentSet - Filter by document set (optional)
  */
-export async function getDocuments(documentSet?: string): Promise<SearchResult[]> {
+export async function getDocuments(
+  documentSet?: string,
+): Promise<SearchResult[]> {
   try {
     let query = supabase
       .from(config.VECTOR_TABLE_NAME)
-      .select('filename, document_set')
-      .not('filename', 'is', null);
+      .select("filename, document_set")
+      .not("filename", "is", null);
 
-    if (documentSet && documentSet !== 'all') {
-      query = query.eq('document_set', documentSet);
+    if (documentSet && documentSet !== "all") {
+      query = query.eq("document_set", documentSet);
     }
 
     const { data, error } = await query;
 
     if (error) {
-      logger.error({ error: error.message }, 'Supabase query error');
+      logger.error({ error: error.message }, "Supabase query error");
       return [];
     }
 
@@ -101,13 +111,13 @@ export async function getDocuments(documentSet?: string): Promise<SearchResult[]
     return Array.from(fileMap.entries()).map(([filename, info]) => ({
       filename,
       document_set: info.document_set,
-      content: '',
+      content: "",
       similarity: 0,
       chunk_count: info.count,
     }));
   } catch (error) {
     const err = error as Error;
-    logger.error({ error: err.message }, 'Get documents error');
+    logger.error({ error: err.message }, "Get documents error");
     return [];
   }
 }
@@ -119,11 +129,11 @@ export async function getDocumentSets(): Promise<string[]> {
   try {
     const { data, error } = await supabase
       .from(config.VECTOR_TABLE_NAME)
-      .select('document_set')
-      .not('document_set', 'is', null);
+      .select("document_set")
+      .not("document_set", "is", null);
 
     if (error) {
-      logger.error({ error: error.message }, 'Supabase query error');
+      logger.error({ error: error.message }, "Supabase query error");
       return [];
     }
 
@@ -139,7 +149,7 @@ export async function getDocumentSets(): Promise<string[]> {
     return Array.from(sets);
   } catch (error) {
     const err = error as Error;
-    logger.error({ error: err.message }, 'Get document sets error');
+    logger.error({ error: err.message }, "Get document sets error");
     return [];
   }
 }
@@ -151,31 +161,31 @@ export async function getDocumentSets(): Promise<string[]> {
  */
 export async function deleteDocuments(
   filename: string,
-  documentSet?: string
+  documentSet?: string,
 ): Promise<number> {
   try {
     let query = supabase
       .from(config.VECTOR_TABLE_NAME)
       .delete()
-      .eq('filename', filename);
+      .eq("filename", filename);
 
-    if (documentSet && documentSet !== 'all') {
-      query = query.eq('document_set', documentSet);
+    if (documentSet && documentSet !== "all") {
+      query = query.eq("document_set", documentSet);
     }
 
     const { error } = await query;
 
     if (error) {
-      logger.error({ error: error.message }, 'Delete documents error');
+      logger.error({ error: error.message }, "Delete documents error");
       return 0;
     }
 
     return 1;
   } catch (error) {
     const err = error as Error;
-    logger.error({ error: err.message }, 'Delete documents error');
+    logger.error({ error: err.message }, "Delete documents error");
     return 0;
   }
 }
 
-export default supabase;
+export default getSupabase();

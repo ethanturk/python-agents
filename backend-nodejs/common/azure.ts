@@ -7,9 +7,9 @@ import {
   BlobServiceClient,
   ContainerClient,
   BlockBlobClient,
-} from '@azure/storage-blob';
-import { config } from './config';
-import logger from './logger';
+} from "@azure/storage-blob";
+import { config } from "./config";
+import logger from "./logger";
 
 // Initialize Azure Blob Service Client
 let blobServiceClient: BlobServiceClient | null = null;
@@ -22,17 +22,17 @@ function initAzure(): void {
 
   try {
     blobServiceClient = BlobServiceClient.fromConnectionString(
-      config.AZURE_STORAGE_CONNECTION_STRING || ''
+      config.AZURE_STORAGE_CONNECTION_STRING || "",
     );
 
     containerClient = blobServiceClient.getContainerClient(
-      config.AZURE_STORAGE_CONTAINER_NAME
+      config.AZURE_STORAGE_CONTAINER_NAME,
     );
 
-    logger.info('Azure Storage initialized');
+    logger.info("Azure Storage initialized");
   } catch (error) {
     const err = error as Error;
-    logger.error({ error: err.message }, 'Azure Storage initialization failed');
+    logger.error({ error: err.message }, "Azure Storage initialization failed");
     throw err;
   }
 }
@@ -47,30 +47,34 @@ function initAzure(): void {
 export async function uploadFile(
   filename: string,
   buffer: Buffer,
-  documentSet: string = 'all'
+  documentSet: string = "all",
 ): Promise<string> {
   initAzure();
 
   try {
     // Create blob path with document set as subdirectory
-    const blobPath = documentSet === 'all' ? filename : `${documentSet}/${filename}`;
+    const blobPath =
+      documentSet === "all" ? filename : `${documentSet}/${filename}`;
 
     const blockBlobClient: BlockBlobClient =
       containerClient!.getBlockBlobClient(blobPath);
 
     await blockBlobClient.uploadData(buffer, {
       blobHTTPHeaders: {
-        blobContentType: 'application/octet-stream',
+        blobContentType: "application/octet-stream",
       },
     });
 
-    logger.info({ filename, documentSet }, 'File uploaded to Azure Storage');
+    logger.info({ filename, documentSet }, "File uploaded to Azure Storage");
 
     // Return blob URL (not storage account URL for security)
     return blobPath;
   } catch (error) {
     const err = error as Error;
-    logger.error({ error: err.message, filename }, 'Azure Storage upload error');
+    logger.error(
+      { error: err.message, filename },
+      "Azure Storage upload error",
+    );
     throw err;
   }
 }
@@ -83,13 +87,14 @@ export async function uploadFile(
  */
 export async function downloadFile(
   filename: string,
-  documentSet: string = 'all'
+  documentSet: string = "all",
 ): Promise<{ buffer: Buffer; contentType: string }> {
   initAzure();
 
   try {
     // Create blob path with document set as subdirectory
-    const blobPath = documentSet === 'all' ? filename : `${documentSet}/${filename}`;
+    const blobPath =
+      documentSet === "all" ? filename : `${documentSet}/${filename}`;
 
     const blockBlobClient: BlockBlobClient =
       containerClient!.getBlockBlobClient(blobPath);
@@ -97,7 +102,7 @@ export async function downloadFile(
     const downloadResponse = await blockBlobClient.download();
 
     if (!downloadResponse.readableStreamBody) {
-      throw new Error('No readable stream body in download response');
+      throw new Error("No readable stream body in download response");
     }
 
     // Convert stream to buffer
@@ -109,14 +114,20 @@ export async function downloadFile(
 
     // Get content type from properties
     const contentType =
-      downloadResponse.contentType || 'application/octet-stream';
+      downloadResponse.contentType || "application/octet-stream";
 
-    logger.info({ filename, documentSet }, 'File downloaded from Azure Storage');
+    logger.info(
+      { filename, documentSet },
+      "File downloaded from Azure Storage",
+    );
 
     return { buffer, contentType };
   } catch (error) {
     const err = error as Error;
-    logger.error({ error: err.message, filename }, 'Azure Storage download error');
+    logger.error(
+      { error: err.message, filename },
+      "Azure Storage download error",
+    );
     throw err;
   }
 }
@@ -128,23 +139,27 @@ export async function downloadFile(
  */
 export async function deleteFile(
   filename: string,
-  documentSet: string = 'all'
+  documentSet: string = "all",
 ): Promise<void> {
   initAzure();
 
   try {
     // Create blob path with document set as subdirectory
-    const blobPath = documentSet === 'all' ? filename : `${documentSet}/${filename}`;
+    const blobPath =
+      documentSet === "all" ? filename : `${documentSet}/${filename}`;
 
     const blockBlobClient: BlockBlobClient =
       containerClient!.getBlockBlobClient(blobPath);
 
     await blockBlobClient.delete();
 
-    logger.info({ filename, documentSet }, 'File deleted from Azure Storage');
+    logger.info({ filename, documentSet }, "File deleted from Azure Storage");
   } catch (error) {
     const err = error as Error;
-    logger.error({ error: err.message, filename }, 'Azure Storage delete error');
+    logger.error(
+      { error: err.message, filename },
+      "Azure Storage delete error",
+    );
     throw err;
   }
 }
@@ -156,13 +171,14 @@ export async function deleteFile(
  */
 export async function fileExists(
   filename: string,
-  documentSet: string = 'all'
+  documentSet: string = "all",
 ): Promise<boolean> {
   initAzure();
 
   try {
     // Create blob path with document set as subdirectory
-    const blobPath = documentSet === 'all' ? filename : `${documentSet}/${filename}`;
+    const blobPath =
+      documentSet === "all" ? filename : `${documentSet}/${filename}`;
 
     const blockBlobClient: BlockBlobClient =
       containerClient!.getBlockBlobClient(blobPath);
@@ -172,7 +188,10 @@ export async function fileExists(
     return exists;
   } catch (error) {
     const err = error as Error;
-    logger.error({ error: err.message, filename }, 'Azure Storage exists check error');
+    logger.error(
+      { error: err.message, filename },
+      "Azure Storage exists check error",
+    );
     return false;
   }
 }

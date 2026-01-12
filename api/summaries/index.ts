@@ -10,51 +10,53 @@ import type {
   SearchQARequest,
   ErrorResponse,
   HealthResponse,
-} from '../../backend-nodejs/common/types.js';
+} from "../../backend-nodejs/common/types.js";
 import {
   getAllSummaries,
   getSummaryByFilename,
-} from '../../backend-nodejs/common/database.js';
-import { runQAAgent } from '../../backend-nodejs/common/llm.js';
-import { matchDocuments } from '../../backend-nodejs/common/supabase.js';
-import { submitTask } from '../../backend-nodejs/common/queue.js';
-import { generateEmbedding } from '../../backend-nodejs/common/llm.js';
-import logger from '../../backend-nodejs/common/logger.js';
+} from "../../backend-nodejs/common/database.js";
+import { runQAAgent } from "../../backend-nodejs/common/llm.js";
+import { matchDocuments } from "../../backend-nodejs/common/supabase.js";
+import { submitTask } from "../../backend-nodejs/common/queue.js";
+import { generateEmbedding } from "../../backend-nodejs/common/llm.js";
+import logger from "../../backend-nodejs/common/logger.js";
 
 export const vercelConfig = {
-  runtime: 'nodejs18.x',
+  runtime: "nodejs18.x",
 };
 
 export default async function handler(request: Request, context: any) {
-  logger.info({ method: request.method, url: request.url }, 'Summaries request');
+  logger.info(
+    { method: request.method, url: request.url },
+    "Summaries request",
+  );
 
   try {
     const url = new URL(request.url);
     const pathname = url.pathname;
 
     // Health endpoint
-    if (pathname === '/health' || pathname === '/summaries/health') {
-      return Response.json({ status: 'ok' } as HealthResponse);
+    if (pathname === "/health" || pathname === "/summaries/health") {
+      return Response.json({ status: "ok" } as HealthResponse);
     }
 
     // Get all summaries endpoint
-    if (pathname === '/agent/summaries') {
+    if (pathname === "/agent/summaries") {
       const summaries = await getAllSummaries();
       return Response.json({ summaries } as SummariesResponse);
     }
 
     // Summary QA endpoint
-    if (pathname === '/agent/summary_qa') {
+    if (pathname === "/agent/summary_qa") {
       const body = (await request.json()) as SummaryQARequest;
 
       // Get summary from database
       const summary = await getSummaryByFilename(body.filename);
 
       if (!summary) {
-        return Response.json(
-          { detail: 'Summary not found' } as ErrorResponse,
-          { status: 404 }
-        );
+        return Response.json({ detail: "Summary not found" } as ErrorResponse, {
+          status: 404,
+        });
       }
 
       // Run QA agent with summary as context
@@ -64,7 +66,7 @@ export default async function handler(request: Request, context: any) {
     }
 
     // Search QA endpoint
-    if (pathname === '/agent/search_qa') {
+    if (pathname === "/agent/search_qa") {
       const body = (await request.json()) as SearchQARequest;
 
       // Generate embedding for question
@@ -75,16 +77,16 @@ export default async function handler(request: Request, context: any) {
         embedding,
         0.7,
         10,
-        body.document_set || 'all'
+        body.document_set || "all",
       );
 
       // Format search results as context string
       const context = results
         .map(
           (r) =>
-            `Document: ${r.filename}\nDocument Set: ${r.document_set}\nContent: ${r.content}\nSimilarity: ${r.similarity}\n`
+            `Document: ${r.filename}\nDocument Set: ${r.document_set}\nContent: ${r.content}\nSimilarity: ${r.similarity}\n`,
         )
-        .join('\n---\n');
+        .join("\n---\n");
 
       // Run QA agent with search context
       const answer = await runQAAgent(body.question, context);
@@ -93,9 +95,9 @@ export default async function handler(request: Request, context: any) {
     }
 
     // Summarize endpoint (async task)
-    if (pathname === '/agent/summarize') {
+    if (pathname === "/agent/summarize") {
       const body = (await request.json()) as { filename: string; url?: string };
-      const taskId = await submitTask('summarize', {
+      const taskId = await submitTask("summarize", {
         filename: body.filename,
         url: body.url,
       });
@@ -109,10 +111,12 @@ export default async function handler(request: Request, context: any) {
     }
 
     // 404 for unknown routes
-    return Response.json({ detail: 'Not found' } as ErrorResponse, { status: 404 });
+    return Response.json({ detail: "Not found" } as ErrorResponse, {
+      status: 404,
+    });
   } catch (error) {
     const err = error as Error;
-    logger.error({ error: err.message, stack: err.stack }, 'Summaries error');
+    logger.error({ error: err.message, stack: err.stack }, "Summaries error");
     return Response.json({ detail: err.message } as ErrorResponse, {
       status: 500,
     });

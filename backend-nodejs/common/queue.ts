@@ -3,31 +3,34 @@
  * Provides HTTP interface to the external queue service.
  */
 
-import type { TaskResponse } from './types';
-import { config } from './config';
-import logger from './logger';
+import type { TaskResponse } from "./types";
+import { config } from "./config";
+import logger from "./logger";
 
 // Mock implementation for local development
 class MockQueueService {
   private tasks = new Map<string, { status: string; result: unknown }>();
   private counter = 0;
 
-  async submitTask(taskType: string, payload: Record<string, unknown>): Promise<string> {
+  async submitTask(
+    taskType: string,
+    payload: Record<string, unknown>,
+  ): Promise<string> {
     this.counter++;
     const taskId = `mock-task-${this.counter}`;
 
     this.tasks.set(taskId, {
-      status: 'pending',
+      status: "pending",
       result: null,
     });
 
-    logger.info({ taskId, taskType, payload }, 'Mock queue: Task submitted');
+    logger.info({ taskId, taskType, payload }, "Mock queue: Task submitted");
 
     // Simulate task completion after delay
     setTimeout(() => {
       const task = this.tasks.get(taskId);
       if (task) {
-        task.status = 'completed';
+        task.status = "completed";
         task.result = `Mock result for ${taskType}`;
       }
     }, 1000);
@@ -35,7 +38,9 @@ class MockQueueService {
     return taskId;
   }
 
-  async getTaskStatus(taskId: string): Promise<{ status: string; result: unknown }> {
+  async getTaskStatus(
+    taskId: string,
+  ): Promise<{ status: string; result: unknown }> {
     const task = this.tasks.get(taskId);
 
     if (!task) {
@@ -51,15 +56,18 @@ class HttpQueueService {
   private baseUrl: string;
 
   constructor() {
-    this.baseUrl = config.QUEUE_SERVICE_URL || 'http://localhost:8000';
+    this.baseUrl = config.QUEUE_SERVICE_URL || "http://localhost:8000";
   }
 
-  async submitTask(taskType: string, payload: Record<string, unknown>): Promise<string> {
+  async submitTask(
+    taskType: string,
+    payload: Record<string, unknown>,
+  ): Promise<string> {
     try {
       const response = await fetch(`${this.baseUrl}/queue/submit`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           task_type: taskType,
@@ -76,15 +84,17 @@ class HttpQueueService {
       return data.task_id;
     } catch (error) {
       const err = error as Error;
-      logger.error({ error: err.message }, 'Queue service submit task error');
+      logger.error({ error: err.message }, "Queue service submit task error");
       throw err;
     }
   }
 
-  async getTaskStatus(taskId: string): Promise<{ status: string; result: unknown }> {
+  async getTaskStatus(
+    taskId: string,
+  ): Promise<{ status: string; result: unknown }> {
     try {
       const response = await fetch(`${this.baseUrl}/queue/status/${taskId}`, {
-        method: 'GET',
+        method: "GET",
       });
 
       if (!response.ok) {
@@ -95,7 +105,7 @@ class HttpQueueService {
       return (await response.json()) as { status: string; result: unknown };
     } catch (error) {
       const err = error as Error;
-      logger.error({ error: err.message }, 'Queue service get status error');
+      logger.error({ error: err.message }, "Queue service get status error");
       throw err;
     }
   }
@@ -109,12 +119,16 @@ export function initQueueService(): MockQueueService | HttpQueueService {
     return queueService;
   }
 
-  const provider = config.QUEUE_PROVIDER || 'mock';
+  const provider = config.QUEUE_PROVIDER || "mock";
 
-  if (provider === 'mock') {
-    logger.info('Using mock queue service');
+  if (provider === "mock") {
+    logger.info("Using mock queue service");
     queueService = new MockQueueService();
-  } else if (provider === 'http' || provider === 'sqs' || provider === 'azure') {
+  } else if (
+    provider === "http" ||
+    provider === "sqs" ||
+    provider === "azure"
+  ) {
     logger.info(`Using HTTP queue service (provider: ${provider})`);
     queueService = new HttpQueueService();
   } else {
@@ -133,7 +147,7 @@ export function initQueueService(): MockQueueService | HttpQueueService {
  */
 export async function submitTask(
   taskType: string,
-  payload: Record<string, unknown>
+  payload: Record<string, unknown>,
 ): Promise<string> {
   const queue = initQueueService();
   return queue.submitTask(taskType, payload);
@@ -150,7 +164,9 @@ export async function getTaskStatus(taskId: string): Promise<TaskResponse> {
 
   return {
     task_id: taskId,
-    status: (status.status as 'pending' | 'processing' | 'completed' | 'failed') || 'pending',
+    status:
+      (status.status as "pending" | "processing" | "completed" | "failed") ||
+      "pending",
     result: status.result,
   };
 }

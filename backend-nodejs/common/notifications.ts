@@ -3,13 +3,19 @@
  * Ported from api/notifications/service.py
  */
 
-import type { Notification, NotificationData } from './types';
-import logger from './logger';
+import type { Notification, NotificationData } from "./types";
+import logger from "./logger";
 
 class NotificationQueue {
   private queue: Notification[] = [];
   private lastId = 0;
   private lock = Promise.resolve();
+
+  // Test-only reset method
+  reset(): void {
+    this.queue = [];
+    this.lastId = 0;
+  }
 
   async push(message: NotificationData): Promise<number> {
     await this.lock;
@@ -30,13 +36,16 @@ class NotificationQueue {
 
     logger.info(
       { id: this.lastId, type: message.type },
-      'Notification pushed to queue'
+      "Notification pushed to queue",
     );
 
     return this.lastId;
   }
 
-  async getSince(sinceId: number, timeout: number = 20.0): Promise<Notification[]> {
+  async getSince(
+    sinceId: number,
+    timeout: number = 20.0,
+  ): Promise<Notification[]> {
     const start = Date.now();
 
     while (Date.now() - start < timeout * 1000) {
@@ -59,31 +68,33 @@ const notificationQueue = new NotificationQueue();
 
 export async function pollNotifications(
   sinceId: number,
-  timeout: number = 20.0
+  timeout: number = 20.0,
 ): Promise<Notification[]> {
   return notificationQueue.getSince(sinceId, timeout);
 }
 
-export async function notify(notification: NotificationData): Promise<{ status: string }> {
+export async function notify(
+  notification: NotificationData,
+): Promise<{ status: string }> {
   logger.info(
     { type: notification.type, filename: notification.filename },
-    'Processing notification'
+    "Processing notification",
   );
 
   // Save summary to database if completed
-  if (notification.status === 'completed' && notification.result) {
+  if (notification.status === "completed" && notification.result) {
     try {
-      const { saveSummary } = await import('./database.js');
-      await saveSummary(notification.filename || '', notification.result);
+      const { saveSummary } = await import("./database.js");
+      await saveSummary(notification.filename || "", notification.result);
     } catch (error) {
       const err = error as Error;
-      logger.error({ error: err.message }, 'DB Error saving summary');
+      logger.error({ error: err.message }, "DB Error saving summary");
     }
   }
 
   await notificationQueue.push(notification);
 
-  return { status: 'ok' };
+  return { status: "ok" };
 }
 
 export default notificationQueue;
