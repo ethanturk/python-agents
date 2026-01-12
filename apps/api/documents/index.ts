@@ -144,7 +144,12 @@ export default async function handler(request: Request, _context: unknown) {
         );
 
         // Return file with correct content type
-        return new Response(buffer, {
+        // Convert Node.js Buffer to ArrayBuffer for Response
+        const arrayBuffer = buffer.buffer.slice(
+          buffer.byteOffset,
+          buffer.byteOffset + buffer.byteLength
+        );
+        return new Response(arrayBuffer, {
           headers: {
             "Content-Type": contentType,
             "Content-Disposition": `attachment; filename="${filename}"`,
