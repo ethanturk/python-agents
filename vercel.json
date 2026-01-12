@@ -1,5 +1,6 @@
 {
-  "buildCommand": "pnpm run build",
+  "buildCommand": "cd ../.. && pnpm turbo build --filter=web",
+  "outputDirectory": ".next",
   "rewrites": [
     {
       "source": "/agent/summaries",
