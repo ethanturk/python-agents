@@ -23,6 +23,7 @@
     "@types/sql.js": "^1.4.9",
     "@typescript-eslint/eslint-plugin": "^8.52.0",
     "@typescript-eslint/parser": "^8.52.0",
+    "@vercel/node": "^5.5.17",
     "eslint": "^9.39.2",
     "eslint-config-prettier": "^9.0.0",
     "eslint-plugin-react": "^7.37.5",

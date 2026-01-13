@@ -4,6 +4,7 @@
  * Ported from api/agent/index.py
  */
 
+import type { VercelRequest, VercelResponse } from "@vercel/node";
 import type {
   AgentRequest,
   AgentResponse,
@@ -11,46 +12,41 @@ import type {
   ErrorResponse,
   HealthResponse,
 } from "../lib/types.js";
-import {
-  runSyncAgent,
-  generateEmbedding,
-} from "../lib/llm.js";
+import { runSyncAgent, generateEmbedding } from "../lib/llm.js";
 import { matchDocuments } from "../lib/supabase.js";
-import {
-  submitTask,
-  getTaskStatus,
-} from "../lib/queue.js";
+import { submitTask, getTaskStatus } from "../lib/queue.js";
 import logger from "../lib/logger.js";
 
 export const vercelConfig = {
   runtime: "nodejs18.x",
 };
 
-export default async function handler(request: Request, _context: unknown) {
-  logger.info({ method: request.method, url: request.url }, "Agent request");
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  logger.info({ method: req.method, url: req.url }, "Agent request");
 
   try {
     // Handle both absolute and relative URLs
-    const url = new URL(request.url, `https://${request.headers.get('host') || 'localhost'}`);
+    const host = req.headers.host || "localhost";
+    const url = new URL(req.url || "/", `https://${host}`);
     const pathname = url.pathname;
 
     // Health endpoint
     if (pathname === "/health" || pathname === "/agent/health") {
-      return Response.json({ status: "ok" } as HealthResponse);
+      return res.status(200).json({ status: "ok" } as HealthResponse);
     }
 
     // Sync agent endpoint
     if (pathname === "/agent/sync") {
-      const body = (await request.json()) as AgentRequest;
+      const body = req.body as AgentRequest;
       const response = await runSyncAgent(body.prompt);
-      return Response.json({ response } as AgentResponse);
+      return res.status(200).json({ response } as AgentResponse);
     }
 
     // Async agent endpoint
     if (pathname === "/agent/async") {
-      const body = (await request.json()) as AgentRequest;
+      const body = req.body as AgentRequest;
       const taskId = await submitTask("agent_async", { prompt: body.prompt });
-      return Response.json({ task_id: taskId });
+      return res.status(200).json({ task_id: taskId });
     }
 
     // Agent status endpoint
@@ -58,13 +54,13 @@ export default async function handler(request: Request, _context: unknown) {
       const taskId = pathname.split("/").pop();
       if (taskId) {
         const status = await getTaskStatus(taskId);
-        return Response.json(status);
+        return res.status(200).json(status);
       }
     }
 
     // Search endpoint (RAG)
     if (pathname === "/agent/search") {
-      const body = (await request.json()) as SearchRequest;
+      const body = req.body as SearchRequest;
 
       // Generate embedding for query
       const embedding = await generateEmbedding(body.prompt);
@@ -75,18 +71,14 @@ export default async function handler(request: Request, _context: unknown) {
 
       const results = await matchDocuments(embedding, 0.7, limit, documentSet);
 
-      return Response.json(results);
+      return res.status(200).json(results);
     }
 
     // 404 for unknown routes
-    return Response.json({ detail: "Not found" } as ErrorResponse, {
-      status: 404,
-    });
+    return res.status(404).json({ detail: "Not found" } as ErrorResponse);
   } catch (error) {
     const err = error as Error;
     logger.error({ error: err.message, stack: err.stack }, "Agent error");
-    return Response.json({ detail: err.message } as ErrorResponse, {
-      status: 500,
-    });
+    return res.status(500).json({ detail: err.message } as ErrorResponse);
   }
 }
