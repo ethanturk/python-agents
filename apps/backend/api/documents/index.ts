@@ -17,12 +17,14 @@ import {
   deleteDocuments,
 } from "../../lib/supabase.js";
 import {
-  uploadFile as _uploadFile,
+  uploadFile,
   downloadFile,
   deleteFile,
 } from "../../lib/azure.js";
-import { submitTask as _submitTask } from "../../lib/queue.js";
+import { submitTask } from "../../lib/queue.js";
 import logger from "../../lib/logger.js";
+import busboy from "busboy";
+import { Readable } from "stream";
 
 export const vercelConfig = {
   runtime: "nodejs18.x",
@@ -99,15 +101,84 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       (pathname === "/agent/upload" || pathname === "/api/agent/upload") &&
       req.method === "POST"
     ) {
-      // Note: File upload handling would need multipart parser for Node.js runtime
-      // For now, return not implemented
-      logger.warn(
-        "File upload endpoint called - needs multipart parser implementation",
-      );
-      return res.status(501).json({
-        detail:
-          "File upload not implemented in Node.js runtime - use Python backend",
-      } as ErrorResponse);
+      return new Promise<void>((resolve) => {
+        const bb = busboy({ headers: req.headers });
+        let documentSet = "all";
+        let filename = "";
+        const chunks: Buffer[] = [];
+
+        bb.on("field", (name, val) => {
+          if (name === "document_set") {
+            documentSet = sanitizeDocumentSet(val);
+          }
+        });
+
+        bb.on("file", (name, file, info) => {
+          filename = info.filename;
+          logger.info({ filename, documentSet }, "Receiving file upload");
+
+          file.on("data", (data: Buffer) => {
+            chunks.push(data);
+          });
+
+          file.on("end", () => {
+            logger.info({ filename, size: chunks.length }, "File data received");
+          });
+        });
+
+        bb.on("finish", async () => {
+          try {
+            if (!filename || chunks.length === 0) {
+              res.status(400).json({
+                detail: "No file uploaded",
+              } as ErrorResponse);
+              resolve();
+              return;
+            }
+
+            const fileBuffer = Buffer.concat(chunks);
+
+            // Upload file to Azure Storage
+            const fileUrl = await uploadFile(filename, fileBuffer, documentSet);
+            logger.info({ filename, fileUrl }, "File uploaded to Azure");
+
+            // Submit ingestion task
+            const taskId = await submitTask("ingest_document", {
+              filename,
+              document_set: documentSet,
+              file_url: fileUrl,
+            });
+
+            logger.info({ taskId, filename }, "Ingestion task submitted");
+
+            res.status(200).json({
+              message: "File uploaded successfully",
+              task_id: taskId,
+              filename,
+              document_set: documentSet,
+            });
+            resolve();
+          } catch (error) {
+            const err = error as Error;
+            logger.error(
+              { error: err.message, filename },
+              "File upload failed",
+            );
+            res.status(500).json({ detail: err.message } as ErrorResponse);
+            resolve();
+          }
+        });
+
+        bb.on("error", (error: Error) => {
+          logger.error({ error: error.message }, "Busboy error");
+          res.status(500).json({ detail: error.message } as ErrorResponse);
+          resolve();
+        });
+
+        // Convert request to readable stream and pipe to busboy
+        const stream = Readable.from(req as unknown as AsyncIterable<Buffer>);
+        stream.pipe(bb);
+      });
     }
 
     // DELETE document
