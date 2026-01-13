@@ -1,6 +1,24 @@
 {
   "version": 2,
   "buildCommand": "pnpm run build",
+  "functions": {
+    "summaries/index.ts": {
+      "memory": 1024,
+      "maxDuration": 10
+    },
+    "documents/index.ts": {
+      "memory": 1024,
+      "maxDuration": 10
+    },
+    "agent/index.ts": {
+      "memory": 1024,
+      "maxDuration": 10
+    },
+    "notifications/index.ts": {
+      "memory": 1024,
+      "maxDuration": 10
+    }
+  },
   "rewrites": [
     {
       "source": "/api/agent/summaries",
@@ -33,10 +51,6 @@
     {
       "source": "/api/agent/files/:path*",
       "destination": "/documents/index.ts"
-    },
-    {
-      "source": "/api/agent/:path*",
-      "destination": "/agent/index.ts"
     },
     {
       "source": "/api/documents/:path*",
