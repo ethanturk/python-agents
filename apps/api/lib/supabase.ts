@@ -41,7 +41,7 @@ export async function matchDocuments(
       match_threshold: threshold,
       match_count: matchCount,
       filter_document_set: documentSet,
-    } as unknown);
+    });
 
     if (error) {
       logger.error({ error: error.message }, "Supabase RPC error");
