@@ -21,7 +21,19 @@ async function initDatabase(): Promise<void> {
   dbPath = process.env.SQLITE_DB_PATH || "/tmp/summaries.db";
 
   try {
-    const SQL = await initSqlJs();
+    // Configure sql.js to load WASM file
+    // In serverless environments (Vercel), load from CDN
+    // In local development, load from node_modules
+    const SQL = await initSqlJs({
+      locateFile: (file) => {
+        if (process.env.VERCEL) {
+          // Use CDN for serverless environment (more reliable than bundling)
+          return `https://sql.js.org/dist/${file}`;
+        }
+        // Local development - use default location
+        return file;
+      },
+    });
 
     // Load existing database if file exists
     if (fs.existsSync(dbPath)) {
