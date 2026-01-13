@@ -22,18 +22,20 @@ async function initDatabase(): Promise<void> {
 
   try {
     // Configure sql.js to load WASM file
-    // In serverless environments (Vercel), load from CDN
-    // In local development, load from node_modules
-    const SQL = await initSqlJs({
-      locateFile: (file) => {
-        if (process.env.VERCEL) {
-          // Use CDN for serverless environment (more reliable than bundling)
-          return `https://sql.js.org/dist/${file}`;
-        }
-        // Local development - use default location
-        return file;
-      },
-    });
+    let SQL;
+    if (process.env.VERCEL) {
+      // In serverless environment, fetch WASM from CDN
+      const wasmUrl = "https://sql.js.org/dist/sql-wasm.wasm";
+      const wasmResponse = await fetch(wasmUrl);
+      const wasmBinary = await wasmResponse.arrayBuffer();
+
+      SQL = await initSqlJs({
+        wasmBinary: wasmBinary as ArrayBuffer,
+      });
+    } else {
+      // Local development - use default location
+      SQL = await initSqlJs();
+    }
 
     // Load existing database if file exists
     if (fs.existsSync(dbPath)) {
@@ -44,7 +46,7 @@ async function initDatabase(): Promise<void> {
       db = new SQL.Database();
 
       // Create summaries table
-      db.run(`
+      db!.run(`
         CREATE TABLE IF NOT EXISTS summaries (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           filename TEXT NOT NULL,
