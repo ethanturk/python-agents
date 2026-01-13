@@ -20,6 +20,11 @@ export const vercelConfig = {
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   logger.info({ method: req.method, url: req.url }, "Notifications request");
 
+  // Handle OPTIONS preflight request
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
+
   try {
     // Handle both absolute and relative URLs
     const host = req.headers.host || "localhost";
@@ -27,12 +32,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const pathname = url.pathname;
 
     // Health endpoint
-    if (pathname === "/health" || pathname === "/notifications/health") {
+    if (
+      pathname === "/health" ||
+      pathname === "/notifications/health" ||
+      pathname === "/api/notifications/health"
+    ) {
       return res.status(200).json({ status: "ok" } as HealthResponse);
     }
 
     // Poll endpoint
-    if (pathname === "/poll" || pathname === "/notifications/poll") {
+    if (
+      pathname === "/poll" ||
+      pathname === "/notifications/poll" ||
+      pathname === "/api/poll"
+    ) {
       const sinceId = parseInt(url.searchParams.get("since_id") || "0", 10);
       const messages = await pollNotifications(sinceId, 20.0);
       return res.status(200).json({ messages } as PollResponse);
@@ -41,7 +54,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Notify endpoint
     if (
       pathname === "/internal/notify" ||
-      pathname === "/notifications/internal/notify"
+      pathname === "/notifications/internal/notify" ||
+      pathname === "/api/notifications/internal/notify"
     ) {
       const body = req.body as Record<string, unknown>;
       const notification = {

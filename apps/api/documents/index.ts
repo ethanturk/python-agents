@@ -42,6 +42,11 @@ function sanitizeDocumentSet(name: string): string {
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   logger.info({ method: req.method, url: req.url }, "Documents request");
 
+  // Handle OPTIONS preflight request
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
+
   try {
     // Handle both absolute and relative URLs
     const host = req.headers.host || "localhost";
@@ -49,12 +54,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const pathname = url.pathname;
 
     // Health endpoint
-    if (pathname === "/health" || pathname === "/documents/health") {
+    if (
+      pathname === "/health" ||
+      pathname === "/documents/health" ||
+      pathname === "/api/documents/health"
+    ) {
       return res.status(200).json({ status: "ok" } as HealthResponse);
     }
 
     // GET documents list
-    if (pathname === "/agent/documents") {
+    if (
+      pathname === "/agent/documents" ||
+      pathname === "/api/agent/documents"
+    ) {
       const documentSet = url.searchParams.get("document_set") || "all";
       const results = await getDocuments(documentSet);
 
@@ -72,7 +84,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // GET document sets
-    if (pathname === "/agent/documentsets") {
+    if (
+      pathname === "/agent/documentsets" ||
+      pathname === "/api/agent/documentsets"
+    ) {
       const documentSets = await getDocumentSets();
       return res.status(200).json({
         document_sets: documentSets,
@@ -80,7 +95,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // POST upload documents
-    if (pathname === "/agent/upload" && req.method === "POST") {
+    if (
+      (pathname === "/agent/upload" || pathname === "/api/agent/upload") &&
+      req.method === "POST"
+    ) {
       // Note: File upload handling would need multipart parser for Node.js runtime
       // For now, return not implemented
       logger.warn(
@@ -93,9 +111,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // DELETE document
-    if (pathname.startsWith("/agent/documents/") && req.method === "DELETE") {
+    if (
+      (pathname.startsWith("/agent/documents/") ||
+        pathname.startsWith("/api/agent/documents/")) &&
+      req.method === "DELETE"
+    ) {
       const parts = pathname.split("/");
-      const filename = parts[3] || "";
+      const filename = parts[3] || parts[4] || "";
       const documentSet = url.searchParams.get("document_set") || "all";
 
       // Delete from Azure Storage
@@ -108,8 +130,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // GET file (proxy endpoint)
-    if (pathname.startsWith("/agent/files/")) {
-      const parts = pathname.split("/agent/files/");
+    if (
+      pathname.startsWith("/agent/files/") ||
+      pathname.startsWith("/api/agent/files/")
+    ) {
+      const parts = pathname.startsWith("/api/agent/files/")
+        ? pathname.split("/api/agent/files/")
+        : pathname.split("/agent/files/");
       if (parts.length > 1) {
         const pathParts = parts[1].split("/");
         const documentSet = pathParts.length > 1 ? pathParts[0] : "all";

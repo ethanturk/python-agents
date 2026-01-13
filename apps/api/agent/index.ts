@@ -24,6 +24,11 @@ export const vercelConfig = {
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   logger.info({ method: req.method, url: req.url }, "Agent request");
 
+  // Handle OPTIONS preflight request
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
+
   try {
     // Handle both absolute and relative URLs
     const host = req.headers.host || "localhost";
@@ -31,26 +36,33 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const pathname = url.pathname;
 
     // Health endpoint
-    if (pathname === "/health" || pathname === "/agent/health") {
+    if (
+      pathname === "/health" ||
+      pathname === "/agent/health" ||
+      pathname === "/api/agent/health"
+    ) {
       return res.status(200).json({ status: "ok" } as HealthResponse);
     }
 
     // Sync agent endpoint
-    if (pathname === "/agent/sync") {
+    if (pathname === "/agent/sync" || pathname === "/api/agent/sync") {
       const body = req.body as AgentRequest;
       const response = await runSyncAgent(body.prompt);
       return res.status(200).json({ response } as AgentResponse);
     }
 
     // Async agent endpoint
-    if (pathname === "/agent/async") {
+    if (pathname === "/agent/async" || pathname === "/api/agent/async") {
       const body = req.body as AgentRequest;
       const taskId = await submitTask("agent_async", { prompt: body.prompt });
       return res.status(200).json({ task_id: taskId });
     }
 
     // Agent status endpoint
-    if (pathname.startsWith("/agent/status/")) {
+    if (
+      pathname.startsWith("/agent/status/") ||
+      pathname.startsWith("/api/agent/status/")
+    ) {
       const taskId = pathname.split("/").pop();
       if (taskId) {
         const status = await getTaskStatus(taskId);
@@ -59,7 +71,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Search endpoint (RAG)
-    if (pathname === "/agent/search") {
+    if (pathname === "/agent/search" || pathname === "/api/agent/search") {
       const body = req.body as SearchRequest;
 
       // Generate embedding for query

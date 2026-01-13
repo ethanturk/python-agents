@@ -26,6 +26,11 @@ export const vercelConfig = {
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   logger.info({ method: req.method, url: req.url }, "Summaries request");
 
+  // Handle OPTIONS preflight request
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
+
   try {
     // Handle both absolute and relative URLs
     const host = req.headers.host || "localhost";
@@ -33,18 +38,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const pathname = url.pathname;
 
     // Health endpoint
-    if (pathname === "/health" || pathname === "/summaries/health") {
+    if (
+      pathname === "/health" ||
+      pathname === "/summaries/health" ||
+      pathname === "/api/summaries/health"
+    ) {
       return res.status(200).json({ status: "ok" } as HealthResponse);
     }
 
     // Get all summaries endpoint
-    if (pathname === "/agent/summaries") {
+    if (
+      pathname === "/agent/summaries" ||
+      pathname === "/api/agent/summaries"
+    ) {
       const summaries = await getAllSummaries();
       return res.status(200).json({ summaries } as SummariesResponse);
     }
 
     // Summary QA endpoint
-    if (pathname === "/agent/summary_qa") {
+    if (
+      pathname === "/agent/summary_qa" ||
+      pathname === "/api/agent/summary_qa"
+    ) {
       const body = req.body as SummaryQARequest;
 
       // Get summary from database
@@ -63,7 +78,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Search QA endpoint
-    if (pathname === "/agent/search_qa") {
+    if (
+      pathname === "/agent/search_qa" ||
+      pathname === "/api/agent/search_qa"
+    ) {
       const body = req.body as SearchQARequest;
 
       // Generate embedding for question
@@ -92,7 +110,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Summarize endpoint (async task)
-    if (pathname === "/agent/summarize") {
+    if (
+      pathname === "/agent/summarize" ||
+      pathname === "/api/agent/summarize"
+    ) {
       const body = req.body as { filename: string; url?: string };
       const taskId = await submitTask("summarize", {
         filename: body.filename,
