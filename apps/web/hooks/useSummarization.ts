@@ -26,8 +26,8 @@ interface Notification {
 
 interface BackendSummary {
   filename: string;
-  summary_text: string;
-  created_at: number;
+  summary: string;
+  created_at: string;
 }
 
 interface UseSummarizationProps {
@@ -295,10 +295,10 @@ export default function useSummarization({
 
       const history = res.data.summaries.map((s: BackendSummary) => ({
         filename: s.filename,
-        result: s.summary_text || "No text",
+        result: s.summary || "No text",
         status: "completed",
         read: true,
-        timestamp: s.created_at,
+        timestamp: new Date(s.created_at).getTime(),
       }));
       setNotifications((prev) => {
         const existingFiles = new Set(prev.map((p) => p.filename));

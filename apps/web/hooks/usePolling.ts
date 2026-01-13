@@ -83,10 +83,13 @@ export default function usePolling({
           onMessageRef.current?.(msg.data);
         }
 
-        if (mounted) {
-          isPolling.current = false;
-          poll();
-        }
+        // Add delay before next poll to avoid rapid polling
+        setTimeout(() => {
+          if (mounted) {
+            isPolling.current = false;
+            poll();
+          }
+        }, 5000);
       } catch (error) {
         console.error("Polling error:", error);
         if (mounted) {
