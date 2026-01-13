@@ -47,7 +47,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       pathname === "/api/poll"
     ) {
       const sinceId = parseInt(url.searchParams.get("since_id") || "0", 10);
-      const messages = await pollNotifications(sinceId, 20.0);
+      // Use 8s timeout to fit within Vercel's 10s maxDuration limit
+      const messages = await pollNotifications(sinceId, 8.0);
       return res.status(200).json({ messages } as PollResponse);
     }
 
