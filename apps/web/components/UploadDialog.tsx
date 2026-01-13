@@ -117,10 +117,12 @@ export default function UploadDialog({
 
   return (
     <Dialog open={open} onOpenChange={!uploading ? onClose : undefined}>
-      <DialogContent className="sm:max-w-[525px]">
+      <DialogContent className="sm:max-w-[525px] bg-white dark:bg-gray-800">
         <DialogHeader>
-          <DialogTitle>Upload Documents</DialogTitle>
-          <DialogDescription>
+          <DialogTitle className="text-foreground">
+            Upload Documents
+          </DialogTitle>
+          <DialogDescription className="text-foreground/70">
             Select files and assign them to a document set
           </DialogDescription>
         </DialogHeader>
@@ -132,18 +134,18 @@ export default function UploadDialog({
               <AlertDescription>Upload Successful!</AlertDescription>
             </Alert>
             <div className="text-center space-y-2">
-              <p>
+              <p className="text-foreground">
                 <strong>{successData.count}</strong> file(s) have been uploaded.
               </p>
-              <p>
+              <p className="text-foreground">
                 Document Set: <strong>{successData.documentSet}</strong>
                 {successData.isNewSet && (
-                  <span className="ml-2 text-xs text-green-500 border border-green-500 rounded px-2 py-1">
+                  <span className="ml-2 text-xs text-green-600 dark:text-green-400 border border-green-600 dark:border-green-400 rounded px-2 py-1">
                     NEW
                   </span>
                 )}
               </p>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-foreground/60">
                 Documents are scheduled for indexing and will be available
                 shortly.
               </p>
@@ -158,7 +160,7 @@ export default function UploadDialog({
             )}
 
             <div>
-              <label className="text-sm font-medium mb-2 block">
+              <label className="text-sm font-medium mb-2 block text-foreground">
                 Document Set
               </label>
               <DocumentSetAutocomplete
@@ -167,7 +169,7 @@ export default function UploadDialog({
                 onChange={setSelectedSet}
                 loading={loadingSets}
               />
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="text-xs text-foreground/60 mt-1">
                 Select existing or type a new one to create it
               </p>
             </div>

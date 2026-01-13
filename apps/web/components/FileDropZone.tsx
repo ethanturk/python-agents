@@ -50,20 +50,20 @@ export default function FileDropZone({
           ${
             isDragActive
               ? "border-primary bg-primary/10"
-              : "border-muted-foreground/25 hover:border-primary/50"
+              : "border-border hover:border-primary/50 bg-muted/30"
           }
         `}
       >
         <input {...getInputProps()} />
-        <CloudUpload className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+        <CloudUpload className="mx-auto h-12 w-12 text-foreground/70 mb-4" />
         {isDragActive ? (
           <p className="text-primary font-medium">Drop the files here ...</p>
         ) : (
           <div>
-            <p className="text-lg font-medium mb-2">
+            <p className="text-lg font-medium mb-2 text-foreground">
               Drag &apos;n&apos; drop files here, or click to select files
             </p>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-foreground/60">
               (Only regular files are supported for now)
             </p>
           </div>
@@ -71,21 +71,23 @@ export default function FileDropZone({
       </div>
 
       {files.length > 0 && (
-        <Card className="p-4">
-          <h4 className="font-semibold mb-3">
+        <Card className="p-4 bg-card border-border">
+          <h4 className="font-semibold mb-3 text-card-foreground">
             Selected Files ({files.length})
           </h4>
           <ul className="space-y-2 max-h-[200px] overflow-auto">
             {files.map((file, index) => (
               <li
                 key={index}
-                className="flex items-center justify-between p-2 rounded hover:bg-muted"
+                className="flex items-center justify-between p-2 rounded hover:bg-muted/50"
               >
                 <div className="flex items-center gap-2 flex-1 min-w-0">
-                  <File className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+                  <File className="h-4 w-4 flex-shrink-0 text-foreground/60" />
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm truncate">{file.name}</p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-sm truncate text-foreground">
+                      {file.name}
+                    </p>
+                    <p className="text-xs text-foreground/60">
                       {(file.size / 1024).toFixed(2)} KB
                     </p>
                   </div>
