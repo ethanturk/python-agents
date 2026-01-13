@@ -138,30 +138,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
             const fileBuffer = Buffer.concat(chunks);
 
-            // Check if Azure Storage is configured
-            if (!process.env.AZURE_STORAGE_CONNECTION_STRING) {
-              logger.warn("Azure Storage not configured - using mock storage");
-
-              // For development/testing without Azure Storage
-              // Submit ingestion task with file buffer in payload
-              const taskId = await submitTask("ingest_document", {
-                filename,
-                document_set: documentSet,
-                file_buffer: fileBuffer.toString("base64"),
-              });
-
-              logger.info({ taskId, filename }, "Ingestion task submitted (mock)");
-
-              res.status(200).json({
-                message: "File uploaded successfully (mock storage)",
-                task_id: taskId,
-                filename,
-                document_set: documentSet,
-              });
-              resolve();
-              return;
-            }
-
             // Upload file to Azure Storage
             const fileUrl = await uploadFile(filename, fileBuffer, documentSet);
             logger.info({ filename, fileUrl }, "File uploaded to Azure");
