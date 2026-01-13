@@ -33,6 +33,10 @@
       "dest": "/summaries/index.ts"
     },
     {
+      "src": "/api/poll",
+      "dest": "/notifications/index.ts"
+    },
+    {
       "src": "/api/notifications/(.*)?",
       "dest": "/notifications/index.ts"
     },
