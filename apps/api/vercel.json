@@ -1,80 +1,62 @@
 {
   "version": 2,
   "buildCommand": "pnpm run build",
-  "builds": [
+  "rewrites": [
     {
-      "src": "agent/index.ts",
-      "use": "@vercel/node"
+      "source": "/api/agent/summaries",
+      "destination": "/summaries/index.ts"
     },
     {
-      "src": "documents/index.ts",
-      "use": "@vercel/node"
+      "source": "/api/agent/summary_qa",
+      "destination": "/summaries/index.ts"
     },
     {
-      "src": "summaries/index.ts",
-      "use": "@vercel/node"
+      "source": "/api/agent/search_qa",
+      "destination": "/summaries/index.ts"
     },
     {
-      "src": "notifications/index.ts",
-      "use": "@vercel/node"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/api/agent/summaries",
-      "dest": "/summaries/index.ts"
+      "source": "/api/agent/summarize",
+      "destination": "/summaries/index.ts"
     },
     {
-      "src": "/api/agent/summary_qa",
-      "dest": "/summaries/index.ts"
+      "source": "/api/agent/documents",
+      "destination": "/documents/index.ts"
     },
     {
-      "src": "/api/agent/search_qa",
-      "dest": "/summaries/index.ts"
+      "source": "/api/agent/documentsets",
+      "destination": "/documents/index.ts"
     },
     {
-      "src": "/api/agent/summarize",
-      "dest": "/summaries/index.ts"
+      "source": "/api/agent/upload",
+      "destination": "/documents/index.ts"
     },
     {
-      "src": "/api/agent/documents",
-      "dest": "/documents/index.ts"
+      "source": "/api/agent/files/:path*",
+      "destination": "/documents/index.ts"
     },
     {
-      "src": "/api/agent/documentsets",
-      "dest": "/documents/index.ts"
+      "source": "/api/agent/:path*",
+      "destination": "/agent/index.ts"
     },
     {
-      "src": "/api/agent/upload",
-      "dest": "/documents/index.ts"
+      "source": "/api/documents/:path*",
+      "destination": "/documents/index.ts"
     },
     {
-      "src": "/api/agent/files/(.*)",
-      "dest": "/documents/index.ts"
+      "source": "/api/summaries/:path*",
+      "destination": "/summaries/index.ts"
     },
     {
-      "src": "/api/agent/(.*)",
-      "dest": "/agent/index.ts"
+      "source": "/api/poll",
+      "destination": "/notifications/index.ts"
     },
     {
-      "src": "/api/documents/(.*)?",
-      "dest": "/documents/index.ts"
+      "source": "/api/notifications/:path*",
+      "destination": "/notifications/index.ts"
     },
     {
-      "src": "/api/summaries/(.*)?",
-      "dest": "/summaries/index.ts"
-    },
-    {
-      "src": "/api/poll",
-      "dest": "/notifications/index.ts"
-    },
-    {
-      "src": "/api/notifications/(.*)?",
-      "dest": "/notifications/index.ts"
-    },
-    {
-      "src": "/health",
-      "dest": "/agent/index.ts"
+      "source": "/health",
+      "destination": "/agent/index.ts"
     }
   ],
   "headers": [
