@@ -2,19 +2,19 @@
   "version": 2,
   "buildCommand": "pnpm run build",
   "functions": {
-    "summaries/index.ts": {
+    "api/summaries/index.ts": {
       "memory": 1024,
       "maxDuration": 10
     },
-    "documents/index.ts": {
+    "api/documents/index.ts": {
       "memory": 1024,
       "maxDuration": 10
     },
-    "agent/index.ts": {
+    "api/agent/index.ts": {
       "memory": 1024,
       "maxDuration": 10
     },
-    "notifications/index.ts": {
+    "api/notifications/index.ts": {
       "memory": 1024,
       "maxDuration": 10
     }
@@ -22,55 +22,55 @@
   "rewrites": [
     {
       "source": "/api/agent/summaries",
-      "destination": "/summaries/index.ts"
+      "destination": "/api/summaries"
     },
     {
       "source": "/api/agent/summary_qa",
-      "destination": "/summaries/index.ts"
+      "destination": "/api/summaries"
     },
     {
       "source": "/api/agent/search_qa",
-      "destination": "/summaries/index.ts"
+      "destination": "/api/summaries"
     },
     {
       "source": "/api/agent/summarize",
-      "destination": "/summaries/index.ts"
+      "destination": "/api/summaries"
     },
     {
       "source": "/api/agent/documents",
-      "destination": "/documents/index.ts"
+      "destination": "/api/documents"
     },
     {
       "source": "/api/agent/documentsets",
-      "destination": "/documents/index.ts"
+      "destination": "/api/documents"
     },
     {
       "source": "/api/agent/upload",
-      "destination": "/documents/index.ts"
+      "destination": "/api/documents"
     },
     {
       "source": "/api/agent/files/:path*",
-      "destination": "/documents/index.ts"
+      "destination": "/api/documents"
     },
     {
       "source": "/api/documents/:path*",
-      "destination": "/documents/index.ts"
+      "destination": "/api/documents"
     },
     {
       "source": "/api/summaries/:path*",
-      "destination": "/summaries/index.ts"
+      "destination": "/api/summaries"
     },
     {
       "source": "/api/poll",
-      "destination": "/notifications/index.ts"
+      "destination": "/api/notifications"
     },
     {
       "source": "/api/notifications/:path*",
-      "destination": "/notifications/index.ts"
+      "destination": "/api/notifications"
     },
     {
       "source": "/health",
-      "destination": "/agent/index.ts"
+      "destination": "/api/agent"
     }
   ],
   "headers": [
