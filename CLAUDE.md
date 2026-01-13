@@ -105,25 +105,150 @@ find_tasks(filter_by="project", filter_value="proj-123")
 - Higher `task_order` = higher priority (0-100)
 - Tasks should be 30 min - 4 hours of work
 
-## Project Overview
+## Project Architecture Overview
 
-LangChain Agent System - A scalable RAG-based LLM application with distributed processing, featuring a FastAPI backend, React frontend, Celery workers, and Supabase vector storage.
+This project is a **Turborepo monorepo** with three main applications:
+
+### Applications
+
+1. **`apps/backend`** - Node.js Serverless Backend
+   - **Tech Stack:** TypeScript, Vercel Functions, OpenAI, Supabase, Firebase Auth, Azure Blob Storage
+   - **Runtime:** Vercel serverless functions (10s max duration)
+   - **API Endpoints:** `/api/agent/*`, `/api/documents/*`, `/api/summaries/*`, `/api/notifications/*`
+   - **Key Services:** LLM agents, vector search (RAG), document management, long-polling notifications (8s timeout)
+   - **Deployment:** Auto-deploy to Vercel on push to `main` via GitHub Actions
+
+2. **`apps/web`** - Next.js Frontend
+   - **Tech Stack:** Next.js 16, React 18, TypeScript, Tailwind CSS, Radix UI, Firebase Auth
+   - **Features:** Server/client components, real-time polling, file upload, document management, RAG chat interface
+   - **Deployment:** Auto-deploy to Vercel on push to `main` via GitHub Actions
+
+3. **`apps/worker`** - Python Celery Worker
+   - **Tech Stack:** Python 3.11+, Celery, LangChain, pydantic-ai, Docling, Supabase
+   - **Tasks:** Document ingestion (Docling → chunk → embed → index), async summarization, multi-step agents, file watching
+   - **Deployment:** Auto-deploy to Docker Hub on push to `main` via GitHub Actions
+
+### Infrastructure
+
+- **Vector Database:** Supabase (PostgreSQL + pgvector extension)
+  - Table: `documents` with vector similarity search via `match_documents()` RPC function
+  - Stores: embeddings, content, metadata, document_set (multi-tenancy)
+
+- **File Storage:** Azure Blob Storage
+  - Handles file uploads from backend
+  - Worker processes files for ingestion
+
+- **Authentication:** Firebase
+  - Backend: Firebase Admin SDK for token verification
+  - Frontend: Firebase Auth context
+
+- **Task Queue:** Redis or RabbitMQ
+  - Celery broker for async task distribution
+  - Long-polling notification queue in backend
+
+### Data Flow
+
+```
+Frontend (Next.js) → Backend API (Node.js Serverless) → Worker (Python Celery)
+                            ↓                                    ↓
+                     Supabase Vector DB                   Azure Blob Storage
+                     Firebase Auth                        Supabase Vector DB
+```
+
+### Key Architecture Patterns
+
+- **Serverless-First:** Backend uses Vercel Functions with 10s timeout limits
+- **Async Processing:** Long-running tasks (ingestion, summarization) handled by Python worker
+- **Multi-Tenancy:** Documents organized by `document_set` for isolation
+- **Long-Polling:** 8s timeout notification system for real-time updates without WebSockets
+- **Stateless Functions:** Backend uses sql.js in-memory SQLite, no persistent disk
+
+### CI/CD Workflows
+
+- `.github/workflows/vercel-backend-deploy.yml` - Deploy backend to Vercel
+- `.github/workflows/vercel-frontend-deploy.yml` - Deploy frontend to Vercel
+- `.github/workflows/docker-hub-deploy.yml` - Deploy worker to Docker Hub
+- `.github/workflows/ci.yml` - Run tests and quality checks on PRs
+
+### Project Structure
+
+```
+python-agents/
+├── apps/
+│   ├── backend/          # Node.js serverless functions
+│   │   ├── api/          # Route handlers (agent, documents, notifications, summaries)
+│   │   ├── lib/          # Services (supabase, llm, database, notifications)
+│   │   └── vercel.json   # Vercel configuration
+│   ├── web/              # Next.js frontend
+│   │   ├── app/          # App router pages
+│   │   └── components/   # React components
+│   └── worker/           # Python Celery worker
+│       ├── async_tasks.py    # Task definitions
+│       └── clients.py        # Service clients
+├── packages/             # Shared configs (eslint, typescript)
+├── turbo.json           # Turborepo config
+└── openspec/            # OpenSpec documentation
+```
+
+### Architectural Constraints & Considerations
+
+When creating proposals or implementing features, consider these constraints:
+
+#### Backend (Node.js Serverless)
+- **10-second timeout limit** - All API operations must complete within 10s
+- **Stateless** - No persistent disk storage (use Azure Blob or Supabase)
+- **Cold starts** - First request may be slower; optimize for quick initialization
+- **Long-polling** - Use 8s timeout max for real-time updates (respects 10s function limit)
+- **In-memory SQLite** - Metadata storage via sql.js (cleared on function restart)
+
+#### Frontend (Next.js 16)
+- **App Router** - Use server and client components appropriately
+- **Firebase Auth** - All API calls require Firebase ID token in Authorization header
+- **Environment Variables** - Use `NEXT_PUBLIC_*` prefix for client-accessible vars
+- **Static Optimization** - Prefer static generation where possible
+
+#### Worker (Python Celery)
+- **Long-running tasks** - Use worker for operations >5s (document processing, LLM calls)
+- **Docling processing** - Heavy memory usage, manage resource cleanup (`gc.collect()`)
+- **VLM pipeline** - Use singleton pattern to avoid re-initialization overhead
+- **Task notifications** - Webhook to backend `/api/notifications/internal/notify` on completion
+
+#### Database & Storage
+- **Supabase Vector DB** - Use RPC function `match_documents()` for similarity search
+- **Document sets** - Always filter by `document_set` for multi-tenancy
+- **Embedding dimensions** - Default 1536 (text-embedding-3-small)
+- **Azure Blob Storage** - Required for file uploads (no local filesystem in serverless)
+
+#### Cross-Service Communication
+- **Backend → Worker** - Via task queue (Redis/RabbitMQ) or direct invocation
+- **Worker → Backend** - Via webhook notifications
+- **Frontend → Backend** - REST API with Firebase auth
+- **Real-time Updates** - Long-polling `/api/poll` endpoint (not WebSockets)
 
 ## Development Commands
 
 ### Running Services
 
-The system uses multiple Docker Compose files for modular deployment:
+The system uses Turborepo for monorepo management:
 
 ```bash
-# Start infrastructure & backend (RabbitMQ, Qdrant, Flower, Backend API)
-docker-compose -f docker-compose.yml up -d --build
+# Install dependencies
+pnpm install
 
-# Start Celery worker for async tasks
-docker-compose -f docker-compose.worker.yml up -d --build
+# Run all apps in dev mode
+pnpm dev
 
-# Start React frontend
-docker-compose -f docker-compose.frontend.yml up -d --build
+# Run specific apps
+pnpm --filter web dev          # Frontend only
+pnpm --filter backend dev      # Backend only (note: serverless, use Vercel CLI)
+
+# Run Celery worker locally
+cd apps/worker
+pip install -r requirements.txt
+celery -A async_tasks worker --loglevel=info
+
+# Or use Docker Compose for worker
+docker-compose -f docker-compose.worker.yml up -d
 ```
 
 ### Testing
@@ -151,193 +276,129 @@ make test-unit
 ./run_tests.sh --all --coverage
 ```
 
-**Backend tests** (pytest):
+**Run all tests:**
 ```bash
-cd backend
-pip3 install -r requirements.txt
-pytest tests/                    # All tests
-pytest -m unit                   # Unit tests only
-pytest -m integration             # Integration tests (requires containers)
-```
-
-**Frontend tests** (Vitest + React Testing Library):
-```bash
-cd frontend
-pnpm install
 pnpm test
 ```
 
-**Test Environment**:
+**Run specific tests:**
 ```bash
-# Start isolated test containers
-docker-compose -f docker-compose.test.yml up -d
-
-# Run integration tests
-USE_TEST_CONTAINERS=true cd backend && pytest -m integration
-
-# Cleanup
-docker-compose -f docker-compose.test.yml down -v
+pnpm --filter web test         # Frontend tests (Vitest)
+pnpm --filter backend test     # Backend tests (Vitest)
+cd apps/worker && pytest       # Worker tests (pytest)
 ```
 
 ### Service URLs
 
-- Backend API: http://localhost:9999/docs (FastAPI Swagger docs)
-- Frontend: http://localhost:3000
-- Flower (Celery monitoring): http://localhost:5555
-- RabbitMQ Console: http://localhost:15672 (guest/guest)
+**Development:**
+- Frontend: http://localhost:3000 (Next.js dev server)
+- Backend API: Deployed on Vercel (use preview URLs or production)
 
-## Architecture
+**Production:**
+- Frontend: https://your-frontend.vercel.app
+- Backend API: https://your-backend.vercel.app/api/*
 
-### High-Level Data Flow
+### Building
 
+```bash
+# Build all apps
+pnpm build
+
+# Build specific app
+pnpm --filter web build
+pnpm --filter backend build
 ```
-Frontend -> Backend API -> RabbitMQ -> Celery Worker -> LLM/Supabase Vector DB
-```
-
-### Core Components
-
-**Backend** (`backend/`):
-- `backend_app.py` - FastAPI application with all HTTP endpoints and WebSocket support
-- `async_tasks.py` - Celery task definitions for async operations (ingestion, summarization, multi-step agents)
-- `config.py` - Centralized configuration from environment variables
-- `database.py` - SQLite database for storing document summaries
-- `auth.py` - Firebase authentication integration
-- `file_watcher.py` - Watchdog-based file monitoring service
-
-**Services Layer** (`backend/services/`):
-- `vector_db.py` - Supabase vector database wrapper using RPC calls for semantic search
-- `ingestion.py` - Document processing pipeline (Docling conversion, chunking, embedding, indexing)
-- `agent.py` - LLM agent implementations (sync chat, RAG, QA)
-- `llm.py` - LLM client abstractions (supports OpenAI/local models)
-- `websocket.py` - WebSocket connection manager
-- `supabase_service.py` - Supabase REST API client wrapper
-
-**Frontend** (`frontend/src/`):
-- React + Vite application
-- Material-UI components
-- Firebase authentication context
-- WebSocket integration for real-time updates
-
-### Agent Types
-
-1. **Synchronous RAG Agent** (`services/agent.py:perform_rag`)
-   - Real-time question answering with semantic search
-   - Uses Supabase vector DB for document retrieval
-   - pydantic-ai Agent with context-aware prompts
-
-2. **Asynchronous Multi-Step Agent** (`async_tasks.py`)
-   - Celery chain workflow: `check_knowledge_base` -> `answer_question`
-   - Demonstrates multi-step reasoning patterns
-
-3. **Document Ingestion Agent** (`async_tasks.py:ingest_docs_task`)
-   - Docling-based conversion (PDF, XLSX, etc.)
-   - RecursiveCharacterTextSplitter for chunking
-   - OpenAI embeddings generation
-   - Batch upsert to Supabase
-
-4. **Summarization Agent** (`async_tasks.py:summarize_document_task`)
-   - Async document summarization
-   - Webhook notifications on completion
-   - Results stored in SQLite
-
-5. **File Watcher Service** (`file_watcher.py`)
-   - Auto-triggers ingestion on new files in monitored directories
-
-### Vector Database Architecture
-
-The system uses **Supabase** (PostgreSQL + pgvector) instead of Qdrant:
-- Table: `documents` (configurable via `VECTOR_TABLE_NAME`)
-- RPC function: `match_documents` - performs similarity search with optional document_set filtering
-- Schema: id, vector, filename, document_set, content, metadata
-- `VectorDBService` class provides compatibility layer mimicking Qdrant API
-
-### Document Processing Pipelines
-
-**Standard Pipeline** (`ingestion.py`):
-- Docling conversion with table structure extraction (OCR disabled by default)
-- RecursiveCharacterTextSplitter (chunk_size=1000, overlap=100)
-- OpenAI embeddings
-- Batch upsert to Supabase (batch_size=64)
-
-**VLM Pipeline** (`ingestion.py:process_file_vlm`):
-- Docling VlmPipeline for vision-language models
-- Singleton converter to avoid heavy re-initialization
-- Same chunking/embedding flow as standard pipeline
-
-### Multi-Tenancy Pattern
-
-Documents are organized by `document_set`:
-- Upload API sanitizes set names: `re.sub(r'[^a-z0-9_]', '_', document_set.lower())`
-- Files stored in subdirectories: `MONITORED_DIR/{document_set}/`
-- Vector DB includes `document_set` filter in search queries
-- "all" is the default document_set
-
-### Configuration
-
-All configuration via environment variables (`.env`):
-- `OPENAI_API_BASE` - Supports OpenAI or local LM Studio endpoints
-- `OPENAI_MODEL` - LLM model name
-- `OPENAI_EMBEDDING_MODEL` - Embedding model
-- `SUPABASE_URL` / `SUPABASE_KEY` - Supabase credentials
-- `CELERY_BROKER_URL` - RabbitMQ connection
-- `MONITORED_DIR` - File watcher directory
-- `RUN_WORKER_EMBEDDED` - Run Celery worker inside FastAPI process (dev mode)
 
 ## Important Patterns
 
+### Serverless Constraints
+
+- **10s timeout** - Backend functions must complete within 10 seconds
+- **Stateless** - No persistent disk storage; use Azure Blob or Supabase
+- **Cold starts** - Optimize initialization, lazy-load heavy dependencies
+- **Long-polling** - Use 8s max timeout for real-time updates
+
 ### Async/Sync Bridging
 
-The codebase uses `nest_asyncio` to allow sync operations in async contexts:
-- Applied in `services/agent.py`
-- Celery tasks use `asyncio.run()` to call async service methods
-- Vector DB service methods are async but called from sync Celery tasks
+Worker tasks use `asyncio.run()` to call async service methods:
+- Supabase client methods are async
+- Worker tasks are sync (Celery limitation)
+- Bridge with `asyncio.run()` wrapper
 
 ### Error Handling
 
-- LLM errors return descriptive strings (e.g., "Error: OPENAI_API_KEY not found")
-- Ingestion failures are logged but don't crash the worker
-- Vector DB operations catch exceptions and return empty results on failure
-
-### File Conversion
-
-`utils/file_conversion.py`:
-- Handles `.xls` to `.xlsx` conversion using pandas
-- Creates temporary files in system temp directory
-- Explicit cleanup with `cleanup_temp_file()` helper
+- Backend: Return structured errors with proper HTTP status codes
+- Worker: Return descriptive strings for task status tracking
+- LLM errors: Return user-friendly messages
+- Vector DB: Catch exceptions and return empty results on failure
 
 ### Authentication
 
-- Firebase Admin SDK for token verification
-- `get_current_user` FastAPI dependency on protected endpoints
-- Frontend uses Firebase Auth context
+- Backend: Firebase Admin SDK for token verification
+- Frontend: Firebase Auth context (`useAuth()` hook)
+- All API calls require Firebase ID token in Authorization header
 
 ### Real-Time Updates
 
-- WebSocket connection at `/ws`
-- Broadcast notifications on task completion
-- Frontend hooks: `useWebSocket`, `useTaskStatus`
+- **Long-polling** at `/api/poll?since_id=X` (8s timeout)
+- Worker webhooks to `/api/notifications/internal/notify`
+- Frontend polls for task updates
+- No WebSockets (not supported in Vercel Functions)
 
 ## Common Development Tasks
 
-### Adding a New Endpoint
+### Adding a New Backend Endpoint
 
-1. Define request/response models in `backend/api/models.py`
-2. Add endpoint in `backend/backend_app.py`
-3. Add `dependencies=[Depends(get_current_user)]` for auth
-4. Use service layer methods (don't inline business logic)
+1. Create handler in `apps/backend/api/<domain>/index.ts`
+2. Define request/response types in `apps/backend/lib/types.ts`
+3. Add business logic in `apps/backend/lib/<service>.ts`
+4. Add route rewrites in `apps/backend/vercel.json`
+5. Update frontend API client in `apps/web/lib/api.ts`
+
+**Example:**
+```typescript
+// apps/backend/api/my-feature/index.ts
+import type { VercelRequest, VercelResponse } from "@vercel/node";
+
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+  // Verify Firebase auth token
+  // Call service layer
+  // Return response within 10s
+}
+```
 
 ### Adding a New Celery Task
 
-1. Define task in `backend/async_tasks.py` with `@app.task` decorator
+1. Define task in `apps/worker/async_tasks.py` with `@app.task` decorator
 2. Use `asyncio.run()` wrapper for async service calls
-3. Remember to call `await db_service.close()` in finally block
-4. Return descriptive strings for task status
+3. Return descriptive strings for task status
+4. Webhook to `/api/notifications/internal/notify` on completion
 
-### Testing Vector Search
+**Example:**
+```python
+@app.task(bind=True)
+def my_task(self, arg: str) -> str:
+    try:
+        result = asyncio.run(my_async_function(arg))
+        # Notify backend
+        return f"Success: {result}"
+    except Exception as e:
+        return f"Error: {str(e)}"
+```
 
-The system expects a Supabase function `match_documents`:
+### Adding a Frontend Component
+
+1. Create component in `apps/web/components/`
+2. Use server components by default, add `"use client"` only if needed
+3. Import `useAuth()` for protected features
+4. Use Tailwind utilities and Radix UI primitives
+5. Call API via `apps/web/lib/api.ts` helpers
+
+### Working with Vector Search
+
+The system uses Supabase RPC function `match_documents`:
 ```sql
--- Expected RPC signature:
+-- RPC signature:
 match_documents(
   query_embedding vector,
   match_threshold float,
@@ -346,13 +407,18 @@ match_documents(
 ) RETURNS table(content text, filename text, document_set text, similarity float, metadata jsonb)
 ```
 
-### Working with Docling
+**Best practices:**
+- Always filter by `document_set` for multi-tenancy
+- Start with 0.7 similarity threshold
+- Use text-embedding-3-small (1536 dimensions)
 
-Docling pipelines are **synchronous** (CPU-bound):
-- Standard pipeline: Fast, no OCR, table structure extraction
-- VLM pipeline: Slow, heavy initialization, use singleton pattern
-- Always cleanup backends: `doc_result.input._backend.unload()`
-- Call `gc.collect()` after VLM processing
+### Working with Docling (Worker)
+
+Docling processing in worker tasks:
+- **Standard pipeline:** Fast, no OCR, table structure extraction
+- **VLM pipeline:** Heavy initialization, use singleton pattern
+- **Cleanup:** Call `gc.collect()` after processing
+- **Memory:** Monitor usage, Docling is memory-intensive
 
 ### Git Workflow
 

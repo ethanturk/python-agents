@@ -101,57 +101,153 @@ find_tasks(filter_by="project", filter_value="proj-123")
 - Higher `task_order` = higher priority (0-100)
 - Tasks should be 30 min - 4 hours of work
 
-# System Agents Architecture
+## Project Architecture Overview
 
-This document outlines the various agents and background processes operating within the Python Agents system.
+This project is a **Turborepo monorepo** with three main applications:
 
-## 1. Synchronous RAG Agent
+### Applications
 
-**Location:** `backend/sync_agent.py` (implied interaction via `backend_app.py`)
-**Role:**
+1. **`apps/backend`** - Node.js Serverless Backend
+   - **Tech Stack:** TypeScript, Vercel Functions, OpenAI, Supabase, Firebase Auth, Azure Blob Storage
+   - **Runtime:** Vercel serverless functions (10s max duration)
+   - **API Endpoints:** `/api/agent/*`, `/api/documents/*`, `/api/summaries/*`, `/api/notifications/*`
+   - **Key Services:** LLM agents, vector search (RAG), document management, long-polling notifications (8s timeout)
+   - **Deployment:** Auto-deploy to Vercel on push to `main` via GitHub Actions
 
-- Handles real-time search and question-answering interactions from the frontend.
-- connect to Qdrant to retrieve relevant document chunks.
-- Uses OpenAI LLMs to generate answers based on retrieved context.
+2. **`apps/web`** - Next.js Frontend
+   - **Tech Stack:** Next.js 16, React 18, TypeScript, Tailwind CSS, Radix UI, Firebase Auth
+   - **Features:** Server/client components, real-time polling, file upload, document management, RAG chat interface
+   - **Deployment:** Auto-deploy to Vercel on push to `main` via GitHub Actions
 
-## 2. Asynchronous Multi-Step Agent
+3. **`apps/worker`** - Python Celery Worker
+   - **Tech Stack:** Python 3.11+, Celery, LangChain, pydantic-ai, Docling, Supabase
+   - **Tasks:** Document ingestion (Docling → chunk → embed → index), async summarization, multi-step agents, file watching
+   - **Deployment:** Auto-deploy to Docker Hub on push to `main` via GitHub Actions
 
-**Location:** `backend/async_tasks.py`
-**Infrastructure:** Celery
-**Role:** Demonstrates a chained agent workflow.
+### Infrastructure
 
-- **Step 1: `check_knowledge_base`**: Determines if a knowledge base exists (or creates a stub).
-- **Step 2: `answer_question`**: Uses the established knowledge base context to answer user questions.
+- **Vector Database:** Supabase (PostgreSQL + pgvector extension)
+  - Table: `documents` with vector similarity search via `match_documents()` RPC function
+  - Stores: embeddings, content, metadata, document_set (multi-tenancy)
 
-## 3. Document Ingestion Agent
+- **File Storage:** Azure Blob Storage
+  - Handles file uploads from backend
+  - Worker processes files for ingestion
 
-**Location:** `backend/async_tasks.py` (`ingest_docs_task`)
-**Infrastructure:** Celery
-**Role:**
+- **Authentication:** Firebase
+  - Backend: Firebase Admin SDK for token verification
+  - Frontend: Firebase Auth context
 
-- Processes uploaded files (PDF, XLSX, etc.).
-- Uses **Docling** for document conversion and efficient parsing.
-- Splits text into chunks.
-- Generates embeddings using OpenAI.
-- Upserts vectors into **Qdrant**.
+- **Task Queue:** Redis or RabbitMQ
+  - Celery broker for async task distribution
+  - Long-polling notification queue in backend
 
-## 4. Summarization Agent
+### Data Flow
 
-**Location:** `backend/async_tasks.py` (`summarize_document_task`)
-**Infrastructure:** Celery
-**Role:**
+```
+Frontend (Next.js) → Backend API (Node.js Serverless) → Worker (Python Celery)
+                            ↓                                    ↓
+                     Supabase Vector DB                   Azure Blob Storage
+                     Firebase Auth                        Supabase Vector DB
+```
 
-- Asynchronously generates comprehensive summaries for uploaded documents.
-- Uses **Docling** to parse documents.
-- Notifies the main backend upon completion via webhook/callback.
+### Key Architecture Patterns
 
-## 5. File Watcher Service
+- **Serverless-First:** Backend uses Vercel Functions with 10s timeout limits
+- **Async Processing:** Long-running tasks (ingestion, summarization) handled by Python worker
+- **Multi-Tenancy:** Documents organized by `document_set` for isolation
+- **Long-Polling:** 8s timeout notification system for real-time updates without WebSockets
+- **Stateless Functions:** Backend uses sql.js in-memory SQLite, no persistent disk
 
-**Location:** `backend/file_watcher.py`
-**Role:**
+### CI/CD Workflows
 
-- Monitors specific directories for new files.
-- Triggers ingestion tasks automatically when new content is detected.
+- `.github/workflows/vercel-backend-deploy.yml` - Deploy backend to Vercel
+- `.github/workflows/vercel-frontend-deploy.yml` - Deploy frontend to Vercel
+- `.github/workflows/docker-hub-deploy.yml` - Deploy worker to Docker Hub
+- `.github/workflows/ci.yml` - Run tests and quality checks on PRs
+
+### Project Structure
+
+```
+python-agents/
+├── apps/
+│   ├── backend/          # Node.js serverless functions
+│   │   ├── api/          # Route handlers (agent, documents, notifications, summaries)
+│   │   ├── lib/          # Services (supabase, llm, database, notifications)
+│   │   └── vercel.json   # Vercel configuration
+│   ├── web/              # Next.js frontend
+│   │   ├── app/          # App router pages
+│   │   └── components/   # React components
+│   └── worker/           # Python Celery worker
+│       ├── async_tasks.py    # Task definitions
+│       └── clients.py        # Service clients
+├── packages/             # Shared configs (eslint, typescript)
+├── turbo.json           # Turborepo config
+└── openspec/            # OpenSpec documentation
+```
+
+### Architectural Constraints & Considerations
+
+When creating proposals or implementing features, consider these constraints:
+
+#### Backend (Node.js Serverless)
+- **10-second timeout limit** - All API operations must complete within 10s
+- **Stateless** - No persistent disk storage (use Azure Blob or Supabase)
+- **Cold starts** - First request may be slower; optimize for quick initialization
+- **Long-polling** - Use 8s timeout max for real-time updates (respects 10s function limit)
+- **In-memory SQLite** - Metadata storage via sql.js (cleared on function restart)
+
+#### Frontend (Next.js 16)
+- **App Router** - Use server and client components appropriately
+- **Firebase Auth** - All API calls require Firebase ID token in Authorization header
+- **Environment Variables** - Use `NEXT_PUBLIC_*` prefix for client-accessible vars
+- **Static Optimization** - Prefer static generation where possible
+
+#### Worker (Python Celery)
+- **Long-running tasks** - Use worker for operations >5s (document processing, LLM calls)
+- **Docling processing** - Heavy memory usage, manage resource cleanup (`gc.collect()`)
+- **VLM pipeline** - Use singleton pattern to avoid re-initialization overhead
+- **Task notifications** - Webhook to backend `/api/notifications/internal/notify` on completion
+
+#### Database & Storage
+- **Supabase Vector DB** - Use RPC function `match_documents()` for similarity search
+- **Document sets** - Always filter by `document_set` for multi-tenancy
+- **Embedding dimensions** - Default 1536 (text-embedding-3-small)
+- **Azure Blob Storage** - Required for file uploads (no local filesystem in serverless)
+
+#### Cross-Service Communication
+- **Backend → Worker** - Via task queue (Redis/RabbitMQ) or direct invocation
+- **Worker → Backend** - Via webhook notifications
+- **Frontend → Backend** - REST API with Firebase auth
+- **Real-time Updates** - Long-polling `/api/poll` endpoint (not WebSockets)
+
+### Agent Types
+
+The system implements several specialized agents:
+
+1. **Synchronous RAG Agent** (`apps/backend/lib/llm.ts`)
+   - Real-time question answering with semantic search
+   - Uses Supabase vector DB for document retrieval
+   - OpenAI integration for response generation
+
+2. **Asynchronous Multi-Step Agent** (`apps/worker/async_tasks.py`)
+   - Celery task chains for complex workflows
+   - Demonstrates multi-step reasoning patterns
+
+3. **Document Ingestion Agent** (`apps/worker/async_tasks.py:ingest_docs_task`)
+   - Docling-based conversion (PDF, XLSX, DOCX, etc.)
+   - RecursiveCharacterTextSplitter for chunking (chunk_size=1000, overlap=100)
+   - OpenAI embeddings generation
+   - Batch upsert to Supabase
+
+4. **Summarization Agent** (`apps/worker/async_tasks.py:summarize_document_task`)
+   - Async document summarization with LLM
+   - Webhook notifications on completion
+   - Results stored in backend database
+
+5. **File Watcher Service** (`apps/worker/file_watcher.py`)
+   - Monitors directories for new files
+   - Auto-triggers ingestion on file detection
 
 ## Landing the Plane (Session Completion)
 

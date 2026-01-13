@@ -2,6 +2,126 @@
 
 Instructions for AI coding assistants using OpenSpec for spec-driven development.
 
+## Project Architecture Overview
+
+This project is a **Turborepo monorepo** with three main applications:
+
+### Applications
+
+1. **`apps/backend`** - Node.js Serverless Backend
+   - **Tech Stack:** TypeScript, Vercel Functions, OpenAI, Supabase, Firebase Auth, Azure Blob Storage
+   - **Runtime:** Vercel serverless functions (10s max duration)
+   - **API Endpoints:** `/api/agent/*`, `/api/documents/*`, `/api/summaries/*`, `/api/notifications/*`
+   - **Key Services:** LLM agents, vector search (RAG), document management, long-polling notifications (8s timeout)
+   - **Deployment:** Auto-deploy to Vercel on push to `main` via GitHub Actions
+
+2. **`apps/web`** - Next.js Frontend
+   - **Tech Stack:** Next.js 16, React 18, TypeScript, Tailwind CSS, Radix UI, Firebase Auth
+   - **Features:** Server/client components, real-time polling, file upload, document management, RAG chat interface
+   - **Deployment:** Auto-deploy to Vercel on push to `main` via GitHub Actions
+
+3. **`apps/worker`** - Python Celery Worker
+   - **Tech Stack:** Python 3.11+, Celery, LangChain, pydantic-ai, Docling, Supabase
+   - **Tasks:** Document ingestion (Docling → chunk → embed → index), async summarization, multi-step agents, file watching
+   - **Deployment:** Auto-deploy to Docker Hub on push to `main` via GitHub Actions
+
+### Infrastructure
+
+- **Vector Database:** Supabase (PostgreSQL + pgvector extension)
+  - Table: `documents` with vector similarity search via `match_documents()` RPC function
+  - Stores: embeddings, content, metadata, document_set (multi-tenancy)
+
+- **File Storage:** Azure Blob Storage
+  - Handles file uploads from backend
+  - Worker processes files for ingestion
+
+- **Authentication:** Firebase
+  - Backend: Firebase Admin SDK for token verification
+  - Frontend: Firebase Auth context
+
+- **Task Queue:** Redis or RabbitMQ
+  - Celery broker for async task distribution
+  - Long-polling notification queue in backend
+
+### Data Flow
+
+```
+Frontend (Next.js) → Backend API (Node.js Serverless) → Worker (Python Celery)
+                            ↓                                    ↓
+                     Supabase Vector DB                   Azure Blob Storage
+                     Firebase Auth                        Supabase Vector DB
+```
+
+### Key Architecture Patterns
+
+- **Serverless-First:** Backend uses Vercel Functions with 10s timeout limits
+- **Async Processing:** Long-running tasks (ingestion, summarization) handled by Python worker
+- **Multi-Tenancy:** Documents organized by `document_set` for isolation
+- **Long-Polling:** 8s timeout notification system for real-time updates without WebSockets
+- **Stateless Functions:** Backend uses sql.js in-memory SQLite, no persistent disk
+
+### CI/CD Workflows
+
+- `.github/workflows/vercel-backend-deploy.yml` - Deploy backend to Vercel
+- `.github/workflows/vercel-frontend-deploy.yml` - Deploy frontend to Vercel
+- `.github/workflows/docker-hub-deploy.yml` - Deploy worker to Docker Hub
+- `.github/workflows/ci.yml` - Run tests and quality checks on PRs
+
+### Project Structure
+
+```
+python-agents/
+├── apps/
+│   ├── backend/          # Node.js serverless functions
+│   │   ├── api/          # Route handlers (agent, documents, notifications, summaries)
+│   │   ├── lib/          # Services (supabase, llm, database, notifications)
+│   │   └── vercel.json   # Vercel configuration
+│   ├── web/              # Next.js frontend
+│   │   ├── app/          # App router pages
+│   │   └── components/   # React components
+│   └── worker/           # Python Celery worker
+│       ├── async_tasks.py    # Task definitions
+│       └── clients.py        # Service clients
+├── packages/             # Shared configs (eslint, typescript)
+├── turbo.json           # Turborepo config
+└── openspec/            # OpenSpec documentation
+```
+
+### Architectural Constraints & Considerations
+
+When creating proposals, consider these constraints:
+
+#### Backend (Node.js Serverless)
+- **10-second timeout limit** - All API operations must complete within 10s
+- **Stateless** - No persistent disk storage (use Azure Blob or Supabase)
+- **Cold starts** - First request may be slower; optimize for quick initialization
+- **Long-polling** - Use 8s timeout max for real-time updates (respects 10s function limit)
+- **In-memory SQLite** - Metadata storage via sql.js (cleared on function restart)
+
+#### Frontend (Next.js 16)
+- **App Router** - Use server and client components appropriately
+- **Firebase Auth** - All API calls require Firebase ID token in Authorization header
+- **Environment Variables** - Use `NEXT_PUBLIC_*` prefix for client-accessible vars
+- **Static Optimization** - Prefer static generation where possible
+
+#### Worker (Python Celery)
+- **Long-running tasks** - Use worker for operations >5s (document processing, LLM calls)
+- **Docling processing** - Heavy memory usage, manage resource cleanup (`gc.collect()`)
+- **VLM pipeline** - Use singleton pattern to avoid re-initialization overhead
+- **Task notifications** - Webhook to backend `/api/notifications/internal/notify` on completion
+
+#### Database & Storage
+- **Supabase Vector DB** - Use RPC function `match_documents()` for similarity search
+- **Document sets** - Always filter by `document_set` for multi-tenancy
+- **Embedding dimensions** - Default 1536 (text-embedding-3-small)
+- **Azure Blob Storage** - Required for file uploads (no local filesystem in serverless)
+
+#### Cross-Service Communication
+- **Backend → Worker** - Via task queue (Redis/RabbitMQ) or direct invocation
+- **Worker → Backend** - Via webhook notifications
+- **Frontend → Backend** - REST API with Firebase auth
+- **Real-time Updates** - Long-polling `/api/poll` endpoint (not WebSockets)
+
 ## TL;DR Quick Checklist
 
 - Search existing work: `openspec spec list --long`, `openspec list` (use `rg` only for full-text search)
@@ -386,6 +506,36 @@ Only add complexity with:
 - Performance data showing current solution too slow
 - Concrete scale requirements (>1000 users, >100MB data)
 - Multiple proven use cases requiring abstraction
+
+### Technology-Specific Guidelines
+
+#### When Adding Backend Features
+- **Choose service layer:** New logic goes in `apps/backend/lib/<service>.ts`, not inline in API routes
+- **Respect timeout limits:** Operations >5s must be async (delegate to worker)
+- **Handle cold starts:** Lazy-load heavy dependencies, cache initialized clients
+- **Type safety:** Define request/response types in `lib/types.ts`
+- **Error handling:** Return descriptive error messages, log with structured logging
+
+#### When Adding Frontend Features
+- **Server vs Client:** Use server components by default, client components only for interactivity
+- **Authentication:** Import `useAuth()` hook for protected routes
+- **API calls:** Use client utilities in `apps/web/lib/api.ts`, include auth tokens
+- **State management:** Keep state local; use polling for real-time updates
+- **Styling:** Use Tailwind utility classes, Radix UI for complex components
+
+#### When Adding Worker Tasks
+- **Task signatures:** Keep parameters simple (JSON-serializable types)
+- **Resource management:** Explicitly cleanup large objects, call `gc.collect()` for memory
+- **Error handling:** Return descriptive strings for status tracking
+- **Notifications:** Always webhook to backend on task completion
+- **Idempotency:** Design tasks to be safely retried on failure
+
+#### When Adding Vector Search Features
+- **Query structure:** Always use `match_documents()` RPC function
+- **Document sets:** Include `filter_document_set` parameter for multi-tenancy
+- **Threshold tuning:** Start with 0.7 similarity threshold, adjust based on results
+- **Chunking strategy:** Use RecursiveCharacterTextSplitter (chunk_size=1000, overlap=100)
+- **Embedding model:** Use OpenAI text-embedding-3-small (1536 dimensions)
 
 ### Clear References
 - Use `file.ts:42` format for code locations
