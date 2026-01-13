@@ -44,6 +44,13 @@ export function DocumentSetAutocomplete({
     }
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && inputValue.trim() !== "") {
+      onChange(inputValue);
+      setOpen(false);
+    }
+  };
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -64,6 +71,7 @@ export function DocumentSetAutocomplete({
             placeholder="Search or type to create..."
             value={inputValue}
             onValueChange={handleInputChange}
+            onKeyDown={handleKeyDown}
           />
           <CommandEmpty>
             <div className="p-2 text-sm">
