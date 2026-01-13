@@ -4,9 +4,9 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import handler from "./index.js";
-import * as supabaseModule from "../lib/supabase.js";
-import * as azureModule from "../lib/azure.js";
-import * as queueModule from "../lib/queue.js";
+import * as supabaseModule from "../../lib/supabase.js";
+import * as azureModule from "../../lib/azure.js";
+import * as queueModule from "../../lib/queue.js";
 
 // Mock modules
 vi.mock("../lib/supabase.js", () => ({

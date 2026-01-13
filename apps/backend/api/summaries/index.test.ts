@@ -4,10 +4,10 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import handler from "./index.js";
-import * as llmModule from "../lib/llm.js";
-import * as dbModule from "../lib/database.js";
-import * as supabaseModule from "../lib/supabase.js";
-import * as queueModule from "../lib/queue.js";
+import * as llmModule from "../../lib/llm.js";
+import * as dbModule from "../../lib/database.js";
+import * as supabaseModule from "../../lib/supabase.js";
+import * as queueModule from "../../lib/queue.js";
 
 // Mock modules
 vi.mock("../lib/llm.js", () => ({

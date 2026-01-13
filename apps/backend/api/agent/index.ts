@@ -11,11 +11,11 @@ import type {
   SearchRequest,
   ErrorResponse,
   HealthResponse,
-} from "../lib/types.js";
-import { runSyncAgent, generateEmbedding } from "../lib/llm.js";
-import { matchDocuments } from "../lib/supabase.js";
-import { submitTask, getTaskStatus } from "../lib/queue.js";
-import logger from "../lib/logger.js";
+} from "../../lib/types.js";
+import { runSyncAgent, generateEmbedding } from "../../lib/llm.js";
+import { matchDocuments } from "../../lib/supabase.js";
+import { submitTask, getTaskStatus } from "../../lib/queue.js";
+import logger from "../../lib/logger.js";
 
 export const vercelConfig = {
   runtime: "nodejs18.x",

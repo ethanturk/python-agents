@@ -11,13 +11,13 @@ import type {
   SearchQARequest,
   ErrorResponse,
   HealthResponse,
-} from "../lib/types.js";
-import { getAllSummaries, getSummaryByFilename } from "../lib/database.js";
-import { runQAAgent } from "../lib/llm.js";
-import { matchDocuments } from "../lib/supabase.js";
-import { submitTask } from "../lib/queue.js";
-import { generateEmbedding } from "../lib/llm.js";
-import logger from "../lib/logger.js";
+} from "../../lib/types.js";
+import { getAllSummaries, getSummaryByFilename } from "../../lib/database.js";
+import { runQAAgent } from "../../lib/llm.js";
+import { matchDocuments } from "../../lib/supabase.js";
+import { submitTask } from "../../lib/queue.js";
+import { generateEmbedding } from "../../lib/llm.js";
+import logger from "../../lib/logger.js";
 
 export const vercelConfig = {
   runtime: "nodejs18.x",

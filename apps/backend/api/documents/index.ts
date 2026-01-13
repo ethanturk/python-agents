@@ -10,19 +10,19 @@ import type {
   DocumentSetsResponse,
   ErrorResponse,
   HealthResponse,
-} from "../lib/types.js";
+} from "../../lib/types.js";
 import {
   getDocuments,
   getDocumentSets,
   deleteDocuments,
-} from "../lib/supabase.js";
+} from "../../lib/supabase.js";
 import {
   uploadFile as _uploadFile,
   downloadFile,
   deleteFile,
-} from "../lib/azure.js";
-import { submitTask as _submitTask } from "../lib/queue.js";
-import logger from "../lib/logger.js";
+} from "../../lib/azure.js";
+import { submitTask as _submitTask } from "../../lib/queue.js";
+import logger from "../../lib/logger.js";
 
 export const vercelConfig = {
   runtime: "nodejs18.x",

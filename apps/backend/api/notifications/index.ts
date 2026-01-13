@@ -9,9 +9,9 @@ import type {
   PollResponse,
   ErrorResponse,
   HealthResponse,
-} from "../lib/types.js";
-import { pollNotifications, notify } from "../lib/notifications.js";
-import logger from "../lib/logger.js";
+} from "../../lib/types.js";
+import { pollNotifications, notify } from "../../lib/notifications.js";
+import logger from "../../lib/logger.js";
 
 export const vercelConfig = {
   runtime: "nodejs18.x",
