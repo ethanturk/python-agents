@@ -19,10 +19,18 @@ function initAzure(): void {
     return;
   }
 
-  try {
-    blobServiceClient = BlobServiceClient.fromConnectionString(
-      process.env.AZURE_STORAGE_CONNECTION_STRING || "",
+  const connectionString = process.env.AZURE_STORAGE_CONNECTION_STRING;
+
+  if (!connectionString) {
+    const error = new Error(
+      "Azure Storage not configured: AZURE_STORAGE_CONNECTION_STRING environment variable is missing",
     );
+    logger.error("Azure Storage initialization failed - connection string not set");
+    throw error;
+  }
+
+  try {
+    blobServiceClient = BlobServiceClient.fromConnectionString(connectionString);
 
     containerClient = blobServiceClient.getContainerClient(
       process.env.AZURE_STORAGE_CONTAINER_NAME || "documents",
