@@ -293,6 +293,19 @@ export default function useSummarization({
     try {
       const res = await axios.get(`${API_BASE}/agent/summaries`);
 
+      // Defensive check: ensure summaries exists and is an array
+      if (!res.data || !Array.isArray(res.data.summaries)) {
+        console.warn(
+          "Invalid summaries response. Expected { summaries: [] }, got:",
+          res.data,
+        );
+        // If it's an error response, log it
+        if (res.data?.detail) {
+          console.error("API error:", res.data.detail);
+        }
+        return;
+      }
+
       const history = res.data.summaries.map((s: BackendSummary) => ({
         filename: s.filename,
         result: s.summary || "No text",
@@ -309,7 +322,11 @@ export default function useSummarization({
         return [...prev, ...newItems];
       });
     } catch (error) {
-      console.error("Failed to load summary history", error);
+      console.error("Failed to load summary history:", error);
+      if (axios.isAxiosError(error) && error.response) {
+        console.error("Response data:", error.response.data);
+        console.error("Response status:", error.response.status);
+      }
     }
   }, []);
 
