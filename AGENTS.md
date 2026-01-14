@@ -288,6 +288,63 @@ task_id = await queue.submit_task(
 For full deployment guide, see `worker/WORKER_DEPLOYMENT.md`.
 
 
+### Azure Container Instances (ACI) Deployment
+
+The system can deploy worker tasks to Azure Container Instances for on-demand processing:
+
+**Architecture:**
+```
+Backend (Vercel)
+  ↓ Submit task
+Azure Queue ({CLIENT_ID}-tasks)
+  ↓ Logic App triggers
+ACI Container (single-task, exits on completion)
+  ↓ Process task
+  ↓ Send webhook
+Backend (/internal/notify)
+  → Update database/notify clients
+```
+
+**Infrastructure Templates:**
+```
+infra/aci/
+├── main.bicep              # Main deployment (ACR, Storage, Key Vault, Logic App)
+├── logic-app-trigger.bicep # Logic App workflow for queue monitoring
+├── worker-container.bicep  # Single-task ACI container template
+└── acr-role-assignment.bicep # ACR pull role for managed identity
+```
+
+**Deployment:**
+```bash
+cd infra/aci
+
+# Validate templates
+az bicep build --file main.bicep
+
+# Deploy infrastructure
+az deployment group create \
+  --template-file main.bicep \
+  --resource-group your-rg \
+  --parameters environment=prod \
+  --parameters clientId=default \
+  --parameters storageAccountName=aidocsrch
+```
+
+**Key Resources Created:**
+- Azure Container Registry (ACR) for worker images
+- Azure Storage Account (queues, blob container for documents)
+- Azure Key Vault (secrets for all credentials)
+- Azure Logic App (monitors queue, triggers ACI containers)
+- User-Assigned Managed Identity (for ACR pull access)
+
+**Parameters:**
+- `environment` - Environment name (dev, staging, prod)
+- `clientId` - Client ID for multi-tenancy (default: default)
+- `storageAccountName` - Storage account name (default: aidocsrch)
+- `supabaseUrl`, `supabaseKey` - Optional if already in Key Vault
+- `openaiApiKey`, `internalApiKey` - Optional if already in Key Vault
+
+
 ### Testing
 
 

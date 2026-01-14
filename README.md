@@ -386,7 +386,20 @@ vercel --prod
 ```bash
 cd apps/worker
 docker build -t your-org/langchain-worker:latest .
-docker push your-org/langchain-worker:latest
+docker push your-org/langlangchain-worker:latest
+```
+
+**Worker (Azure Container Instances):**
+```bash
+# Deploy infrastructure and trigger worker via Logic App
+cd infra/aci
+az bicep build --file main.bicep  # Validate templates
+az deployment group create \
+  --template-file main.bicep \
+  --resource-group your-rg \
+  --parameters environment=prod \
+  --parameters clientId=default \
+  --parameters storageAccountName=aidocsrch
 ```
 
 ### Production Environment Variables
@@ -463,6 +476,12 @@ python-agents/
 ├── .github/
 │   └── workflows/        # CI/CD pipelines
 ├── turbo.json           # Turborepo config
+├── infra/
+│   └── aci/              # Azure Container Instances deployment
+│       ├── main.bicep        # Main deployment (ACR, Storage, Key Vault, Logic App)
+│       ├── logic-app-trigger.bicep  # Logic App workflow for queue monitoring
+│       └── worker-container.bicep   # Single-task ACI container template
+├── openspec/            # OpenSpec documentation
 └── package.json         # Root workspace config
 ```
 

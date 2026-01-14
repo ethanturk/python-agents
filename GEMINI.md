@@ -184,8 +184,51 @@ python-agents/
 │       └── services/         # Service modules
 ├── packages/             # Shared configs (eslint, typescript)
 ├── turbo.json           # Turborepo config
+├── infra/
+│   └── aci/              # Azure Container Instances deployment
+│       ├── main.bicep              # Main deployment (ACR, Storage, Key Vault, Logic App)
+│       ├── logic-app-trigger.bicep # Logic App workflow for queue monitoring
+│       ├── worker-container.bicep  # Single-task ACI container template
+│       └── acr-role-assignment.bicep # ACR pull role for managed identity
 └── openspec/            # OpenSpec documentation
 ```
+
+### Task Queue: Azure Storage Queues
+- Queue naming: `{CLIENT_ID}-tasks` (e.g., `default-tasks`)
+- Two deployment modes:
+  - **VPS Worker:** Continuous polling when `TASK_DATA` env var is not set
+  - **ACI (on-demand):** Logic App triggers single-task containers when queue has messages
+
+### Worker Deployment: Azure Container Instances (ACI)
+For on-demand worker processing without maintaining a running VPS:
+
+**Architecture:**
+```
+Backend (Vercel) → Azure Queue → Logic App → ACI Container → Webhook → Backend
+```
+
+**Deployment:**
+```bash
+cd infra/aci
+
+# Validate templates
+az bicep build --file main.bicep
+
+# Deploy infrastructure
+az deployment group create \
+  --template-file main.bicep \
+  --resource-group your-rg \
+  --parameters environment=prod \
+  --parameters clientId=default \
+  --parameters storageAccountName=aidocsrch
+```
+
+**Key Resources:**
+- Azure Container Registry (ACR) for worker images
+- Azure Storage Account with queues and blob containers
+- Azure Key Vault for secrets
+- Azure Logic App for queue monitoring and container triggering
+- User-Assigned Managed Identity for ACR pull access
 
 ### Architectural Constraints & Considerations
 
