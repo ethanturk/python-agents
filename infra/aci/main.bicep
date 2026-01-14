@@ -22,6 +22,10 @@ param supabaseKey string
 @secure()
 param openaiApiKey string
 
+@description('Internal API key for webhook authentication')
+@secure()
+param internalApiKey string
+
 // Naming convention
 var baseName = 'worker-${environment}'
 var acrName = replace('acr${baseName}', '-', '')
@@ -107,6 +111,7 @@ module logicApp 'logic-app-trigger.bicep' = {
     supabaseUrl: supabaseUrl
     supabaseKey: supabaseKey
     openaiApiKey: openaiApiKey
+    internalApiKey: internalApiKey
     queueName: queueName
     pollingIntervalSeconds: 30
     containerResourceGroup: resourceGroup().name

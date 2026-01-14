@@ -25,12 +25,17 @@ class NotificationService:
 
     def __init__(self):
         self.timeout = 30
+        self.api_key = os.environ.get("INTERNAL_API_KEY")
 
     async def send_webhook(self, webhook_url: str, task_data: Dict[str, Any]) -> bool:
         """Send webhook notification to frontend server."""
         try:
+            headers = {}
+            if self.api_key:
+                headers["X-Internal-Api-Key"] = self.api_key
+
             async with httpx.AsyncClient(timeout=self.timeout) as client:
-                response = await client.post(webhook_url, json=task_data)
+                response = await client.post(webhook_url, json=task_data, headers=headers)
                 response.raise_for_status()
                 logger.info(f"Webhook sent successfully to {webhook_url}")
                 return True
@@ -101,9 +106,12 @@ class SummarizationHandler:
 # Shared handler registry for both single-task and polling modes
 def get_handlers() -> Dict[str, Any]:
     """Get the handler registry."""
+    ingestion = IngestionHandler()
+    summarization = SummarizationHandler()
     return {
-        "ingest": IngestionHandler(),
-        "summarize": SummarizationHandler(),
+        "ingest": ingestion,
+        "ingest_document": ingestion,  # Alias for compatibility
+        "summarize": summarization,
     }
 
 

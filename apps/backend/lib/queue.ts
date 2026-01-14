@@ -133,9 +133,12 @@ class AzureQueueService implements IQueueService {
     this.queueName = `${clientId}-tasks`;
 
     // Webhook URL for worker to notify on completion
-    const baseUrl = process.env.VERCEL_URL
-      ? `https://${process.env.VERCEL_URL}`
-      : process.env.API_URL || "http://localhost:3001";
+    // Prefer explicit API_URL (production) over VERCEL_URL (preview deployment)
+    const baseUrl = process.env.API_URL
+      ? process.env.API_URL
+      : process.env.VERCEL_URL
+        ? `https://${process.env.VERCEL_URL}`
+        : "http://localhost:3001";
     this.webhookUrl = `${baseUrl}/api/notifications/internal/notify`;
 
     if (!this.connectionString) {

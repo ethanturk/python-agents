@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.39.26.7824",
-      "templateHash": "18149499221911505011"
+      "templateHash": "5289735648360801793"
     }
   },
   "parameters": {
@@ -45,6 +45,12 @@
       "type": "securestring",
       "metadata": {
         "description": "OpenAI API key"
+      }
+    },
+    "internalApiKey": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Internal API key for webhook authentication"
       }
     },
     "queueName": {
@@ -225,6 +231,10 @@
                                 {
                                   "name": "OPENAI_API_KEY",
                                   "secureValue": "[parameters('openaiApiKey')]"
+                                },
+                                {
+                                  "name": "INTERNAL_API_KEY",
+                                  "secureValue": "[parameters('internalApiKey')]"
                                 }
                               ]
                             }

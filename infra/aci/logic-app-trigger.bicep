@@ -19,6 +19,10 @@ param supabaseKey string
 @secure()
 param openaiApiKey string
 
+@description('Internal API key for webhook authentication')
+@secure()
+param internalApiKey string
+
 @description('Queue name to monitor')
 param queueName string = 'default-tasks'
 
@@ -172,6 +176,10 @@ resource logicApp 'Microsoft.Logic/workflows@2019-05-01' = {
                             {
                               name: 'OPENAI_API_KEY'
                               secureValue: openaiApiKey
+                            }
+                            {
+                              name: 'INTERNAL_API_KEY'
+                              secureValue: internalApiKey
                             }
                           ]
                         }
