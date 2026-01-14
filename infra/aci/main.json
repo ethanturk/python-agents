@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.39.26.7824",
-      "templateHash": "12717715969918198925"
+      "templateHash": "10977955476706457957"
     }
   },
   "parameters": {
@@ -57,6 +57,13 @@
       "metadata": {
         "description": "Internal API key for webhook authentication (optional if already in Key Vault)"
       }
+    },
+    "storageAccountName": {
+      "type": "string",
+      "defaultValue": "aidocsrch",
+      "metadata": {
+        "description": "Storage account name"
+      }
     }
   },
   "variables": {
@@ -80,7 +87,7 @@
     {
       "type": "Microsoft.Storage/storageAccounts",
       "apiVersion": "2023-01-01",
-      "name": "aidocsrch",
+      "name": "[parameters('storageAccountName')]",
       "location": "[parameters('location')]",
       "sku": {
         "name": "Standard_LRS"
@@ -95,17 +102,17 @@
     {
       "type": "Microsoft.Storage/storageAccounts/queueServices/queues",
       "apiVersion": "2023-01-01",
-      "name": "[format('{0}/queues/{1}', 'aidocsrch', variables('queueName'))]",
+      "name": "[format('{0}/queues/{1}', parameters('storageAccountName'), variables('queueName'))]",
       "dependsOn": [
-        "[resourceId('Microsoft.Storage/storageAccounts', 'aidocsrch')]"
+        "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
       ]
     },
     {
       "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
       "apiVersion": "2023-01-01",
-      "name": "[format('{0}/containers/documents', 'aidocsrch')]",
+      "name": "[format('{0}/containers/documents', parameters('storageAccountName'))]",
       "dependsOn": [
-        "[resourceId('Microsoft.Storage/storageAccounts', 'aidocsrch')]"
+        "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
       ]
     },
     {
@@ -129,11 +136,11 @@
       "apiVersion": "2023-07-01",
       "name": "[format('{0}/{1}', variables('keyVaultName'), 'storage-account-name')]",
       "properties": {
-        "value": "aidocsrch"
+        "value": "[parameters('storageAccountName')]"
       },
       "dependsOn": [
         "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]",
-        "[resourceId('Microsoft.Storage/storageAccounts', 'aidocsrch')]"
+        "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
       ]
     },
     {
@@ -141,11 +148,11 @@
       "apiVersion": "2023-07-01",
       "name": "[format('{0}/{1}', variables('keyVaultName'), 'storage-account-key')]",
       "properties": {
-        "value": "[listKeys(resourceId('Microsoft.Storage/storageAccounts', 'aidocsrch'), '2023-01-01').keys[0].value]"
+        "value": "[listKeys(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), '2023-01-01').keys[0].value]"
       },
       "dependsOn": [
         "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]",
-        "[resourceId('Microsoft.Storage/storageAccounts', 'aidocsrch')]"
+        "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
       ]
     },
     {
@@ -153,11 +160,11 @@
       "apiVersion": "2023-07-01",
       "name": "[format('{0}/{1}', variables('keyVaultName'), 'azure-storage-connection-string')]",
       "properties": {
-        "value": "[format('DefaultEndpointsProtocol=https;AccountName={0};AccountKey={1};EndpointSuffix=core.windows.net', 'aidocsrch', listKeys(resourceId('Microsoft.Storage/storageAccounts', 'aidocsrch'), '2023-01-01').keys[0].value)]"
+        "value": "[format('DefaultEndpointsProtocol=https;AccountName={0};AccountKey={1};EndpointSuffix=core.windows.net', parameters('storageAccountName'), listKeys(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), '2023-01-01').keys[0].value)]"
       },
       "dependsOn": [
         "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]",
-        "[resourceId('Microsoft.Storage/storageAccounts', 'aidocsrch')]"
+        "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
       ]
     },
     {
@@ -246,7 +253,7 @@
             "value": "[resourceGroup().name]"
           },
           "storageAccountName": {
-            "value": "aidocsrch"
+            "value": "[parameters('storageAccountName')]"
           },
           "keyVaultName": {
             "value": "[variables('keyVaultName')]"
@@ -666,7 +673,7 @@
       },
       "dependsOn": [
         "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]",
-        "[resourceId('Microsoft.Storage/storageAccounts', 'aidocsrch')]"
+        "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
       ]
     }
   ],
@@ -689,7 +696,7 @@
     },
     "storageAccountName": {
       "type": "string",
-      "value": "aidocsrch"
+      "value": "[parameters('storageAccountName')]"
     },
     "logicAppName": {
       "type": "string",

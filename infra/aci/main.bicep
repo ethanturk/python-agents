@@ -22,6 +22,9 @@ param openaiApiKey string = ''
 @secure()
 param internalApiKey string = ''
 
+@description('Storage account name')
+param storageAccountName string = 'aidocsrch'
+
 // Naming convention
 var baseName = 'worker-${environment}'
 var keyVaultName = 'kv-${baseName}'
@@ -41,7 +44,7 @@ resource acr 'Microsoft.ContainerRegistry/registries@2023-07-01' = {
 
 // Azure Storage account for queues and blob storage
 resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
-  name: 'aidocsrch'
+  name: storageAccountName
   location: location
   sku: {
     name: 'Standard_LRS'
