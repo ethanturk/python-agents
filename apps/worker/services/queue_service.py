@@ -146,13 +146,41 @@ class AzureQueueService(QueueService):
         self.connection_string = os.getenv("AZURE_STORAGE_CONNECTION_STRING")
         self.client_id = os.getenv("CLIENT_ID", "default").lower()
         self.queue_name = f"{self.client_id}-tasks"
+        self._queue_ensured = False
 
         if not self.connection_string:
             logger.warning("AZURE_STORAGE_CONNECTION_STRING not configured")
+        else:
+            # Ensure queue exists on initialization
+            self._ensure_queue_exists()
 
         logger.info(
             f"AzureQueueService initialized for client '{self.client_id}' with queue '{self.queue_name}'"
         )
+
+    def _ensure_queue_exists(self) -> None:
+        """Create the queue if it doesn't exist."""
+        if self._queue_ensured or not self.connection_string:
+            return
+
+        try:
+            from azure.storage.queue import QueueServiceClient
+            from azure.core.exceptions import ResourceExistsError
+
+            queue_service = QueueServiceClient.from_connection_string(
+                self.connection_string
+            )
+            queue_client = queue_service.get_queue_client(self.queue_name)
+
+            try:
+                queue_client.create_queue()
+                logger.info(f"Created queue '{self.queue_name}'")
+            except ResourceExistsError:
+                logger.debug(f"Queue '{self.queue_name}' already exists")
+
+            self._queue_ensured = True
+        except Exception as e:
+            logger.error(f"Failed to ensure queue exists: {e}")
 
     def _validate_message_size(self, message: str) -> None:
         """Validate message is under 64KB limit."""

@@ -39,6 +39,7 @@
   },
   "dependencies": {
     "@azure/storage-blob": "^12.17.0",
+    "@azure/storage-queue": "^12.16.0",
     "@fastify/cors": "^8.4.0",
     "@supabase/supabase-js": "^2.38.0",
     "busboy": "^1.6.0",

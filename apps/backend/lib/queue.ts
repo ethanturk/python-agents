@@ -1,13 +1,23 @@
 /**
- * Queue service HTTP client.
- * Provides HTTP interface to the external queue service.
+ * Queue service for async task processing.
+ * Supports Azure Storage Queue, HTTP proxy, and mock implementations.
  */
 
 import type { TaskResponse } from "./types.js";
 import logger from "./logger.js";
+import { randomUUID } from "crypto";
+
+// Base interface for queue services
+interface IQueueService {
+  submitTask(
+    taskType: string,
+    payload: Record<string, unknown>,
+  ): Promise<string>;
+  getTaskStatus(taskId: string): Promise<{ status: string; result: unknown }>;
+}
 
 // Mock implementation for local development
-class MockQueueService {
+class MockQueueService implements IQueueService {
   private tasks = new Map<string, { status: string; result: unknown }>();
   private counter = 0;
 
@@ -50,8 +60,8 @@ class MockQueueService {
   }
 }
 
-// Real HTTP implementation
-class HttpQueueService {
+// HTTP proxy implementation (calls external queue service)
+class HttpQueueService implements IQueueService {
   private baseUrl: string;
 
   constructor() {
@@ -110,10 +120,123 @@ class HttpQueueService {
   }
 }
 
-// Initialize queue service based on provider
-let queueService: MockQueueService | HttpQueueService | null = null;
+// Azure Storage Queue implementation
+class AzureQueueService implements IQueueService {
+  private connectionString: string;
+  private queueName: string;
+  private webhookUrl: string;
+  private queueEnsured = false;
 
-export function initQueueService(): MockQueueService | HttpQueueService {
+  constructor() {
+    this.connectionString = process.env.AZURE_STORAGE_CONNECTION_STRING || "";
+    const clientId = (process.env.CLIENT_ID || "default").toLowerCase();
+    this.queueName = `${clientId}-tasks`;
+
+    // Webhook URL for worker to notify on completion
+    const baseUrl = process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : process.env.API_URL || "http://localhost:3001";
+    this.webhookUrl = `${baseUrl}/api/notifications/internal/notify`;
+
+    if (!this.connectionString) {
+      logger.warn("AZURE_STORAGE_CONNECTION_STRING not configured");
+    }
+
+    logger.info(
+      { queueName: this.queueName },
+      "AzureQueueService initialized",
+    );
+  }
+
+  private async ensureQueueExists(): Promise<void> {
+    if (this.queueEnsured || !this.connectionString) {
+      return;
+    }
+
+    try {
+      // Dynamic import to avoid bundling issues in serverless
+      const { QueueServiceClient } = await import("@azure/storage-queue");
+
+      const queueServiceClient = QueueServiceClient.fromConnectionString(
+        this.connectionString,
+      );
+      const queueClient = queueServiceClient.getQueueClient(this.queueName);
+
+      // Create queue if it doesn't exist
+      await queueClient.createIfNotExists();
+      this.queueEnsured = true;
+      logger.info({ queueName: this.queueName }, "Queue ensured to exist");
+    } catch (error) {
+      const err = error as Error;
+      logger.error(
+        { error: err.message, queueName: this.queueName },
+        "Failed to ensure queue exists",
+      );
+      throw err;
+    }
+  }
+
+  async submitTask(
+    taskType: string,
+    payload: Record<string, unknown>,
+  ): Promise<string> {
+    if (!this.connectionString) {
+      throw new Error("Azure Queue not configured");
+    }
+
+    await this.ensureQueueExists();
+
+    try {
+      const { QueueServiceClient } = await import("@azure/storage-queue");
+
+      const queueServiceClient = QueueServiceClient.fromConnectionString(
+        this.connectionString,
+      );
+      const queueClient = queueServiceClient.getQueueClient(this.queueName);
+
+      const taskId = randomUUID();
+      const message = JSON.stringify({
+        task_type: taskType,
+        task_id: taskId,
+        payload,
+        webhook_url: this.webhookUrl,
+      });
+
+      // Azure Queue message format: taskId|jsonPayload
+      await queueClient.sendMessage(Buffer.from(message).toString("base64"));
+
+      logger.info(
+        { taskId, taskType, queueName: this.queueName },
+        "Task submitted to Azure Queue",
+      );
+
+      return taskId;
+    } catch (error) {
+      const err = error as Error;
+      logger.error(
+        { error: err.message, taskType },
+        "Failed to submit task to Azure Queue",
+      );
+      throw err;
+    }
+  }
+
+  async getTaskStatus(
+    taskId: string,
+  ): Promise<{ status: string; result: unknown }> {
+    // Azure Queue doesn't track task status - that's handled via webhooks
+    // Return pending status; actual status comes from notifications table
+    return {
+      status: "pending",
+      result: null,
+    };
+  }
+}
+
+// Initialize queue service based on provider
+let queueService: IQueueService | null = null;
+
+export function initQueueService(): IQueueService {
   if (queueService !== null) {
     return queueService;
   }
@@ -123,12 +246,11 @@ export function initQueueService(): MockQueueService | HttpQueueService {
   if (provider === "mock") {
     logger.info("Using mock queue service");
     queueService = new MockQueueService();
-  } else if (
-    provider === "http" ||
-    provider === "sqs" ||
-    provider === "azure"
-  ) {
-    logger.info(`Using HTTP queue service (provider: ${provider})`);
+  } else if (provider === "azure") {
+    logger.info("Using Azure Queue service");
+    queueService = new AzureQueueService();
+  } else if (provider === "http") {
+    logger.info("Using HTTP queue service");
     queueService = new HttpQueueService();
   } else {
     logger.warn(`Unknown queue provider: ${provider}, falling back to mock`);
@@ -170,4 +292,4 @@ export async function getTaskStatus(taskId: string): Promise<TaskResponse> {
   };
 }
 
-export { MockQueueService, HttpQueueService };
+export { MockQueueService, HttpQueueService, AzureQueueService };
