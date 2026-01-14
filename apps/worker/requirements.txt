@@ -8,7 +8,7 @@ pydantic-ai
 litellm
 
 # Document Processing
-docling[vlm]
+docling
 pypdfium2
 pandas
 xlrd
