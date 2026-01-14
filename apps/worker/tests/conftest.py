@@ -21,11 +21,6 @@ os.environ.setdefault("OPENAI_MODEL", "gpt-4o-mini")
 os.environ.setdefault("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
 os.environ.setdefault("OPENAI_EMBEDDING_DIMENSIONS", "1536")
 os.environ.setdefault("VECTOR_TABLE_NAME", "test_documents")
-os.environ.setdefault("CELERY_QUEUE_NAME", "test-queue")
-os.environ.setdefault(
-    "CELERY_BROKER_URL",
-    "amqp://test_user:test_pass@localhost:5673//",  # pragma: allowlist secret
-)
 os.environ.setdefault("SUPABASE_URL", "http://localhost:54321")
 os.environ.setdefault("SUPABASE_KEY", "test-key")  # pragma: allowlist secret
 
@@ -84,22 +79,8 @@ def mock_openai_agent(mocker):
     mock_agent.run_sync.return_value = mock_result
 
     mocker.patch("services.agent.Agent", return_value=mock_agent)
-    mocker.patch("async_tasks.Agent", return_value=mock_agent)
 
     return mock_agent
-
-
-@pytest.fixture
-def mock_celery_task(mocker):
-    """Mock Celery tasks for unit tests."""
-    mock_task = MagicMock()
-    mock_task.id = "mock-task-id"
-
-    # Mock Celery task delays
-    mocker.patch("async_tasks.ingest_docs_task.delay", return_value=mock_task)
-    mocker.patch("async_tasks.summarize_document_task.delay", return_value=mock_task)
-
-    return mock_task
 
 
 @pytest.fixture

@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "langchain-agent-backend"
 version = "0.1.0"
-description = "LangChain Agent System with FastAPI, Celery, and Supabase"
+description = "LangChain Agent System with Azure Queue Worker and Supabase"
 requires-python = ">=3.11"
 
 [tool.mypy]
@@ -25,7 +25,6 @@ disallow_untyped_calls = true
 # Relax strict mode for third-party libraries without type stubs
 [[tool.mypy.overrides]]
 module = [
-    "celery.*",
     "langchain.*",
     "langchain_openai.*",
     "pydantic_ai.*",

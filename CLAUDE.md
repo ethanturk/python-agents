@@ -123,8 +123,8 @@ This project is a **Turborepo monorepo** with three main applications:
    - **Features:** Server/client components, real-time polling, file upload, document management, RAG chat interface
    - **Deployment:** Auto-deploy to Vercel on push to `main` via GitHub Actions
 
-3. **`apps/worker`** - Python Celery Worker
-   - **Tech Stack:** Python 3.11+, Celery, LangChain, pydantic-ai, Docling, Supabase
+3. **`apps/worker`** - Python Async Worker
+   - **Tech Stack:** Python 3.11+, LangChain, pydantic-ai, Docling, Supabase
    - **Tasks:** Document ingestion (Docling → chunk → embed → index), async summarization, multi-step agents, file watching
    - **Deployment:** Auto-deploy to Docker Hub on push to `main` via GitHub Actions
 
@@ -142,14 +142,14 @@ This project is a **Turborepo monorepo** with three main applications:
   - Backend: Firebase Admin SDK for token verification
   - Frontend: Firebase Auth context
 
-- **Task Queue:** Redis or RabbitMQ
-  - Celery broker for async task distribution
-  - Long-polling notification queue in backend
+- **Task Queue:** Azure Storage Queues
+   - Async worker polls queues for task distribution
+   - Long-polling notification queue in backend
 
 ### Data Flow
 
 ```
-Frontend (Next.js) → Backend API (Node.js Serverless) → Worker (Python Celery)
+Frontend (Next.js) → Backend API (Node.js Serverless) → Worker (Python Async)
                             ↓                                    ↓
                      Supabase Vector DB                   Azure Blob Storage
                      Firebase Auth                        Supabase Vector DB
@@ -207,7 +207,7 @@ When creating proposals or implementing features, consider these constraints:
 - **Environment Variables** - Use `NEXT_PUBLIC_*` prefix for client-accessible vars
 - **Static Optimization** - Prefer static generation where possible
 
-#### Worker (Python Celery)
+#### Worker (Python Async)
 - **Long-running tasks** - Use worker for operations >5s (document processing, LLM calls)
 - **Docling processing** - Heavy memory usage, manage resource cleanup (`gc.collect()`)
 - **VLM pipeline** - Use singleton pattern to avoid re-initialization overhead
@@ -220,7 +220,7 @@ When creating proposals or implementing features, consider these constraints:
 - **Azure Blob Storage** - Required for file uploads (no local filesystem in serverless)
 
 #### Cross-Service Communication
-- **Backend → Worker** - Via task queue (Redis/RabbitMQ) or direct invocation
+- **Backend → Worker** - Via Azure Storage Queues
 - **Worker → Backend** - Via webhook notifications
 - **Frontend → Backend** - REST API with Firebase auth
 - **Real-time Updates** - Long-polling `/api/poll` endpoint (not WebSockets)
@@ -242,10 +242,10 @@ pnpm dev
 pnpm --filter web dev          # Frontend only
 pnpm --filter backend dev      # Backend only (note: serverless, use Vercel CLI)
 
-# Run Celery worker locally
+# Run async worker locally
 cd apps/worker
 pip install -r requirements.txt
-celery -A async_tasks worker --loglevel=info
+python main.py
 
 # Or use Docker Compose for worker
 docker-compose -f docker-compose.worker.yml up -d
@@ -367,23 +367,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 }
 ```
 
-### Adding a New Celery Task
+### Adding a New Async Task
 
-1. Define task in `apps/worker/async_tasks.py` with `@app.task` decorator
-2. Use `asyncio.run()` wrapper for async service calls
-3. Return descriptive strings for task status
+1. Define handler in `apps/worker/queue_worker.py`
+2. Add handler to AsyncWorker handlers dictionary
+3. Use async methods for service calls
 4. Webhook to `/api/notifications/internal/notify` on completion
 
 **Example:**
 ```python
-@app.task(bind=True)
-def my_task(self, arg: str) -> str:
-    try:
-        result = asyncio.run(my_async_function(arg))
-        # Notify backend
-        return f"Success: {result}"
-    except Exception as e:
-        return f"Error: {str(e)}"
+class MyHandler:
+    async def execute(self, payload: dict) -> dict:
+        try:
+            result = await my_async_function(payload)
+            # Notify backend via webhook
+            return {"status": "completed", "result": result}
+        except Exception as e:
+            return {"status": "failed", "error": str(e)}
 ```
 
 ### Adding a Frontend Component

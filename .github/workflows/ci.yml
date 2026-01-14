@@ -121,27 +121,6 @@ jobs:
             exit 1
           fi
 
-      - name: Wait for RabbitMQ to be ready
-        run: |
-          echo "Waiting for RabbitMQ..."
-          max_attempts=30
-          attempt=0
-          while [ $attempt -lt $max_attempts ]; do
-            if docker exec test-rabbitmq rabbitmq-diagnostics ping > /dev/null 2>&1; then
-              echo "RabbitMQ is ready!"
-              break
-            fi
-            attempt=$((attempt + 1))
-            echo "Attempt $attempt of $max_attempts..."
-            sleep 2
-          done
-
-          if [ $attempt -eq $max_attempts ]; then
-            echo "RabbitMQ did not become ready"
-            docker-compose -f docker-compose.test.yml logs test-rabbitmq
-            exit 1
-          fi
-
       - name: Show running containers
         run: |
           docker ps
@@ -152,7 +131,6 @@ jobs:
         env:
           USE_TEST_CONTAINERS: "true"
           DATABASE_CONN_STRING: "postgresql://test_user:test_pass@localhost:5433/test_db"  # pragma: allowlist secret
-          CELERY_BROKER_URL: "amqp://test_user:test_pass@localhost:5673//"  # pragma: allowlist secret
         run: |
           cd worker
           pytest -m integration -v --tb=short

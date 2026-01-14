@@ -56,7 +56,6 @@ jobs:
           OPENAI_EMBEDDING_DIMENSIONS: ${{ secrets.OPENAI_EMBEDDING_DIMENSIONS }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-          CELERY_BROKER_URL: ${{ secrets.CELERY_BROKER_URL }}
 
   # Build and push Docker image for Docker Hub deployment
   build-docker:

@@ -1,9 +1,5 @@
 # Core Worker Dependencies
-# For Celery workers handling async tasks (document ingestion, summarization, etc.)
-
-# Task Queue
-celery[redis]>=5.3.0
-redis>=5.0.0
+# For async task processing (document ingestion, summarization, etc.)
 
 # LLM & AI Frameworks
 langchain-openai

@@ -6,18 +6,6 @@ load_dotenv()
 
 BASE_URL = os.getenv("BASE_URL") or "192.168.5.204"
 
-# Celery Configuration
-# Redis Broker URL (supports both RabbitMQ and Redis for backwards compatibility)
-# For multi-instance deployment, use Redis: redis://default:password@host:port  # pragma: allowlist secret
-CELERY_BROKER_URL = os.getenv(  # pragma: allowlist secret
-    "CELERY_BROKER_URL", f"amqp://guest:guest@{BASE_URL}:5672//"  # pragma: allowlist secret
-)
-# Use Redis result backend when broker is Redis, otherwise use RPC
-if CELERY_BROKER_URL and CELERY_BROKER_URL.startswith("redis://"):
-    CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", CELERY_BROKER_URL)
-else:
-    CELERY_RESULT_BACKEND = "rpc://"
-
 # OpenAI / Local LLM Configuration
 # Pointing to LM Studio
 OPENAI_API_BASE = os.getenv("OPENAI_API_BASE") or "http://192.168.5.203:1234/v1"
@@ -38,7 +26,6 @@ SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 
 DATABASE_CONN_STRING = os.getenv("DATABASE_CONN_STRING")
 VECTOR_TABLE_NAME = os.getenv("VECTOR_TABLE_NAME") or "documents"
-CELERY_QUEUE_NAME = os.getenv("CELERY_QUEUE_NAME") or "celery"
 
 # Azure Storage Configuration (Central US region)
 AZURE_STORAGE_CONNECTION_STRING = os.getenv("AZURE_STORAGE_CONNECTION_STRING")

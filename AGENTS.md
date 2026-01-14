@@ -564,16 +564,6 @@ Docling pipelines are **synchronous** (CPU-bound):
 - Call `gc.collect()` after VLM processing
 
 
-## Project-Specific Notes
-
-
-This project has Archon skills integration documented:
-- **Do NOT** use Claude's built-in todo tracking when Archon is present
-- Task management through Archon skills: `find_tasks`, `manage_task`
-- Knowledge base through RAG: `rag_search_knowledge_base`, `rag_get_available_sources`
-- "Landing the Plane" workflow: Must push changes to remote before session ends
-
-
 ### Git Workflow
 
 

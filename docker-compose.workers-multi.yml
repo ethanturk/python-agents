@@ -1,7 +1,7 @@
 version: '3.8'
 
 # Multi-Instance Worker Deployment
-# This Docker Compose file deploys multiple Celery workers on a single VPS,
+# This Docker Compose file deploys multiple async workers on a single VPS,
 # each worker dedicated to a specific tenant instance.
 #
 # Usage:
@@ -11,7 +11,7 @@ version: '3.8'
 #   4. Scale: Add new worker service for each tenant
 #
 # Environment Variables Required (per tenant):
-#   TENANT{N}_CELERY_BROKER_URL - Upstash Redis URL
+#   TENANT{N}_CLIENT_ID - Client identifier for queue isolation
 #   TENANT{N}_OPENAI_API_KEY - OpenAI API key
 #   TENANT{N}_OPENAI_API_BASE - OpenAI API base URL
 #   TENANT{N}_OPENAI_MODEL - LLM model name
@@ -28,10 +28,12 @@ services:
     image: ethanturk/python-agents-worker:latest
     container_name: worker-tenant1
     pull_policy: always
-    command: ["celery", "-A", "async_tasks", "worker", "--loglevel=info", "-Q", "tenant1_queue"]
+    command: ["python", "main.py"]
     environment:
-      CELERY_BROKER_URL: ${TENANT1_CELERY_BROKER_URL}
-      CELERY_QUEUE_NAME: tenant1_queue
+      CLIENT_ID: ${TENANT1_CLIENT_ID:-tenant1}
+      WORKER_POLLING_INTERVAL: ${TENANT1_WORKER_POLLING_INTERVAL:-5}
+      WORKER_VISIBILITY_TIMEOUT: ${TENANT1_WORKER_VISIBILITY_TIMEOUT:-30}
+      WORKER_MAX_MESSAGES: ${TENANT1_WORKER_MAX_MESSAGES:-10}
       OPENAI_API_KEY: ${TENANT1_OPENAI_API_KEY}
       OPENAI_API_BASE: ${TENANT1_OPENAI_API_BASE:-https://api.openai.com/v1}
       OPENAI_MODEL: ${TENANT1_OPENAI_MODEL:-gpt-4o-mini}
@@ -46,21 +48,18 @@ services:
     restart: unless-stopped
     networks:
       - workers
-    healthcheck:
-      test: ["CMD-SHELL", "celery -A async_tasks inspect ping -d celery@$$HOSTNAME || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
   # Worker for tenant2
   worker-tenant2:
     image: ethanturk/python-agents-worker:latest
     container_name: worker-tenant2
     pull_policy: always
-    command: ["celery", "-A", "async_tasks", "worker", "--loglevel=info", "-Q", "tenant2_queue"]
+    command: ["python", "main.py"]
     environment:
-      CELERY_BROKER_URL: ${TENANT2_CELERY_BROKER_URL}
-      CELERY_QUEUE_NAME: tenant2_queue
+      CLIENT_ID: ${TENANT2_CLIENT_ID:-tenant2}
+      WORKER_POLLING_INTERVAL: ${TENANT2_WORKER_POLLING_INTERVAL:-5}
+      WORKER_VISIBILITY_TIMEOUT: ${TENANT2_WORKER_VISIBILITY_TIMEOUT:-30}
+      WORKER_MAX_MESSAGES: ${TENANT2_WORKER_MAX_MESSAGES:-10}
       OPENAI_API_KEY: ${TENANT2_OPENAI_API_KEY}
       OPENAI_API_BASE: ${TENANT2_OPENAI_API_BASE:-https://api.openai.com/v1}
       OPENAI_MODEL: ${TENANT2_OPENAI_MODEL:-gpt-4o-mini}
@@ -75,21 +74,18 @@ services:
     restart: unless-stopped
     networks:
       - workers
-    healthcheck:
-      test: ["CMD-SHELL", "celery -A async_tasks inspect ping -d celery@$$HOSTNAME || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
   # Worker for tenant3
   worker-tenant3:
     image: ethanturk/python-agents-worker:latest
     container_name: worker-tenant3
     pull_policy: always
-    command: ["celery", "-A", "async_tasks", "worker", "--loglevel=info", "-Q", "tenant3_queue"]
+    command: ["python", "main.py"]
     environment:
-      CELERY_BROKER_URL: ${TENANT3_CELERY_BROKER_URL}
-      CELERY_QUEUE_NAME: tenant3_queue
+      CLIENT_ID: ${TENANT3_CLIENT_ID:-tenant3}
+      WORKER_POLLING_INTERVAL: ${TENANT3_WORKER_POLLING_INTERVAL:-5}
+      WORKER_VISIBILITY_TIMEOUT: ${TENANT3_WORKER_VISIBILITY_TIMEOUT:-30}
+      WORKER_MAX_MESSAGES: ${TENANT3_WORKER_MAX_MESSAGES:-10}
       OPENAI_API_KEY: ${TENANT3_OPENAI_API_KEY}
       OPENAI_API_BASE: ${TENANT3_OPENAI_API_BASE:-https://api.openai.com/v1}
       OPENAI_MODEL: ${TENANT3_OPENAI_MODEL:-gpt-4o-mini}
@@ -104,21 +100,18 @@ services:
     restart: unless-stopped
     networks:
       - workers
-    healthcheck:
-      test: ["CMD-SHELL", "celery -A async_tasks inspect ping -d celery@$$HOSTNAME || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
   # Worker for tenant4
   worker-tenant4:
     image: ethanturk/python-agents-worker:latest
     container_name: worker-tenant4
     pull_policy: always
-    command: ["celery", "-A", "async_tasks", "worker", "--loglevel=info", "-Q", "tenant4_queue"]
+    command: ["python", "main.py"]
     environment:
-      CELERY_BROKER_URL: ${TENANT4_CELERY_BROKER_URL}
-      CELERY_QUEUE_NAME: tenant4_queue
+      CLIENT_ID: ${TENANT4_CLIENT_ID:-tenant4}
+      WORKER_POLLING_INTERVAL: ${TENANT4_WORKER_POLLING_INTERVAL:-5}
+      WORKER_VISIBILITY_TIMEOUT: ${TENANT4_WORKER_VISIBILITY_TIMEOUT:-30}
+      WORKER_MAX_MESSAGES: ${TENANT4_WORKER_MAX_MESSAGES:-10}
       OPENAI_API_KEY: ${TENANT4_OPENAI_API_KEY}
       OPENAI_API_BASE: ${TENANT4_OPENAI_API_BASE:-https://api.openai.com/v1}
       OPENAI_MODEL: ${TENANT4_OPENAI_MODEL:-gpt-4o-mini}
@@ -133,21 +126,18 @@ services:
     restart: unless-stopped
     networks:
       - workers
-    healthcheck:
-      test: ["CMD-SHELL", "celery -A async_tasks inspect ping -d celery@$$HOSTNAME || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
   # Worker for tenant5
   worker-tenant5:
     image: ethanturk/python-agents-worker:latest
     container_name: worker-tenant5
     pull_policy: always
-    command: ["celery", "-A", "async_tasks", "worker", "--loglevel=info", "-Q", "tenant5_queue"]
+    command: ["python", "main.py"]
     environment:
-      CELERY_BROKER_URL: ${TENANT5_CELERY_BROKER_URL}
-      CELERY_QUEUE_NAME: tenant5_queue
+      CLIENT_ID: ${TENANT5_CLIENT_ID:-tenant5}
+      WORKER_POLLING_INTERVAL: ${TENANT5_WORKER_POLLING_INTERVAL:-5}
+      WORKER_VISIBILITY_TIMEOUT: ${TENANT5_WORKER_VISIBILITY_TIMEOUT:-30}
+      WORKER_MAX_MESSAGES: ${TENANT5_WORKER_MAX_MESSAGES:-10}
       OPENAI_API_KEY: ${TENANT5_OPENAI_API_KEY}
       OPENAI_API_BASE: ${TENANT5_OPENAI_API_BASE:-https://api.openai.com/v1}
       OPENAI_MODEL: ${TENANT5_OPENAI_MODEL:-gpt-4o-mini}
@@ -162,38 +152,8 @@ services:
     restart: unless-stopped
     networks:
       - workers
-    healthcheck:
-      test: ["CMD-SHELL", "celery -A async_tasks inspect ping -d celery@$$HOSTNAME || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
-  # Flower - Celery monitoring dashboard
-  # Access via SSH tunnel: ssh -L 5555:localhost:5555 root@<vps-ip>
-  # Then open: http://localhost:5555
-  flower:
-    image: mher/flower:latest
-    container_name: flower
-    command:
-      - celery
-      - --broker=${TENANT1_CELERY_BROKER_URL}
-      - flower
-      - --port=5555
-      - --broker_api=${TENANT1_CELERY_BROKER_URL}
-    ports:
-      - "5555:5555"
-    environment:
-      CELERY_BROKER_URL: ${TENANT1_CELERY_BROKER_URL}
-      FLOWER_BASIC_AUTH: ${FLOWER_BASIC_AUTH:-admin:admin}
-    restart: unless-stopped
-    networks:
-      - workers
-    depends_on:
-      - worker-tenant1
-      - worker-tenant2
-      - worker-tenant3
-      - worker-tenant4
-      - worker-tenant5
+
 
 networks:
   workers:

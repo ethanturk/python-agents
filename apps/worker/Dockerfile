@@ -27,6 +27,5 @@ COPY . .
 # Preload models
 RUN python preload_models.py
 
-EXPOSE 8000
-
-CMD ["uvicorn", "backend_app:app", "--host", "0.0.0.0", "--port", "8000", "--loop", "asyncio"]
+# Run the async queue worker
+CMD ["python", "main.py"]

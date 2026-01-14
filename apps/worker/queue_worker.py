@@ -9,10 +9,8 @@ from typing import Any, Dict
 
 import httpx
 
-import config
 from services.azure_storage import azure_storage_service
 from services.ingestion import ingestion_service
-from services.llm import LLMService
 from services.queue_service import AzureQueueService
 from summarizer import summarize_document
 
