@@ -25,12 +25,15 @@ function initAzure(): void {
     const error = new Error(
       "Azure Storage not configured: AZURE_STORAGE_CONNECTION_STRING environment variable is missing",
     );
-    logger.error("Azure Storage initialization failed - connection string not set");
+    logger.error(
+      "Azure Storage initialization failed - connection string not set",
+    );
     throw error;
   }
 
   try {
-    blobServiceClient = BlobServiceClient.fromConnectionString(connectionString);
+    blobServiceClient =
+      BlobServiceClient.fromConnectionString(connectionString);
 
     containerClient = blobServiceClient.getContainerClient(
       process.env.AZURE_STORAGE_CONTAINER_NAME || "documents",
@@ -59,6 +62,10 @@ export async function uploadFile(
   initAzure();
 
   try {
+    // Get container name
+    const containerName =
+      process.env.AZURE_STORAGE_CONTAINER_NAME || "documents";
+
     // Create blob path with document set as subdirectory
     const blobPath =
       documentSet === "all" ? filename : `${documentSet}/${filename}`;
@@ -74,8 +81,8 @@ export async function uploadFile(
 
     logger.info({ filename, documentSet }, "File uploaded to Azure Storage");
 
-    // Return blob URL (not storage account URL for security)
-    return blobPath;
+    // Return full path including container name (e.g., "demo/vegetables/file.md")
+    return `${containerName}/${blobPath}`;
   } catch (error) {
     const err = error as Error;
     logger.error(

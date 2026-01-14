@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.39.26.7824",
-      "templateHash": "5289735648360801793"
+      "templateHash": "18368041486732142864"
     }
   },
   "parameters": {
@@ -58,6 +58,13 @@
       "defaultValue": "default-tasks",
       "metadata": {
         "description": "Queue name to monitor"
+      }
+    },
+    "azureStorageContainerName": {
+      "type": "string",
+      "defaultValue": "documents",
+      "metadata": {
+        "description": "Azure Storage container name"
       }
     },
     "pollingIntervalSeconds": {
@@ -219,6 +226,10 @@
                                 {
                                   "name": "AZURE_STORAGE_CONNECTION_STRING",
                                   "secureValue": "[parameters('storageConnectionString')]"
+                                },
+                                {
+                                  "name": "AZURE_STORAGE_CONTAINER_NAME",
+                                  "value": "[parameters('azureStorageContainerName')]"
                                 },
                                 {
                                   "name": "SUPABASE_URL",

@@ -54,11 +54,18 @@ class IngestionHandler:
         """Execute document ingestion task."""
         filename = payload.get("filename")
         document_set = payload.get("document_set", "default")
+        file_url = payload.get("file_url")
+
+        if not filename or not isinstance(filename, str):
+            return {"status": "failed", "error": "Missing required field: filename"}
 
         logger.info(f"Starting ingestion task: {filename} in {document_set}")
 
         try:
-            content = await azure_storage_service.download_file(filename, document_set)
+            if file_url and isinstance(file_url, str):
+                content = await azure_storage_service.download_file_by_path(file_url)
+            else:
+                content = await azure_storage_service.download_file(filename, document_set)
             if not content:
                 raise ValueError(f"Failed to download file: {filename}")
 
@@ -85,11 +92,18 @@ class SummarizationHandler:
         """Execute document summarization task."""
         filename = payload.get("filename")
         document_set = payload.get("document_set", "default")
+        file_url = payload.get("file_url")
+
+        if not filename or not isinstance(filename, str):
+            return {"status": "failed", "error": "Missing required field: filename"}
 
         logger.info(f"Starting summarization task: {filename} in {document_set}")
 
         try:
-            content = await azure_storage_service.download_file(filename, document_set)
+            if file_url and isinstance(file_url, str):
+                content = await azure_storage_service.download_file_by_path(file_url)
+            else:
+                content = await azure_storage_service.download_file(filename, document_set)
             if not content:
                 raise ValueError(f"Failed to download file: {filename}")
 
@@ -115,7 +129,9 @@ def get_handlers() -> Dict[str, Any]:
     }
 
 
-def parse_task_data(task_data_raw: str) -> Tuple[str, str, Dict[str, Any], Optional[str]]:
+def parse_task_data(
+    task_data_raw: str,
+) -> Tuple[str, str, Dict[str, Any], Optional[str]]:
     """
     Parse task data from TASK_DATA environment variable or queue message.
 

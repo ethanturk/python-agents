@@ -45,6 +45,25 @@ class AzureStorageService:
             logger.error(f"Azure download failed for {filename}: {e}")
             return None
 
+    async def download_file_by_path(self, blob_path: str) -> bytes | None:
+        """Download file by full path including container (e.g., 'demo/vegetables/kale.md')"""
+        try:
+            parts = blob_path.split("/", 1)
+            if len(parts) != 2:
+                raise ValueError(f"Invalid blob path format: {blob_path}")
+
+            container_name, blob_name = parts
+
+            container_client = self.blob_service_client.get_container_client(container_name)
+            blob_client = container_client.get_blob_client(blob_name)
+            blob = blob_client.download_blob()
+            content = blob.readall()
+            logger.info(f"Downloaded by path: {blob_path} ({len(content)} bytes)")
+            return content
+        except Exception as e:
+            logger.error(f"Azure download by path failed for {blob_path}: {e}")
+            return None
+
     async def delete_file(self, filename: str, document_set: str) -> bool:
         """Delete file from container/{document_set}/{filename}"""
         try:
