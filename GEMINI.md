@@ -119,9 +119,9 @@ This project is a **Turborepo monorepo** with three main applications:
    - **Features:** Server/client components, real-time polling, file upload, document management, RAG chat interface
    - **Deployment:** Auto-deploy to Vercel on push to `main` via GitHub Actions
 
-3. **`apps/worker`** - Python Celery Worker
-   - **Tech Stack:** Python 3.11+, Celery, LangChain, pydantic-ai, Docling, Supabase
-   - **Tasks:** Document ingestion (Docling → chunk → embed → index), async summarization, multi-step agents, file watching
+3. **`apps/worker`** - Python Async Worker
+   - **Tech Stack:** Python 3.11+, Azure Queue, LangChain, pydantic-ai, Docling, Supabase
+   - **Tasks:** Document ingestion (Docling → chunk → embed → index), async summarization, file watching
    - **Deployment:** Auto-deploy to Docker Hub on push to `main` via GitHub Actions
 
 ### Infrastructure
@@ -138,14 +138,14 @@ This project is a **Turborepo monorepo** with three main applications:
   - Backend: Firebase Admin SDK for token verification
   - Frontend: Firebase Auth context
 
-- **Task Queue:** Redis or RabbitMQ
-  - Celery broker for async task distribution
+- **Task Queue:** Azure Storage Queues
+  - Async worker polls queues for task distribution
   - Long-polling notification queue in backend
 
 ### Data Flow
 
 ```
-Frontend (Next.js) → Backend API (Node.js Serverless) → Worker (Python Celery)
+Frontend (Next.js) → Backend API (Node.js Serverless) → Worker (Python Async)
                             ↓                                    ↓
                      Supabase Vector DB                   Azure Blob Storage
                      Firebase Auth                        Supabase Vector DB
@@ -178,9 +178,10 @@ python-agents/
 │   ├── web/              # Next.js frontend
 │   │   ├── app/          # App router pages
 │   │   └── components/   # React components
-│   └── worker/           # Python Celery worker
-│       ├── async_tasks.py    # Task definitions
-│       └── clients.py        # Service clients
+│   └── worker/           # Python async worker
+│       ├── main.py           # Worker entry point
+│       ├── queue_worker.py   # Queue polling and handlers
+│       └── services/         # Service modules
 ├── packages/             # Shared configs (eslint, typescript)
 ├── turbo.json           # Turborepo config
 └── openspec/            # OpenSpec documentation
@@ -203,7 +204,7 @@ When creating proposals or implementing features, consider these constraints:
 - **Environment Variables** - Use `NEXT_PUBLIC_*` prefix for client-accessible vars
 - **Static Optimization** - Prefer static generation where possible
 
-#### Worker (Python Celery)
+#### Worker (Python Async)
 - **Long-running tasks** - Use worker for operations >5s (document processing, LLM calls)
 - **Docling processing** - Heavy memory usage, manage resource cleanup (`gc.collect()`)
 - **VLM pipeline** - Use singleton pattern to avoid re-initialization overhead
@@ -216,7 +217,7 @@ When creating proposals or implementing features, consider these constraints:
 - **Azure Blob Storage** - Required for file uploads (no local filesystem in serverless)
 
 #### Cross-Service Communication
-- **Backend → Worker** - Via task queue (Redis/RabbitMQ) or direct invocation
+- **Backend → Worker** - Via Azure Storage Queues
 - **Worker → Backend** - Via webhook notifications
 - **Frontend → Backend** - REST API with Firebase auth
 - **Real-time Updates** - Long-polling `/api/poll` endpoint (not WebSockets)
@@ -230,22 +231,18 @@ The system implements several specialized agents:
    - Uses Supabase vector DB for document retrieval
    - OpenAI integration for response generation
 
-2. **Asynchronous Multi-Step Agent** (`apps/worker/async_tasks.py`)
-   - Celery task chains for complex workflows
-   - Demonstrates multi-step reasoning patterns
-
-3. **Document Ingestion Agent** (`apps/worker/async_tasks.py:ingest_docs_task`)
+2. **Document Ingestion** (`apps/worker/queue_worker.py`)
    - Docling-based conversion (PDF, XLSX, DOCX, etc.)
    - RecursiveCharacterTextSplitter for chunking (chunk_size=1000, overlap=100)
    - OpenAI embeddings generation
    - Batch upsert to Supabase
 
-4. **Summarization Agent** (`apps/worker/async_tasks.py:summarize_document_task`)
+3. **Summarization** (`apps/worker/summarizer.py`)
    - Async document summarization with LLM
    - Webhook notifications on completion
    - Results stored in backend database
 
-5. **File Watcher Service** (`apps/worker/file_watcher.py`)
+4. **File Watcher Service** (`apps/worker/file_watcher.py`)
    - Monitors directories for new files
    - Auto-triggers ingestion on file detection
 

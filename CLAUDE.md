@@ -182,9 +182,10 @@ python-agents/
 │   ├── web/              # Next.js frontend
 │   │   ├── app/          # App router pages
 │   │   └── components/   # React components
-│   └── worker/           # Python Celery worker
-│       ├── async_tasks.py    # Task definitions
-│       └── clients.py        # Service clients
+│   └── worker/           # Python async worker
+│       ├── main.py           # Worker entry point
+│       ├── queue_worker.py   # Queue polling and handlers
+│       └── services/         # Service modules
 ├── packages/             # Shared configs (eslint, typescript)
 ├── turbo.json           # Turborepo config
 └── openspec/            # OpenSpec documentation
@@ -320,10 +321,10 @@ pnpm --filter backend build
 
 ### Async/Sync Bridging
 
-Worker tasks use `asyncio.run()` to call async service methods:
+Worker uses async/await for service methods:
 - Supabase client methods are async
-- Worker tasks are sync (Celery limitation)
-- Bridge with `asyncio.run()` wrapper
+- Queue worker is fully async
+- Uses `nest_asyncio` for compatibility
 
 ### Error Handling
 

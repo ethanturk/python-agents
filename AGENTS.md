@@ -143,7 +143,7 @@ find_tasks(filter_by="project", filter_value="proj-123")
 ## Project Overview
 
 
-LangChain Agent System - A scalable RAG-based LLM application with distributed processing, featuring a FastAPI backend, React frontend, Celery workers, and Supabase vector storage.
+LangChain Agent System - A scalable RAG-based LLM application with distributed processing, featuring a Node.js serverless backend, Next.js frontend, Azure Queue workers, and Supabase vector storage.
 
 
 ## Development Commands
@@ -152,20 +152,27 @@ LangChain Agent System - A scalable RAG-based LLM application with distributed p
 ### Running Services
 
 
-The system uses multiple Docker Compose files for modular deployment:
+The system uses Turborepo for monorepo management:
 
 
 ```bash
-# Start infrastructure & backend (RabbitMQ, Qdrant, Flower, Backend API)
-docker-compose -f docker-compose.yml up -d --build
+# Install dependencies
+pnpm install
 
+# Run all apps in dev mode
+pnpm dev
 
-# Start Celery worker for async tasks
-docker-compose -f docker-compose.worker.yml up -d --build
+# Run specific apps
+pnpm --filter web dev          # Frontend only
+pnpm --filter backend dev      # Backend only
 
+# Run async worker locally
+cd apps/worker
+pip install -r requirements.txt
+python main.py
 
-# Start React frontend
-docker-compose -f docker-compose.frontend.yml up -d --build
+# Or use Docker Compose for worker
+docker-compose -f docker-compose.worker.yml up -d
 ```
 
 
@@ -180,7 +187,7 @@ The backend is now split into domain-specific Vercel serverless functions:
 | `api/agent` | `/agent/sync`, `/agent/async`, `/agent/status`, `/agent/search` | pydantic-ai, langchain-openai, supabase | LLM queries and RAG |
 | `api/documents` | `/agent/upload`, `/agent/documents`, `/agent/delete`, `/agent/files` | azure-storage-blob, supabase | File operations |
 | `api/summaries` | `/agent/summaries`, `/agent/summary_qa`, `/agent/search_qa` | pydantic-ai, supabase | Cached summaries |
-| `api/notifications` | `/poll`, `/internal/notify` | FastAPI only | Notifications (polling) |
+| `api/notifications` | `/poll`, `/internal/notify` | minimal | Notifications (polling) |
 
 
 **Deployment:**
@@ -200,7 +207,7 @@ vercel --prod
 **Important Notes:**
 1. WebSocket (`/ws`) and SSE (`/sse`) endpoints are NOT available in serverless
 2. Use `/poll` endpoint for notifications instead
-3. Async tasks use external queue service (not Celery)
+3. Async tasks use Azure Storage Queues
 4. See `backend/SERVERLESS_DEPLOYMENT.md` for full deployment guide
 
 ### Queue Worker Deployment
@@ -348,10 +355,8 @@ docker-compose -f docker-compose.test.yml down -v
 ### Service URLs
 
 
-- Backend API: http://localhost:9999/docs (FastAPI Swagger docs)
 - Frontend: http://localhost:3000
-- Flower (Celery monitoring): http://localhost:5555
-- RabbitMQ Console: http://localhost:15672 (guest/guest)
+- Backend API: Deployed on Vercel (use preview URLs or production)
 
 
 ## Architecture
@@ -361,36 +366,35 @@ docker-compose -f docker-compose.test.yml down -v
 
 
 ```
-Frontend -> Backend API -> RabbitMQ -> Celery Worker -> LLM/Supabase Vector DB
+Frontend (Next.js) → Backend API (Node.js Serverless) → Azure Queue → Worker (Python)
+                            ↓                                              ↓
+                     Supabase Vector DB                            Supabase Vector DB
+                     Firebase Auth                                 Azure Blob Storage
 ```
 
 
 ### Core Components
 
 
-**Backend** (`backend/`):
-- `backend_app.py` - FastAPI application with all HTTP endpoints and WebSocket support
-- `async_tasks.py` - Celery task definitions for async operations (ingestion, summarization, multi-step agents)
-- `config.py` - Centralized configuration from environment variables
-- `database.py` - SQLite database for storing document summaries
-- `auth.py` - Firebase authentication integration
-- `file_watcher.py` - Watchdog-based file monitoring service
+**Backend** (`apps/backend/`):
+- `api/agent/` - LLM agent endpoints (RAG, search, QA)
+- `api/documents/` - Document management endpoints
+- `api/summaries/` - Summarization endpoints
+- `api/notifications/` - Long-polling notification system
+- `lib/` - Shared services (Supabase, LLM, database, notifications)
 
+**Worker** (`apps/worker/`):
+- `main.py` - Queue worker entry point
+- `queue_worker.py` - Azure Queue polling and task handling
+- `services/ingestion.py` - Document processing pipeline (Docling, chunking, embedding)
+- `services/vector_db.py` - Supabase vector database wrapper
+- `summarizer.py` - Document summarization
 
-**Services Layer** (`backend/services/`):
-- `vector_db.py` - Supabase vector database wrapper using RPC calls for semantic search
-- `ingestion.py` - Document processing pipeline (Docling conversion, chunking, embedding, indexing)
-- `agent.py` - LLM agent implementations (sync chat, RAG, QA)
-- `llm.py` - LLM client abstractions (supports OpenAI/local models)
-- `websocket.py` - WebSocket connection manager
-- `supabase_service.py` - Supabase REST API client wrapper
-
-
-**Frontend** (`frontend/src/`):
-- React + Vite application
-- Material-UI components
+**Frontend** (`apps/web/`):
+- Next.js 16 with App Router
+- Server and client components
 - Firebase authentication context
-- WebSocket integration for real-time updates
+- Long-polling for real-time updates
 
 
 ### Agent Types
@@ -402,25 +406,20 @@ Frontend -> Backend API -> RabbitMQ -> Celery Worker -> LLM/Supabase Vector DB
    - pydantic-ai Agent with context-aware prompts
 
 
-2. **Asynchronous Multi-Step Agent** (`async_tasks.py`)
-   - Celery chain workflow: `check_knowledge_base` -> `answer_question`
-   - Demonstrates multi-step reasoning patterns
-
-
-3. **Document Ingestion Agent** (`async_tasks.py:ingest_docs_task`)
+2. **Document Ingestion** (`queue_worker.py`)
    - Docling-based conversion (PDF, XLSX, etc.)
    - RecursiveCharacterTextSplitter for chunking
    - OpenAI embeddings generation
    - Batch upsert to Supabase
 
 
-4. **Summarization Agent** (`async_tasks.py:summarize_document_task`)
-   - Async document summarization
+3. **Summarization** (`summarizer.py`)
+   - Async document summarization via queue
    - Webhook notifications on completion
-   - Results stored in SQLite
+   - Results stored in database
 
 
-5. **File Watcher Service** (`file_watcher.py`)
+4. **File Watcher Service** (`file_watcher.py`)
    - Auto-triggers ingestion on new files in monitored directories
 
 
@@ -468,9 +467,9 @@ All configuration via environment variables (`.env`):
 - `OPENAI_MODEL` - LLM model name
 - `OPENAI_EMBEDDING_MODEL` - Embedding model
 - `SUPABASE_URL` / `SUPABASE_KEY` - Supabase credentials
-- `CELERY_BROKER_URL` - RabbitMQ connection
+- `AZURE_STORAGE_CONNECTION_STRING` - Azure Storage for queues and files
+- `CLIENT_ID` - Client identifier for queue isolation
 - `MONITORED_DIR` - File watcher directory
-- `RUN_WORKER_EMBEDDED` - Run Celery worker inside FastAPI process (dev mode)
 
 
 ## Important Patterns
@@ -481,8 +480,8 @@ All configuration via environment variables (`.env`):
 
 The codebase uses `nest_asyncio` to allow sync operations in async contexts:
 - Applied in `services/agent.py`
-- Celery tasks use `asyncio.run()` to call async service methods
-- Vector DB service methods are async but called from sync Celery tasks
+- Queue worker uses async/await for service methods
+- Vector DB service methods are async
 
 
 ### Error Handling
@@ -505,38 +504,38 @@ The codebase uses `nest_asyncio` to allow sync operations in async contexts:
 ### Authentication
 
 
-- Firebase Admin SDK for token verification
-- `get_current_user` FastAPI dependency on protected endpoints
+- Firebase Admin SDK for token verification (backend)
 - Frontend uses Firebase Auth context
 
 
 ### Real-Time Updates
 
 
-- WebSocket connection at `/ws`
-- Broadcast notifications on task completion
-- Frontend hooks: `useWebSocket`, `useTaskStatus`
+- Long-polling at `/api/poll` (8s timeout)
+- Worker sends webhooks to `/api/notifications/internal/notify` on task completion
+- Frontend polls for task status updates
 
 
 ## Common Development Tasks
 
 
-### Adding a New Endpoint
+### Adding a New Backend Endpoint
 
 
-1. Define request/response models in `backend/api/models.py`
-2. Add endpoint in `backend/backend_app.py`
-3. Add `dependencies=[Depends(get_current_user)]` for auth
-4. Use service layer methods (don't inline business logic)
+1. Create handler in `apps/backend/api/<domain>/index.ts`
+2. Define request/response types in `apps/backend/lib/types.ts`
+3. Add business logic in `apps/backend/lib/<service>.ts`
+4. Add route rewrites in `apps/backend/vercel.json`
+5. Update frontend API client in `apps/web/lib/api.ts`
 
 
-### Adding a New Celery Task
+### Adding a New Worker Task
 
 
-1. Define task in `backend/async_tasks.py` with `@app.task` decorator
-2. Use `asyncio.run()` wrapper for async service calls
-3. Remember to call `await db_service.close()` in finally block
-4. Return descriptive strings for task status
+1. Add handler class in `apps/worker/queue_worker.py`
+2. Register handler in the `AsyncWorker` handlers dictionary
+3. Use async methods for service calls
+4. Send webhook to `/api/notifications/internal/notify` on completion
 
 
 ### Testing Vector Search

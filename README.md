@@ -10,14 +10,14 @@ This is a **Turborepo monorepo** with three main applications:
 ┌─────────────┐      ┌──────────────────┐      ┌─────────────┐
 │  Next.js    │─────▶│  Node.js Backend │─────▶│   Python    │
 │  Frontend   │      │  (Vercel Funcs)  │      │   Worker    │
-│             │      │                  │      │  (Celery)   │
+│             │      │                  │      │(Azure Queue)│
 └─────────────┘      └──────────────────┘      └─────────────┘
                               │                        │
                               ▼                        ▼
                      ┌─────────────────────────────────────┐
                      │  Supabase (Vector DB + Postgres)    │
                      │  Azure Blob Storage (Files)         │
-                     │  Redis/RabbitMQ (Task Queue)        │
+                     │  Azure Storage Queues (Task Queue)  │
                      └─────────────────────────────────────┘
 ```
 
@@ -59,18 +59,17 @@ This is a **Turborepo monorepo** with three main applications:
 
 **Deployment:** Vercel (auto-deploy on push to `main` via GitHub Actions)
 
-#### ⚙️ `apps/worker` - Python Celery Worker
+#### ⚙️ `apps/worker` - Python Async Worker
 
-**Tech Stack:** Python 3.11+, Celery, LangChain, pydantic-ai, Docling, Supabase
+**Tech Stack:** Python 3.11+, Azure Queue, LangChain, pydantic-ai, Docling, Supabase
 
 **Task Types:**
 - **Document Ingestion** - Process PDFs, XLSX, DOCX with Docling → chunk → embed → index
 - **Summarization** - Async document summarization with LLM
-- **Multi-step Agents** - RAG queries with knowledge base checks
 - **File Watching** - Auto-trigger ingestion on new files
 
 **Key Dependencies:**
-- `celery[redis]` - Distributed task queue
+- `azure-storage-queue` - Azure Queue polling
 - `langchain-openai` - LLM integration
 - `docling[vlm]` - Document processing with vision models
 - `supabase` - Vector DB client
@@ -156,15 +155,15 @@ OPENAI_EMBEDDING_MODEL=text-embedding-3-small
 SUPABASE_URL=https://your-project.supabase.co
 SUPABASE_KEY=your-service-role-key
 
-# Celery Broker
-CELERY_BROKER_URL=redis://localhost:6379/0
-# Or for RabbitMQ: amqp://guest:guest@localhost:5672//  # pragma: allowlist secret
-
-# Azure Storage (File Processing)
+# Azure Storage (Queue and File Processing)
 AZURE_STORAGE_CONNECTION_STRING=DefaultEndpointsProtocol=https;...
 AZURE_STORAGE_CONTAINER_NAME=documents
 
-# File Monitoring
+# Worker Configuration
+CLIENT_ID=your-client-id
+API_URL=https://your-backend.vercel.app
+
+# File Monitoring (optional)
 MONITORED_DIR=/app/monitored
 ```
 
@@ -181,18 +180,18 @@ pnpm --filter web dev          # Frontend only
 pnpm --filter backend dev      # Backend only (note: serverless, use Vercel CLI)
 ```
 
-**Run Celery worker locally:**
+**Run worker locally:**
 
 ```bash
 cd apps/worker
 pip install -r requirements.txt
-celery -A async_tasks worker --loglevel=info
+python main.py
 ```
 
 **Or use Docker Compose:**
 
 ```bash
-# Start Redis and Celery worker
+# Start worker
 docker-compose -f docker-compose.worker.yml up -d
 ```
 
@@ -406,18 +405,18 @@ Set environment variables in:
 4. Add business logic in `apps/backend/lib/<service>.ts`
 5. Update frontend API client in `apps/web/lib/api.ts`
 
-### Adding a New Celery Task
+### Adding a New Worker Task
 
-1. Define task in `apps/worker/async_tasks.py`:
+1. Add handler class in `apps/worker/queue_worker.py`:
 ```python
-@app.task(bind=True)
-def my_task(self, arg1: str) -> str:
-    # Task implementation
-    return "result"
+class MyHandler:
+    async def execute(self, payload: dict) -> dict:
+        # Task implementation
+        return {"status": "completed", "result": result}
 ```
 
-2. Call from backend via webhook or queue integration
-3. Add notification support if needed
+2. Register handler in the `AsyncWorker` handlers dictionary
+3. Submit tasks via Azure Queue from backend
 
 ### Working with Vector DB
 
@@ -453,11 +452,11 @@ python-agents/
 │   │   ├── components/   # React components
 │   │   ├── lib/          # Client utilities
 │   │   └── public/
-│   └── worker/           # Python Celery worker
-│       ├── async_tasks.py    # Task definitions
-│       ├── clients.py        # Service clients
+│   └── worker/           # Python async worker
+│       ├── main.py           # Worker entry point
+│       ├── queue_worker.py   # Queue polling and handlers
 │       ├── config.py         # Configuration
-│       └── database.py       # SQLite storage
+│       └── services/         # Service modules
 ├── packages/             # Shared configs
 │   ├── eslint-config/
 │   └── typescript-config/
