@@ -7,10 +7,6 @@ param clientId string = 'default'
 @description('Resource location')
 param location string = resourceGroup().location
 
-@description('Azure Storage connection string')
-@secure()
-param storageConnectionString string
-
 @description('Supabase URL')
 param supabaseUrl string
 
@@ -44,6 +40,31 @@ resource acr 'Microsoft.ContainerRegistry/registries@2023-07-01' = {
   }
 }
 
+// Azure Storage account for queues and blob storage
+resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
+  name: 'sa${baseName}'
+  location: location
+  sku: {
+    name: 'Standard_LRS'
+  }
+  kind: 'StorageV2'
+  properties: {
+    accessTier: 'Hot'
+    minimumTlsVersion: 'TLS1_2'
+    supportsHttpsTrafficOnly: true
+  }
+}
+
+// Storage queue for tasks
+resource queue 'Microsoft.Storage/storageAccounts/queueServices/queues@2023-01-01' = {
+  name: '${storageAccount.name}/${queueName}'
+}
+
+// Storage blob container for documents
+resource blobContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-01-01' = {
+  name: '${storageAccount.name}/documents'
+}
+
 // Key Vault for secrets
 resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
   name: keyVaultName
@@ -58,17 +79,49 @@ resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
     enabledForDeployment: true
     enabledForTemplateDeployment: true
   }
+  dependsOn: [
+    storageAccount
+  ]
 }
 
-// Store secrets in Key Vault
-resource secretAzureStorage 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
+// Get storage account key
+var storageAccountKey = listKeys(storageAccount.id, '2023-01-01').keys[0].value
+
+// Storage account secrets for Logic App connection
+resource secretStorageAccountName 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
+  parent: keyVault
+  name: 'storage-account-name' // pragma: allowlist secret
+  properties: {
+    value: storageAccount.name
+  }
+  dependsOn: [
+    storageAccount
+  ]
+}
+
+resource secretStorageAccountKey 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
+  parent: keyVault
+  name: 'storage-account-key' // pragma: allowlist secret
+  properties: {
+    value: storageAccountKey
+  }
+  dependsOn: [
+    storageAccount
+  ]
+}
+
+resource secretStorageConnectionString 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
   parent: keyVault
   name: 'azure-storage-connection-string' // pragma: allowlist secret
   properties: {
-    value: storageConnectionString
+    value: 'DefaultEndpointsProtocol=https;AccountName=${storageAccount.name};AccountKey=${storageAccountKey};EndpointSuffix=core.windows.net'
   }
+  dependsOn: [
+    storageAccount
+  ]
 }
 
+// Supabase secrets
 resource secretSupabaseUrl 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
   parent: keyVault
   name: 'supabase-url' // pragma: allowlist secret
@@ -85,6 +138,7 @@ resource secretSupabaseKey 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
   }
 }
 
+// OpenAI and Internal API secrets
 resource secretOpenaiKey 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
   parent: keyVault
   name: 'openai-api-key' // pragma: allowlist secret
@@ -115,10 +169,11 @@ module logicApp 'logic-app-trigger.bicep' = {
   params: {
     environment: environment
     location: location
-    storageConnectionString: storageConnectionString
     queueName: queueName
     pollingIntervalSeconds: 30
     containerResourceGroup: resourceGroup().name
+    storageAccountName: storageAccount.name
+    keyVaultName: keyVault.name
   }
   dependsOn: [
     acr
@@ -131,5 +186,6 @@ output acrLoginServer string = acr.properties.loginServer
 output acrName string = acr.name
 output keyVaultName string = keyVault.name
 output keyVaultUri string = keyVault.properties.vaultUri
+output storageAccountName string = storageAccount.name
 output logicAppName string = logicApp.outputs.logicAppName
 output logicAppId string = logicApp.outputs.logicAppId

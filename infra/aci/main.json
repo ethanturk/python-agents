@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.39.26.7824",
-      "templateHash": "8310393109401861994"
+      "templateHash": "5381460499406652947"
     }
   },
   "parameters": {
@@ -28,12 +28,6 @@
       "defaultValue": "[resourceGroup().location]",
       "metadata": {
         "description": "Resource location"
-      }
-    },
-    "storageConnectionString": {
-      "type": "securestring",
-      "metadata": {
-        "description": "Azure Storage connection string"
       }
     },
     "supabaseUrl": {
@@ -81,6 +75,37 @@
       }
     },
     {
+      "type": "Microsoft.Storage/storageAccounts",
+      "apiVersion": "2023-01-01",
+      "name": "[format('sa{0}', variables('baseName'))]",
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "Standard_LRS"
+      },
+      "kind": "StorageV2",
+      "properties": {
+        "accessTier": "Hot",
+        "minimumTlsVersion": "TLS1_2",
+        "supportsHttpsTrafficOnly": true
+      }
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts/queueServices/queues",
+      "apiVersion": "2023-01-01",
+      "name": "[format('{0}/{1}', format('sa{0}', variables('baseName')), variables('queueName'))]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts', format('sa{0}', variables('baseName')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
+      "apiVersion": "2023-01-01",
+      "name": "[format('{0}/documents', format('sa{0}', variables('baseName')))]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts', format('sa{0}', variables('baseName')))]"
+      ]
+    },
+    {
       "type": "Microsoft.KeyVault/vaults",
       "apiVersion": "2023-07-01",
       "name": "[variables('keyVaultName')]",
@@ -94,17 +119,45 @@
         "enableRbacAuthorization": true,
         "enabledForDeployment": true,
         "enabledForTemplateDeployment": true
-      }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts', format('sa{0}', variables('baseName')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2023-07-01",
+      "name": "[format('{0}/{1}', variables('keyVaultName'), 'storage-account-name')]",
+      "properties": {
+        "value": "[format('sa{0}', variables('baseName'))]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]",
+        "[resourceId('Microsoft.Storage/storageAccounts', format('sa{0}', variables('baseName')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2023-07-01",
+      "name": "[format('{0}/{1}', variables('keyVaultName'), 'storage-account-key')]",
+      "properties": {
+        "value": "[listKeys(resourceId('Microsoft.Storage/storageAccounts', format('sa{0}', variables('baseName'))), '2023-01-01').keys[0].value]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]",
+        "[resourceId('Microsoft.Storage/storageAccounts', format('sa{0}', variables('baseName')))]"
+      ]
     },
     {
       "type": "Microsoft.KeyVault/vaults/secrets",
       "apiVersion": "2023-07-01",
       "name": "[format('{0}/{1}', variables('keyVaultName'), 'azure-storage-connection-string')]",
       "properties": {
-        "value": "[parameters('storageConnectionString')]"
+        "value": "[format('DefaultEndpointsProtocol=https;AccountName={0};AccountKey={1};EndpointSuffix=core.windows.net', format('sa{0}', variables('baseName')), listKeys(resourceId('Microsoft.Storage/storageAccounts', format('sa{0}', variables('baseName'))), '2023-01-01').keys[0].value)]"
       },
       "dependsOn": [
-        "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]"
+        "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]",
+        "[resourceId('Microsoft.Storage/storageAccounts', format('sa{0}', variables('baseName')))]"
       ]
     },
     {
@@ -179,9 +232,6 @@
           "location": {
             "value": "[parameters('location')]"
           },
-          "storageConnectionString": {
-            "value": "[parameters('storageConnectionString')]"
-          },
           "queueName": {
             "value": "[variables('queueName')]"
           },
@@ -190,6 +240,12 @@
           },
           "containerResourceGroup": {
             "value": "[resourceGroup().name]"
+          },
+          "storageAccountName": {
+            "value": "[format('sa{0}', variables('baseName'))]"
+          },
+          "keyVaultName": {
+            "value": "[variables('keyVaultName')]"
           }
         },
         "template": {
@@ -199,7 +255,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.39.26.7824",
-              "templateHash": "5417779954877762564"
+              "templateHash": "2841032253962235408"
             }
           },
           "parameters": {
@@ -215,12 +271,6 @@
               "defaultValue": "[resourceGroup().location]",
               "metadata": {
                 "description": "Resource location"
-              }
-            },
-            "storageConnectionString": {
-              "type": "securestring",
-              "metadata": {
-                "description": "Azure Storage connection string"
               }
             },
             "queueName": {
@@ -243,14 +293,25 @@
               "metadata": {
                 "description": "Resource group for container instances"
               }
+            },
+            "storageAccountName": {
+              "type": "string",
+              "metadata": {
+                "description": "Storage account name for the queue"
+              }
+            },
+            "keyVaultName": {
+              "type": "string",
+              "metadata": {
+                "description": "Key Vault name"
+              }
             }
           },
           "variables": {
             "baseName": "[format('worker-{0}', parameters('environment'))]",
             "acrName": "[replace(format('acr{0}', variables('baseName')), '-', '')]",
             "logicAppName": "[format('la-{0}-{1}', variables('baseName'), split(parameters('queueName'), '-')[0])]",
-            "keyVaultName": "[format('kv-{0}', parameters('environment'))]",
-            "keyVaultResourceId": "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]"
+            "keyVaultResourceId": "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]"
           },
           "resources": [
             {
@@ -270,8 +331,8 @@
                   "id": "[subscriptionResourceId('Microsoft.Web/locations/managedApis', parameters('location'), 'azurequeues')]"
                 },
                 "parameterValues": {
-                  "storageaccount": "[split(split(parameters('storageConnectionString'), 'AccountName=')[1], ';')[0]]",
-                  "sharedkey": "[split(split(parameters('storageConnectionString'), 'AccountKey=')[1], ';')[0]]"
+                  "storageaccount": "[format('@Microsoft.KeyVault({0}, storage-account-name)', parameters('keyVaultName'))]",
+                  "sharedkey": "[format('@Microsoft.KeyVault({0}, storage-account-key)', parameters('keyVaultName'))]"
                 }
               }
             },
@@ -308,7 +369,7 @@
                           }
                         },
                         "method": "get",
-                        "path": "[format('/v2/storageAccounts/@{{encodeURIComponent(encodeURIComponent(''{0}''))}}/queues/@{{encodeURIComponent(''{1}'')}}/message_trigger', split(split(parameters('storageConnectionString'), 'AccountName=')[1], ';')[0], parameters('queueName'))]"
+                        "path": "/v2/storageAccounts/@{encodeURIComponent(encodeURIComponent(storageAccountName))}/queues/@{encodeURIComponent(queueName)}/message_trigger"
                       }
                     }
                   },
@@ -453,7 +514,7 @@
                               }
                             },
                             "method": "delete",
-                            "path": "[format('/v2/storageAccounts/@{{encodeURIComponent(encodeURIComponent(''{0}''))}}/queues/@{{encodeURIComponent(''{1}'')}}/messages/@{{encodeURIComponent(items(''For_Each_Message'')?[''MessageId''])}}', split(split(parameters('storageConnectionString'), 'AccountName=')[1], ';')[0], parameters('queueName'))]",
+                            "path": "/v2/storageAccounts/@{encodeURIComponent(encodeURIComponent(storageAccountName))}/queues/@{encodeURIComponent(queueName)}/messages/@{encodeURIComponent(items('For_Each_Message')?['MessageId'])}",
                             "queries": {
                               "popreceipt": "@items('For_Each_Message')?['PopReceipt']"
                             }
@@ -496,7 +557,21 @@
             {
               "type": "Microsoft.Authorization/roleAssignments",
               "apiVersion": "2022-04-01",
-              "scope": "[format('Microsoft.KeyVault/vaults/{0}', variables('keyVaultName'))]",
+              "scope": "[format('Microsoft.KeyVault/vaults/{0}', parameters('keyVaultName'))]",
+              "name": "[guid(variables('keyVaultResourceId'), resourceId('Microsoft.Logic/workflows', variables('logicAppName')), 'SecretsUser')]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6')]",
+                "principalId": "[reference(resourceId('Microsoft.Logic/workflows', variables('logicAppName')), '2019-05-01', 'full').identity.principalId]",
+                "principalType": "ServicePrincipal"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Logic/workflows', variables('logicAppName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[format('Microsoft.KeyVault/vaults/{0}', parameters('keyVaultName'))]",
               "name": "[guid(variables('keyVaultResourceId'), resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-acr-pull', variables('logicAppName'))), 'SecretsUser')]",
               "properties": {
                 "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6')]",
@@ -586,7 +661,8 @@
       },
       "dependsOn": [
         "[resourceId('Microsoft.ContainerRegistry/registries', variables('acrName'))]",
-        "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]"
+        "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]",
+        "[resourceId('Microsoft.Storage/storageAccounts', format('sa{0}', variables('baseName')))]"
       ]
     }
   ],
@@ -606,6 +682,10 @@
     "keyVaultUri": {
       "type": "string",
       "value": "[reference(resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName')), '2023-07-01').vaultUri]"
+    },
+    "storageAccountName": {
+      "type": "string",
+      "value": "[format('sa{0}', variables('baseName'))]"
     },
     "logicAppName": {
       "type": "string",

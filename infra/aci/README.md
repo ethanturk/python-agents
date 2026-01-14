@@ -32,8 +32,8 @@ Azure Storage Queue ──► Azure Logic App ──► Azure Container Instance
 
 1. Azure CLI installed and authenticated
 2. Resource group created
-3. Azure Storage account with queue created
-4. Required secrets ready (Storage connection string, Supabase, OpenAI)
+3. Required secrets ready (Supabase URL/key, OpenAI API key, Internal API key)
+4. Note: Storage account and Key Vault are created automatically by the template
 
 ## Deployment
 
@@ -52,21 +52,21 @@ az deployment group create \
   --parameters \
     environment=prod \
     clientId=default \
-    storageConnectionString="<your-storage-connection-string>" \
     supabaseUrl="<your-supabase-url>" \
     supabaseKey="<your-supabase-key>" \
     openaiApiKey="<your-openai-key>" \
     internalApiKey="<your-internal-api-key>"
 ```
 
-**Note**: Secrets are stored in Azure Key Vault and pulled directly by ACI containers. The Logic App does not handle secrets directly.
+**Note**: Storage account and Key Vault are created automatically by the template. All secrets (including storage credentials) are stored in Key Vault and used by Logic App and ACI containers.
 
 ### 3. Note Output Values
 
-After deployment, note the outputs:
+After deployment, note: outputs:
 - `acrLoginServer` - Use this in CI/CD for image push
 - `acrName` - ACR name for authentication
 - `keyVaultName` - Key Vault for manual secret updates
+- `storageAccountName` - Storage account created by template
 - `logicAppName` - Logic App to monitor
 
 ## CI/CD Integration

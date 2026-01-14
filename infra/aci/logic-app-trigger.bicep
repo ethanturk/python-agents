@@ -4,10 +4,6 @@ param environment string = 'prod'
 @description('Resource location')
 param location string = resourceGroup().location
 
-@description('Azure Storage connection string')
-@secure()
-param storageConnectionString string
-
 @description('Queue name to monitor')
 param queueName string = 'default-tasks'
 
@@ -17,10 +13,23 @@ param pollingIntervalSeconds int = 30
 @description('Resource group for container instances')
 param containerResourceGroup string = resourceGroup().name
 
+@description('Storage account name for the queue')
+param storageAccountName string
+
+@description('Key Vault name')
+param keyVaultName string
+
 // Naming convention (matches main.bicep)
 var baseName = 'worker-${environment}'
 var acrName = replace('acr${baseName}', '-', '')
 var logicAppName = 'la-${baseName}-${split(queueName, '-')[0]}'
+var keyVaultResourceId = resourceId('Microsoft.KeyVault/vaults', keyVaultName)
+
+// Reference existing Key Vault from main deployment
+resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' existing = {
+  scope: resourceGroup()
+  name: keyVaultName
+}
 
 // User-Assigned Managed Identity for ACI to pull from ACR
 resource acrPullIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
@@ -28,7 +37,7 @@ resource acrPullIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-
   location: location
 }
 
-// API connection for Azure Storage Queue
+// API connection for Azure Storage Queue - pulls secrets from Key Vault
 resource storageConnection 'Microsoft.Web/connections@2016-06-01' = {
   name: 'azurequeues-connection'
   location: location
@@ -38,8 +47,8 @@ resource storageConnection 'Microsoft.Web/connections@2016-06-01' = {
       id: subscriptionResourceId('Microsoft.Web/locations/managedApis', location, 'azurequeues')
     }
     parameterValues: {
-      storageaccount: split(split(storageConnectionString, 'AccountName=')[1], ';')[0]
-      sharedkey: split(split(storageConnectionString, 'AccountKey=')[1], ';')[0]
+      storageaccount: '@Microsoft.KeyVault(${keyVaultName}, storage-account-name)'
+      sharedkey: '@Microsoft.KeyVault(${keyVaultName}, storage-account-key)'
     }
   }
 }
@@ -76,7 +85,7 @@ resource logicApp 'Microsoft.Logic/workflows@2019-05-01' = {
               }
             }
             method: 'get'
-            path: '/v2/storageAccounts/@{encodeURIComponent(encodeURIComponent(\'${split(split(storageConnectionString, 'AccountName=')[1], ';')[0]}\'))}/queues/@{encodeURIComponent(\'${queueName}\')}/message_trigger'
+            path: '/v2/storageAccounts/@{encodeURIComponent(encodeURIComponent(storageAccountName))}/queues/@{encodeURIComponent(queueName)}/message_trigger'
           }
         }
       }
@@ -209,7 +218,7 @@ resource logicApp 'Microsoft.Logic/workflows@2019-05-01' = {
                   }
                 }
                 method: 'delete'
-                path: '/v2/storageAccounts/@{encodeURIComponent(encodeURIComponent(\'${split(split(storageConnectionString, 'AccountName=')[1], ';')[0]}\'))}/queues/@{encodeURIComponent(\'${queueName}\')}/messages/@{encodeURIComponent(items(\'For_Each_Message\')?[\'MessageId\'])}'
+                path: '/v2/storageAccounts/@{encodeURIComponent(encodeURIComponent(storageAccountName))}/queues/@{encodeURIComponent(queueName)}/messages/@{encodeURIComponent(items(\'For_Each_Message\')?[\'MessageId\'])}'
                 queries: {
                   popreceipt: '@items(\'For_Each_Message\')?[\'PopReceipt\']'
                 }
@@ -244,6 +253,17 @@ resource contributorRoleAssignment 'Microsoft.Authorization/roleAssignments@2022
   }
 }
 
+// Key Vault Secrets User role assignment for Logic App identity (to access storage secrets)
+resource logicAppKeyVaultSecretsUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(keyVaultResourceId, logicApp.id, 'SecretsUser')
+  scope: keyVault
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6') // Key Vault Secrets User
+    principalId: logicApp.identity.principalId
+    principalType: 'ServicePrincipal'
+  }
+}
+
 // AcrPull role assignment for the managed identity on the ACR
 module acrPullRoleAssignment 'acr-role-assignment.bicep' = {
   name: 'acrPullRoleAssignment'
@@ -252,16 +272,6 @@ module acrPullRoleAssignment 'acr-role-assignment.bicep' = {
     acrName: acrName
     principalId: acrPullIdentity.properties.principalId
   }
-}
-
-// Get Key Vault resource ID
-var keyVaultName = 'kv-${environment}'
-var keyVaultResourceId = resourceId('Microsoft.KeyVault/vaults', keyVaultName)
-
-// Reference existing Key Vault from main deployment
-resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' existing = {
-  scope: resourceGroup()
-  name: keyVaultName
 }
 
 // Key Vault Secrets User role assignment for ACI identity

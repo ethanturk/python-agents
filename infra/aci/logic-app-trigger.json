@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.39.26.7824",
-      "templateHash": "5417779954877762564"
+      "templateHash": "1466467361225750716"
     }
   },
   "parameters": {
@@ -26,7 +26,7 @@
     "storageConnectionString": {
       "type": "securestring",
       "metadata": {
-        "description": "Azure Storage connection string"
+        "description": "Azure Storage connection string (for API connection)"
       }
     },
     "queueName": {
