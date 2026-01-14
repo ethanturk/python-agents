@@ -104,6 +104,9 @@ module logicApp 'logic-app-trigger.bicep' = {
     environment: environment
     location: location
     storageConnectionString: storageConnectionString
+    supabaseUrl: supabaseUrl
+    supabaseKey: supabaseKey
+    openaiApiKey: openaiApiKey
     queueName: queueName
     pollingIntervalSeconds: 30
     containerResourceGroup: resourceGroup().name

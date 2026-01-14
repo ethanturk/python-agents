@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.39.26.7824",
-      "templateHash": "18064785525089275348"
+      "templateHash": "18149499221911505011"
     }
   },
   "parameters": {
@@ -27,6 +27,24 @@
       "type": "securestring",
       "metadata": {
         "description": "Azure Storage connection string"
+      }
+    },
+    "supabaseUrl": {
+      "type": "string",
+      "metadata": {
+        "description": "Supabase URL"
+      }
+    },
+    "supabaseKey": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Supabase service key"
+      }
+    },
+    "openaiApiKey": {
+      "type": "securestring",
+      "metadata": {
+        "description": "OpenAI API key"
       }
     },
     "queueName": {
@@ -191,6 +209,22 @@
                                 {
                                   "name": "WORKER_TASK_TIMEOUT",
                                   "value": "1800"
+                                },
+                                {
+                                  "name": "AZURE_STORAGE_CONNECTION_STRING",
+                                  "secureValue": "[parameters('storageConnectionString')]"
+                                },
+                                {
+                                  "name": "SUPABASE_URL",
+                                  "value": "[parameters('supabaseUrl')]"
+                                },
+                                {
+                                  "name": "SUPABASE_KEY",
+                                  "secureValue": "[parameters('supabaseKey')]"
+                                },
+                                {
+                                  "name": "OPENAI_API_KEY",
+                                  "secureValue": "[parameters('openaiApiKey')]"
                                 }
                               ]
                             }

@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.39.26.7824",
-      "templateHash": "16069929486836984582"
+      "templateHash": "10756039893117126300"
     }
   },
   "parameters": {
@@ -165,6 +165,15 @@
           "storageConnectionString": {
             "value": "[parameters('storageConnectionString')]"
           },
+          "supabaseUrl": {
+            "value": "[parameters('supabaseUrl')]"
+          },
+          "supabaseKey": {
+            "value": "[parameters('supabaseKey')]"
+          },
+          "openaiApiKey": {
+            "value": "[parameters('openaiApiKey')]"
+          },
           "queueName": {
             "value": "[variables('queueName')]"
           },
@@ -182,7 +191,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.39.26.7824",
-              "templateHash": "17037202327789630772"
+              "templateHash": "18149499221911505011"
             }
           },
           "parameters": {
@@ -204,6 +213,24 @@
               "type": "securestring",
               "metadata": {
                 "description": "Azure Storage connection string"
+              }
+            },
+            "supabaseUrl": {
+              "type": "string",
+              "metadata": {
+                "description": "Supabase URL"
+              }
+            },
+            "supabaseKey": {
+              "type": "securestring",
+              "metadata": {
+                "description": "Supabase service key"
+              }
+            },
+            "openaiApiKey": {
+              "type": "securestring",
+              "metadata": {
+                "description": "OpenAI API key"
               }
             },
             "queueName": {
@@ -332,7 +359,7 @@
                           },
                           "inputs": {
                             "method": "PUT",
-                            "uri": "[format('https://management.azure.com/subscriptions/@{{subscription().subscriptionId}}/resourceGroups/{0}/providers/Microsoft.ContainerInstance/containerGroups/worker-@{{guid()}}?api-version=2023-05-01', parameters('containerResourceGroup'))]",
+                            "uri": "[format('https://management.azure.com/subscriptions/{0}/resourceGroups/{1}/providers/Microsoft.ContainerInstance/containerGroups/worker-@{{guid()}}?api-version=2023-05-01', subscription().subscriptionId, parameters('containerResourceGroup'))]",
                             "authentication": {
                               "type": "ManagedServiceIdentity"
                             },
@@ -368,6 +395,22 @@
                                         {
                                           "name": "WORKER_TASK_TIMEOUT",
                                           "value": "1800"
+                                        },
+                                        {
+                                          "name": "AZURE_STORAGE_CONNECTION_STRING",
+                                          "secureValue": "[parameters('storageConnectionString')]"
+                                        },
+                                        {
+                                          "name": "SUPABASE_URL",
+                                          "value": "[parameters('supabaseUrl')]"
+                                        },
+                                        {
+                                          "name": "SUPABASE_KEY",
+                                          "secureValue": "[parameters('supabaseKey')]"
+                                        },
+                                        {
+                                          "name": "OPENAI_API_KEY",
+                                          "secureValue": "[parameters('openaiApiKey')]"
                                         }
                                       ]
                                     }

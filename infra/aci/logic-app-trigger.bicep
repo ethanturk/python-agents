@@ -8,6 +8,17 @@ param location string = resourceGroup().location
 @secure()
 param storageConnectionString string
 
+@description('Supabase URL')
+param supabaseUrl string
+
+@description('Supabase service key')
+@secure()
+param supabaseKey string
+
+@description('OpenAI API key')
+@secure()
+param openaiApiKey string
+
 @description('Queue name to monitor')
 param queueName string = 'default-tasks'
 
@@ -145,6 +156,22 @@ resource logicApp 'Microsoft.Logic/workflows@2019-05-01' = {
                             {
                               name: 'WORKER_TASK_TIMEOUT'
                               value: '1800'
+                            }
+                            {
+                              name: 'AZURE_STORAGE_CONNECTION_STRING'
+                              secureValue: storageConnectionString
+                            }
+                            {
+                              name: 'SUPABASE_URL'
+                              value: supabaseUrl
+                            }
+                            {
+                              name: 'SUPABASE_KEY'
+                              secureValue: supabaseKey
+                            }
+                            {
+                              name: 'OPENAI_API_KEY'
+                              secureValue: openaiApiKey
                             }
                           ]
                         }
