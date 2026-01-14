@@ -1,0 +1,550 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.39.26.7824",
+      "templateHash": "16069929486836984582"
+    }
+  },
+  "parameters": {
+    "environment": {
+      "type": "string",
+      "defaultValue": "prod",
+      "metadata": {
+        "description": "Environment name (e.g., dev, staging, prod)"
+      }
+    },
+    "clientId": {
+      "type": "string",
+      "defaultValue": "default",
+      "metadata": {
+        "description": "Client ID for multi-tenancy"
+      }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "Resource location"
+      }
+    },
+    "storageConnectionString": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Azure Storage connection string"
+      }
+    },
+    "supabaseUrl": {
+      "type": "string",
+      "metadata": {
+        "description": "Supabase URL"
+      }
+    },
+    "supabaseKey": {
+      "type": "securestring",
+      "metadata": {
+        "description": "Supabase service key"
+      }
+    },
+    "openaiApiKey": {
+      "type": "securestring",
+      "metadata": {
+        "description": "OpenAI API key"
+      }
+    }
+  },
+  "variables": {
+    "baseName": "[format('worker-{0}', parameters('environment'))]",
+    "acrName": "[replace(format('acr{0}', variables('baseName')), '-', '')]",
+    "keyVaultName": "[format('kv-{0}', variables('baseName'))]",
+    "queueName": "[format('{0}-tasks', parameters('clientId'))]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.ContainerRegistry/registries",
+      "apiVersion": "2023-07-01",
+      "name": "[variables('acrName')]",
+      "location": "[parameters('location')]",
+      "sku": {
+        "name": "Basic"
+      },
+      "properties": {
+        "adminUserEnabled": true
+      }
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults",
+      "apiVersion": "2023-07-01",
+      "name": "[variables('keyVaultName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "sku": {
+          "family": "A",
+          "name": "standard"
+        },
+        "tenantId": "[subscription().tenantId]",
+        "enableRbacAuthorization": true,
+        "enabledForDeployment": true,
+        "enabledForTemplateDeployment": true
+      }
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2023-07-01",
+      "name": "[format('{0}/{1}', variables('keyVaultName'), 'azure-storage-connection-string')]",
+      "properties": {
+        "value": "[parameters('storageConnectionString')]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2023-07-01",
+      "name": "[format('{0}/{1}', variables('keyVaultName'), 'supabase-url')]",
+      "properties": {
+        "value": "[parameters('supabaseUrl')]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2023-07-01",
+      "name": "[format('{0}/{1}', variables('keyVaultName'), 'supabase-key')]",
+      "properties": {
+        "value": "[parameters('supabaseKey')]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2023-07-01",
+      "name": "[format('{0}/{1}', variables('keyVaultName'), 'openai-api-key')]",
+      "properties": {
+        "value": "[parameters('openaiApiKey')]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2023-07-01",
+      "name": "[format('{0}/{1}', variables('keyVaultName'), 'acr-password')]",
+      "properties": {
+        "value": "[listCredentials(resourceId('Microsoft.ContainerRegistry/registries', variables('acrName')), '2023-07-01').passwords[0].value]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.ContainerRegistry/registries', variables('acrName'))]",
+        "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Resources/deployments",
+      "apiVersion": "2025-04-01",
+      "name": "deploy-logic-app",
+      "properties": {
+        "expressionEvaluationOptions": {
+          "scope": "inner"
+        },
+        "mode": "Incremental",
+        "parameters": {
+          "environment": {
+            "value": "[parameters('environment')]"
+          },
+          "location": {
+            "value": "[parameters('location')]"
+          },
+          "storageConnectionString": {
+            "value": "[parameters('storageConnectionString')]"
+          },
+          "queueName": {
+            "value": "[variables('queueName')]"
+          },
+          "pollingIntervalSeconds": {
+            "value": 30
+          },
+          "containerResourceGroup": {
+            "value": "[resourceGroup().name]"
+          }
+        },
+        "template": {
+          "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+          "contentVersion": "1.0.0.0",
+          "metadata": {
+            "_generator": {
+              "name": "bicep",
+              "version": "0.39.26.7824",
+              "templateHash": "17037202327789630772"
+            }
+          },
+          "parameters": {
+            "environment": {
+              "type": "string",
+              "defaultValue": "prod",
+              "metadata": {
+                "description": "Environment name (e.g., dev, staging, prod)"
+              }
+            },
+            "location": {
+              "type": "string",
+              "defaultValue": "[resourceGroup().location]",
+              "metadata": {
+                "description": "Resource location"
+              }
+            },
+            "storageConnectionString": {
+              "type": "securestring",
+              "metadata": {
+                "description": "Azure Storage connection string"
+              }
+            },
+            "queueName": {
+              "type": "string",
+              "defaultValue": "default-tasks",
+              "metadata": {
+                "description": "Queue name to monitor"
+              }
+            },
+            "pollingIntervalSeconds": {
+              "type": "int",
+              "defaultValue": 30,
+              "metadata": {
+                "description": "Polling interval in seconds"
+              }
+            },
+            "containerResourceGroup": {
+              "type": "string",
+              "defaultValue": "[resourceGroup().name]",
+              "metadata": {
+                "description": "Resource group for container instances"
+              }
+            }
+          },
+          "variables": {
+            "baseName": "[format('worker-{0}', parameters('environment'))]",
+            "acrName": "[replace(format('acr{0}', variables('baseName')), '-', '')]",
+            "logicAppName": "[format('la-{0}-{1}', variables('baseName'), split(parameters('queueName'), '-')[0])]"
+          },
+          "resources": [
+            {
+              "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
+              "apiVersion": "2023-01-31",
+              "name": "[format('{0}-acr-pull', variables('logicAppName'))]",
+              "location": "[parameters('location')]"
+            },
+            {
+              "type": "Microsoft.Web/connections",
+              "apiVersion": "2016-06-01",
+              "name": "azurequeues-connection",
+              "location": "[parameters('location')]",
+              "properties": {
+                "displayName": "Azure Storage Queue Connection",
+                "api": {
+                  "id": "[subscriptionResourceId('Microsoft.Web/locations/managedApis', parameters('location'), 'azurequeues')]"
+                },
+                "parameterValues": {
+                  "storageaccount": "[split(split(parameters('storageConnectionString'), 'AccountName=')[1], ';')[0]]",
+                  "sharedkey": "[split(split(parameters('storageConnectionString'), 'AccountKey=')[1], ';')[0]]"
+                }
+              }
+            },
+            {
+              "type": "Microsoft.Logic/workflows",
+              "apiVersion": "2019-05-01",
+              "name": "[variables('logicAppName')]",
+              "location": "[parameters('location')]",
+              "identity": {
+                "type": "SystemAssigned"
+              },
+              "properties": {
+                "state": "Enabled",
+                "definition": {
+                  "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+                  "contentVersion": "1.0.0.0",
+                  "parameters": {
+                    "$connections": {
+                      "defaultValue": {},
+                      "type": "Object"
+                    }
+                  },
+                  "triggers": {
+                    "When_messages_are_available_in_queue": {
+                      "type": "ApiConnection",
+                      "recurrence": {
+                        "frequency": "Second",
+                        "interval": "[parameters('pollingIntervalSeconds')]"
+                      },
+                      "inputs": {
+                        "host": {
+                          "connection": {
+                            "name": "@parameters('$connections')['azurequeues']['connectionId']"
+                          }
+                        },
+                        "method": "get",
+                        "path": "[format('/v2/storageAccounts/@{{encodeURIComponent(encodeURIComponent(''{0}''))}}/queues/@{{encodeURIComponent(''{1}'')}}/message_trigger', split(split(parameters('storageConnectionString'), 'AccountName=')[1], ';')[0], parameters('queueName'))]"
+                      }
+                    }
+                  },
+                  "actions": {
+                    "For_Each_Message": {
+                      "type": "Foreach",
+                      "runAfter": {},
+                      "foreach": "@triggerBody()?['QueueMessagesList']?['QueueMessage']",
+                      "actions": {
+                        "Parse_Message": {
+                          "type": "ParseJson",
+                          "runAfter": {},
+                          "inputs": {
+                            "content": "@items('For_Each_Message')?['MessageText']",
+                            "schema": {
+                              "type": "object",
+                              "properties": {
+                                "task_type": {
+                                  "type": "string"
+                                },
+                                "task_id": {
+                                  "type": "string"
+                                },
+                                "payload": {
+                                  "type": "object"
+                                },
+                                "webhook_url": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        },
+                        "Create_Container_Instance": {
+                          "type": "Http",
+                          "runAfter": {
+                            "Parse_Message": [
+                              "Succeeded"
+                            ]
+                          },
+                          "inputs": {
+                            "method": "PUT",
+                            "uri": "[format('https://management.azure.com/subscriptions/@{{subscription().subscriptionId}}/resourceGroups/{0}/providers/Microsoft.ContainerInstance/containerGroups/worker-@{{guid()}}?api-version=2023-05-01', parameters('containerResourceGroup'))]",
+                            "authentication": {
+                              "type": "ManagedServiceIdentity"
+                            },
+                            "body": {
+                              "location": "[parameters('location')]",
+                              "identity": {
+                                "type": "UserAssigned",
+                                "userAssignedIdentities": {
+                                  "[format('{0}', resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-acr-pull', variables('logicAppName'))))]": {}
+                                }
+                              },
+                              "properties": {
+                                "containers": [
+                                  {
+                                    "name": "worker",
+                                    "properties": {
+                                      "image": "[format('{0}.azurecr.io/worker:latest', variables('acrName'))]",
+                                      "resources": {
+                                        "requests": {
+                                          "cpu": 1,
+                                          "memoryInGB": 2
+                                        }
+                                      },
+                                      "environmentVariables": [
+                                        {
+                                          "name": "TASK_DATA",
+                                          "value": "@items('For_Each_Message')?['MessageText']"
+                                        },
+                                        {
+                                          "name": "CLIENT_ID",
+                                          "value": "[split(parameters('queueName'), '-')[0]]"
+                                        },
+                                        {
+                                          "name": "WORKER_TASK_TIMEOUT",
+                                          "value": "1800"
+                                        }
+                                      ]
+                                    }
+                                  }
+                                ],
+                                "osType": "Linux",
+                                "restartPolicy": "Never",
+                                "imageRegistryCredentials": [
+                                  {
+                                    "server": "[format('{0}.azurecr.io', variables('acrName'))]",
+                                    "identity": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-acr-pull', variables('logicAppName')))]"
+                                  }
+                                ]
+                              }
+                            }
+                          }
+                        },
+                        "Delete_Message": {
+                          "type": "ApiConnection",
+                          "runAfter": {
+                            "Create_Container_Instance": [
+                              "Succeeded"
+                            ]
+                          },
+                          "inputs": {
+                            "host": {
+                              "connection": {
+                                "name": "@parameters('$connections')['azurequeues']['connectionId']"
+                              }
+                            },
+                            "method": "delete",
+                            "path": "[format('/v2/storageAccounts/@{{encodeURIComponent(encodeURIComponent(''{0}''))}}/queues/@{{encodeURIComponent(''{1}'')}}/messages/@{{encodeURIComponent(items(''For_Each_Message'')?[''MessageId''])}}', split(split(parameters('storageConnectionString'), 'AccountName=')[1], ';')[0], parameters('queueName'))]",
+                            "queries": {
+                              "popreceipt": "@items('For_Each_Message')?['PopReceipt']"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "parameters": {
+                  "$connections": {
+                    "value": {
+                      "azurequeues": {
+                        "connectionId": "[resourceId('Microsoft.Web/connections', 'azurequeues-connection')]",
+                        "connectionName": "azurequeues-connection",
+                        "id": "[subscriptionResourceId('Microsoft.Web/locations/managedApis', parameters('location'), 'azurequeues')]"
+                      }
+                    }
+                  }
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-acr-pull', variables('logicAppName')))]",
+                "[resourceId('Microsoft.Web/connections', 'azurequeues-connection')]"
+              ]
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "name": "[guid(resourceId('Microsoft.Logic/workflows', variables('logicAppName')), 'Contributor')]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', 'b24988ac-6180-42a0-ab88-20f7382dd24c')]",
+                "principalId": "[reference(resourceId('Microsoft.Logic/workflows', variables('logicAppName')), '2019-05-01', 'full').identity.principalId]",
+                "principalType": "ServicePrincipal"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.Logic/workflows', variables('logicAppName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Resources/deployments",
+              "apiVersion": "2025-04-01",
+              "name": "acrPullRoleAssignment",
+              "properties": {
+                "expressionEvaluationOptions": {
+                  "scope": "inner"
+                },
+                "mode": "Incremental",
+                "parameters": {
+                  "acrName": {
+                    "value": "[variables('acrName')]"
+                  },
+                  "principalId": {
+                    "value": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-acr-pull', variables('logicAppName'))), '2023-01-31').principalId]"
+                  }
+                },
+                "template": {
+                  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+                  "contentVersion": "1.0.0.0",
+                  "metadata": {
+                    "_generator": {
+                      "name": "bicep",
+                      "version": "0.39.26.7824",
+                      "templateHash": "9460084306972313342"
+                    }
+                  },
+                  "parameters": {
+                    "acrName": {
+                      "type": "string",
+                      "metadata": {
+                        "description": "ACR name"
+                      }
+                    },
+                    "principalId": {
+                      "type": "string",
+                      "metadata": {
+                        "description": "Principal ID to grant AcrPull role"
+                      }
+                    }
+                  },
+                  "resources": [
+                    {
+                      "type": "Microsoft.Authorization/roleAssignments",
+                      "apiVersion": "2022-04-01",
+                      "scope": "[format('Microsoft.ContainerRegistry/registries/{0}', parameters('acrName'))]",
+                      "name": "[guid(resourceId('Microsoft.ContainerRegistry/registries', parameters('acrName')), parameters('principalId'), 'AcrPull')]",
+                      "properties": {
+                        "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '7f951dda-4ed3-4680-a7ca-43fe172d538d')]",
+                        "principalId": "[parameters('principalId')]",
+                        "principalType": "ServicePrincipal"
+                      }
+                    }
+                  ]
+                }
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-acr-pull', variables('logicAppName')))]"
+              ]
+            }
+          ],
+          "outputs": {
+            "logicAppId": {
+              "type": "string",
+              "value": "[resourceId('Microsoft.Logic/workflows', variables('logicAppName'))]"
+            },
+            "logicAppName": {
+              "type": "string",
+              "value": "[variables('logicAppName')]"
+            },
+            "logicAppPrincipalId": {
+              "type": "string",
+              "value": "[reference(resourceId('Microsoft.Logic/workflows', variables('logicAppName')), '2019-05-01', 'full').identity.principalId]"
+            }
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.ContainerRegistry/registries', variables('acrName'))]"
+      ]
+    }
+  ],
+  "outputs": {
+    "acrLoginServer": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.ContainerRegistry/registries', variables('acrName')), '2023-07-01').loginServer]"
+    },
+    "acrName": {
+      "type": "string",
+      "value": "[variables('acrName')]"
+    },
+    "keyVaultName": {
+      "type": "string",
+      "value": "[variables('keyVaultName')]"
+    },
+    "keyVaultUri": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName')), '2023-07-01').vaultUri]"
+    },
+    "logicAppName": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'deploy-logic-app'), '2025-04-01').outputs.logicAppName.value]"
+    },
+    "logicAppId": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Resources/deployments', 'deploy-logic-app'), '2025-04-01').outputs.logicAppId.value]"
+    }
+  }
+}

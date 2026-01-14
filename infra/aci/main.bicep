@@ -26,7 +26,6 @@ param openaiApiKey string
 var baseName = 'worker-${environment}'
 var acrName = replace('acr${baseName}', '-', '')
 var keyVaultName = 'kv-${baseName}'
-var logicAppName = 'la-${baseName}-${clientId}'
 var queueName = '${clientId}-tasks'
 
 // Azure Container Registry
@@ -102,19 +101,15 @@ resource secretAcrPassword 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
 module logicApp 'logic-app-trigger.bicep' = {
   name: 'deploy-logic-app'
   params: {
-    logicAppName: logicAppName
+    environment: environment
     location: location
     storageConnectionString: storageConnectionString
     queueName: queueName
     pollingIntervalSeconds: 30
     containerResourceGroup: resourceGroup().name
-    acrName: acrName
-    keyVaultName: keyVaultName
   }
   dependsOn: [
-    keyVault
     acr
-    secretAcrPassword
   ]
 }
 
