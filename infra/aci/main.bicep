@@ -59,12 +59,12 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
 
 // Storage queue for tasks
 resource queue 'Microsoft.Storage/storageAccounts/queueServices/queues@2023-01-01' = {
-  name: '${storageAccount.name}/${queueName}'
+  name: '${storageAccount.name}/default/${queueName}'
 }
 
 // Storage blob container for documents
 resource blobContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-01-01' = {
-  name: '${storageAccount.name}/documents'
+  name: '${storageAccount.name}/default/documents'
 }
 
 // Key Vault for secrets

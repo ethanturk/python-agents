@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.39.26.7824",
-      "templateHash": "16147780056451921292"
+      "templateHash": "10991965739001146148"
     }
   },
   "parameters": {
@@ -102,7 +102,7 @@
     {
       "type": "Microsoft.Storage/storageAccounts/queueServices/queues",
       "apiVersion": "2023-01-01",
-      "name": "[format('{0}/{1}', parameters('storageAccountName'), variables('queueName'))]",
+      "name": "[format('{0}/queueServices/{1}', parameters('storageAccountName'), variables('queueName'))]",
       "dependsOn": [
         "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
       ]
@@ -110,7 +110,7 @@
     {
       "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
       "apiVersion": "2023-01-01",
-      "name": "[format('{0}/documents', parameters('storageAccountName'))]",
+      "name": "[format('{0}/blobServices/documents', parameters('storageAccountName'))]",
       "dependsOn": [
         "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
       ]
