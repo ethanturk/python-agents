@@ -8,21 +8,6 @@ param location string = resourceGroup().location
 @secure()
 param storageConnectionString string
 
-@description('Supabase URL')
-param supabaseUrl string
-
-@description('Supabase service key')
-@secure()
-param supabaseKey string
-
-@description('OpenAI API key')
-@secure()
-param openaiApiKey string
-
-@description('Internal API key for webhook authentication')
-@secure()
-param internalApiKey string
-
 @description('Queue name to monitor')
 param queueName string = 'default-tasks'
 
@@ -163,23 +148,38 @@ resource logicApp 'Microsoft.Logic/workflows@2019-05-01' = {
                             }
                             {
                               name: 'AZURE_STORAGE_CONNECTION_STRING'
-                              secureValue: storageConnectionString
+                              secretReference: {
+                                vaultId: keyVaultResourceId
+                                secretName: 'azure-storage-connection-string' // pragma: allowlist secret
+                              }
                             }
                             {
                               name: 'SUPABASE_URL'
-                              value: supabaseUrl
+                              secretReference: {
+                                vaultId: keyVaultResourceId
+                                secretName: 'supabase-url' // pragma: allowlist secret
+                              }
                             }
                             {
                               name: 'SUPABASE_KEY'
-                              secureValue: supabaseKey
+                              secretReference: {
+                                vaultId: keyVaultResourceId
+                                secretName: 'supabase-key' // pragma: allowlist secret
+                              }
                             }
                             {
                               name: 'OPENAI_API_KEY'
-                              secureValue: openaiApiKey
+                              secretReference: {
+                                vaultId: keyVaultResourceId
+                                secretName: 'openai-api-key' // pragma: allowlist secret
+                              }
                             }
                             {
                               name: 'INTERNAL_API_KEY'
-                              secureValue: internalApiKey
+                              secretReference: {
+                                vaultId: keyVaultResourceId
+                                secretName: 'internal-api-key' // pragma: allowlist secret
+                              }
                             }
                           ]
                         }
@@ -251,6 +251,27 @@ module acrPullRoleAssignment 'acr-role-assignment.bicep' = {
   params: {
     acrName: acrName
     principalId: acrPullIdentity.properties.principalId
+  }
+}
+
+// Get Key Vault resource ID
+var keyVaultName = 'kv-${environment}'
+var keyVaultResourceId = resourceId('Microsoft.KeyVault/vaults', keyVaultName)
+
+// Reference existing Key Vault from main deployment
+resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' existing = {
+  scope: resourceGroup()
+  name: keyVaultName
+}
+
+// Key Vault Secrets User role assignment for ACI identity
+resource keyVaultSecretsUser 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
+  name: guid(keyVaultResourceId, acrPullIdentity.id, 'SecretsUser')
+  scope: keyVault
+  properties: {
+    roleDefinitionId: subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6') // Key Vault Secrets User
+    principalId: acrPullIdentity.properties.principalId
+    principalType: 'ServicePrincipal'
   }
 }
 

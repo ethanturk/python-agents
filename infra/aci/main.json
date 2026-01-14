@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.39.26.7824",
-      "templateHash": "12427557232511225228"
+      "templateHash": "8310393109401861994"
     }
   },
   "parameters": {
@@ -58,13 +58,6 @@
       "type": "securestring",
       "metadata": {
         "description": "Internal API key for webhook authentication"
-      }
-    },
-    "azureStorageContainerName": {
-      "type": "string",
-      "defaultValue": "documents",
-      "metadata": {
-        "description": "Azure Storage container name"
       }
     }
   },
@@ -150,6 +143,17 @@
     {
       "type": "Microsoft.KeyVault/vaults/secrets",
       "apiVersion": "2023-07-01",
+      "name": "[format('{0}/{1}', variables('keyVaultName'), 'internal-api-key')]",
+      "properties": {
+        "value": "[parameters('internalApiKey')]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2023-07-01",
       "name": "[format('{0}/{1}', variables('keyVaultName'), 'acr-password')]",
       "properties": {
         "value": "[listCredentials(resourceId('Microsoft.ContainerRegistry/registries', variables('acrName')), '2023-07-01').passwords[0].value]"
@@ -178,18 +182,6 @@
           "storageConnectionString": {
             "value": "[parameters('storageConnectionString')]"
           },
-          "supabaseUrl": {
-            "value": "[parameters('supabaseUrl')]"
-          },
-          "supabaseKey": {
-            "value": "[parameters('supabaseKey')]"
-          },
-          "openaiApiKey": {
-            "value": "[parameters('openaiApiKey')]"
-          },
-          "internalApiKey": {
-            "value": "[parameters('internalApiKey')]"
-          },
           "queueName": {
             "value": "[variables('queueName')]"
           },
@@ -198,9 +190,6 @@
           },
           "containerResourceGroup": {
             "value": "[resourceGroup().name]"
-          },
-          "azureStorageContainerName": {
-            "value": "[parameters('azureStorageContainerName')]"
           }
         },
         "template": {
@@ -210,7 +199,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.39.26.7824",
-              "templateHash": "18368041486732142864"
+              "templateHash": "5417779954877762564"
             }
           },
           "parameters": {
@@ -234,42 +223,11 @@
                 "description": "Azure Storage connection string"
               }
             },
-            "supabaseUrl": {
-              "type": "string",
-              "metadata": {
-                "description": "Supabase URL"
-              }
-            },
-            "supabaseKey": {
-              "type": "securestring",
-              "metadata": {
-                "description": "Supabase service key"
-              }
-            },
-            "openaiApiKey": {
-              "type": "securestring",
-              "metadata": {
-                "description": "OpenAI API key"
-              }
-            },
-            "internalApiKey": {
-              "type": "securestring",
-              "metadata": {
-                "description": "Internal API key for webhook authentication"
-              }
-            },
             "queueName": {
               "type": "string",
               "defaultValue": "default-tasks",
               "metadata": {
                 "description": "Queue name to monitor"
-              }
-            },
-            "azureStorageContainerName": {
-              "type": "string",
-              "defaultValue": "documents",
-              "metadata": {
-                "description": "Azure Storage container name"
               }
             },
             "pollingIntervalSeconds": {
@@ -290,7 +248,9 @@
           "variables": {
             "baseName": "[format('worker-{0}', parameters('environment'))]",
             "acrName": "[replace(format('acr{0}', variables('baseName')), '-', '')]",
-            "logicAppName": "[format('la-{0}-{1}', variables('baseName'), split(parameters('queueName'), '-')[0])]"
+            "logicAppName": "[format('la-{0}-{1}', variables('baseName'), split(parameters('queueName'), '-')[0])]",
+            "keyVaultName": "[format('kv-{0}', parameters('environment'))]",
+            "keyVaultResourceId": "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]"
           },
           "resources": [
             {
@@ -430,27 +390,38 @@
                                         },
                                         {
                                           "name": "AZURE_STORAGE_CONNECTION_STRING",
-                                          "secureValue": "[parameters('storageConnectionString')]"
-                                        },
-                                        {
-                                          "name": "AZURE_STORAGE_CONTAINER_NAME",
-                                          "value": "[parameters('azureStorageContainerName')]"
+                                          "secretReference": {
+                                            "vaultId": "[variables('keyVaultResourceId')]",
+                                            "secretName": "azure-storage-connection-string"
+                                          }
                                         },
                                         {
                                           "name": "SUPABASE_URL",
-                                          "value": "[parameters('supabaseUrl')]"
+                                          "secretReference": {
+                                            "vaultId": "[variables('keyVaultResourceId')]",
+                                            "secretName": "supabase-url"
+                                          }
                                         },
                                         {
                                           "name": "SUPABASE_KEY",
-                                          "secureValue": "[parameters('supabaseKey')]"
+                                          "secretReference": {
+                                            "vaultId": "[variables('keyVaultResourceId')]",
+                                            "secretName": "supabase-key"
+                                          }
                                         },
                                         {
                                           "name": "OPENAI_API_KEY",
-                                          "secureValue": "[parameters('openaiApiKey')]"
+                                          "secretReference": {
+                                            "vaultId": "[variables('keyVaultResourceId')]",
+                                            "secretName": "openai-api-key"
+                                          }
                                         },
                                         {
                                           "name": "INTERNAL_API_KEY",
-                                          "secureValue": "[parameters('internalApiKey')]"
+                                          "secretReference": {
+                                            "vaultId": "[variables('keyVaultResourceId')]",
+                                            "secretName": "internal-api-key"
+                                          }
                                         }
                                       ]
                                     }
@@ -520,6 +491,20 @@
               },
               "dependsOn": [
                 "[resourceId('Microsoft.Logic/workflows', variables('logicAppName'))]"
+              ]
+            },
+            {
+              "type": "Microsoft.Authorization/roleAssignments",
+              "apiVersion": "2022-04-01",
+              "scope": "[format('Microsoft.KeyVault/vaults/{0}', variables('keyVaultName'))]",
+              "name": "[guid(variables('keyVaultResourceId'), resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-acr-pull', variables('logicAppName'))), 'SecretsUser')]",
+              "properties": {
+                "roleDefinitionId": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '4633458b-17de-408a-b874-0445c86b69e6')]",
+                "principalId": "[reference(resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-acr-pull', variables('logicAppName'))), '2023-01-31').principalId]",
+                "principalType": "ServicePrincipal"
+              },
+              "dependsOn": [
+                "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', format('{0}-acr-pull', variables('logicAppName')))]"
               ]
             },
             {
@@ -600,7 +585,8 @@
         }
       },
       "dependsOn": [
-        "[resourceId('Microsoft.ContainerRegistry/registries', variables('acrName'))]"
+        "[resourceId('Microsoft.ContainerRegistry/registries', variables('acrName'))]",
+        "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]"
       ]
     }
   ],

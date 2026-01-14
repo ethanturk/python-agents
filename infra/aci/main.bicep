@@ -63,7 +63,7 @@ resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
 // Store secrets in Key Vault
 resource secretAzureStorage 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
   parent: keyVault
-  name: 'azure-storage-connection-string'
+  name: 'azure-storage-connection-string' // pragma: allowlist secret
   properties: {
     value: storageConnectionString
   }
@@ -71,7 +71,7 @@ resource secretAzureStorage 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
 
 resource secretSupabaseUrl 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
   parent: keyVault
-  name: 'supabase-url'
+  name: 'supabase-url' // pragma: allowlist secret
   properties: {
     value: supabaseUrl
   }
@@ -79,7 +79,7 @@ resource secretSupabaseUrl 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
 
 resource secretSupabaseKey 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
   parent: keyVault
-  name: 'supabase-key'
+  name: 'supabase-key' // pragma: allowlist secret
   properties: {
     value: supabaseKey
   }
@@ -87,15 +87,23 @@ resource secretSupabaseKey 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
 
 resource secretOpenaiKey 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
   parent: keyVault
-  name: 'openai-api-key'
+  name: 'openai-api-key' // pragma: allowlist secret
   properties: {
     value: openaiApiKey
   }
 }
 
+resource secretInternalApiKey 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
+  parent: keyVault
+  name: 'internal-api-key' // pragma: allowlist secret
+  properties: {
+    value: internalApiKey
+  }
+}
+
 resource secretAcrPassword 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
   parent: keyVault
-  name: 'acr-password'
+  name: 'acr-password' // pragma: allowlist secret
   properties: {
     value: acr.listCredentials().passwords[0].value
   }
@@ -108,16 +116,13 @@ module logicApp 'logic-app-trigger.bicep' = {
     environment: environment
     location: location
     storageConnectionString: storageConnectionString
-    supabaseUrl: supabaseUrl
-    supabaseKey: supabaseKey
-    openaiApiKey: openaiApiKey
-    internalApiKey: internalApiKey
     queueName: queueName
     pollingIntervalSeconds: 30
     containerResourceGroup: resourceGroup().name
   }
   dependsOn: [
     acr
+    keyVault
   ]
 }
 

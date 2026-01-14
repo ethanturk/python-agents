@@ -10,11 +10,14 @@ Azure Storage Queue ──► Azure Logic App ──► Azure Container Instance
        │                     │                      ▼
        │                     │              Worker Container
        │                     │                      │
+       │                     │                      ▼
+       │                     │              Pulls Secrets from Key Vault
        │                     ▼                      │
        │              Delete Message ◄──────────────┘
        │                                    (on completion)
        ▼
-  Azure Key Vault ◄─── Secrets (API keys, connection strings)
+   Azure Key Vault ◄─── Secrets (API keys, connection strings)
+                      (ACI identity with Key Vault Secrets User role)
 ```
 
 ## Files
@@ -52,8 +55,11 @@ az deployment group create \
     storageConnectionString="<your-storage-connection-string>" \
     supabaseUrl="<your-supabase-url>" \
     supabaseKey="<your-supabase-key>" \
-    openaiApiKey="<your-openai-key>"
+    openaiApiKey="<your-openai-key>" \
+    internalApiKey="<your-internal-api-key>"
 ```
+
+**Note**: Secrets are stored in Azure Key Vault and pulled directly by ACI containers. The Logic App does not handle secrets directly.
 
 ### 3. Note Output Values
 

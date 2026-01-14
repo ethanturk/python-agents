@@ -24,7 +24,9 @@ class DocumentPoint:
         self.payload = payload
 
 
-class VectorDBService(VectorReader, VectorWriter, VectorDeleter, DocumentMetadataReader):
+class VectorDBService(
+    VectorReader, VectorWriter, VectorDeleter, DocumentMetadataReader
+):
     def __init__(self):
         self.supabase = supabase_service
         self.table_name = config.VECTOR_TABLE_NAME or "documents"
@@ -78,8 +80,14 @@ class VectorDBService(VectorReader, VectorWriter, VectorDeleter, DocumentMetadat
             return []
 
     async def upsert_vectors(self, points: list[dict[str, Any]]):
-        if not self.supabase.is_available() or not points:
+        if not points:
+            logger.warning("upsert_vectors called with empty points list")
             return
+        if not self.supabase.is_available():
+            logger.error(
+                "Supabase client not available - check SUPABASE_URL and SUPABASE_KEY environment variables"
+            )
+            raise RuntimeError("Supabase client not available")
 
         try:
             records = []
