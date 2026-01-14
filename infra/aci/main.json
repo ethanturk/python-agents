@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.39.26.7824",
-      "templateHash": "10977955476706457957"
+      "templateHash": "16147780056451921292"
     }
   },
   "parameters": {
@@ -102,7 +102,7 @@
     {
       "type": "Microsoft.Storage/storageAccounts/queueServices/queues",
       "apiVersion": "2023-01-01",
-      "name": "[format('{0}/queues/{1}', parameters('storageAccountName'), variables('queueName'))]",
+      "name": "[format('{0}/{1}', parameters('storageAccountName'), variables('queueName'))]",
       "dependsOn": [
         "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
       ]
@@ -110,7 +110,7 @@
     {
       "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
       "apiVersion": "2023-01-01",
-      "name": "[format('{0}/containers/documents', parameters('storageAccountName'))]",
+      "name": "[format('{0}/documents', parameters('storageAccountName'))]",
       "dependsOn": [
         "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
       ]
@@ -266,7 +266,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.39.26.7824",
-              "templateHash": "300438718166324112"
+              "templateHash": "1462730888771457385"
             }
           },
           "parameters": {
@@ -381,7 +381,7 @@
                           }
                         },
                         "method": "get",
-                        "path": "/v2/storageAccounts/@{encodeURIComponent(encodeURIComponent(storageAccountName))}/queues/@{encodeURIComponent(queueName)}/message_trigger"
+                        "path": "[format('/v2/storageAccounts/{0}/queues/{1}/message_trigger', parameters('storageAccountName'), parameters('queueName'))]"
                       }
                     }
                   },
@@ -526,7 +526,7 @@
                               }
                             },
                             "method": "delete",
-                            "path": "/v2/storageAccounts/@{encodeURIComponent(encodeURIComponent(storageAccountName))}/queues/@{encodeURIComponent(queueName)}/messages/@{encodeURIComponent(items('For_Each_Message')?['MessageId'])}",
+                            "path": "[format('/v2/storageAccounts/{0}/queues/{1}/messages/@{{items(''For_Each_Message'')?[''MessageId''])}}', parameters('storageAccountName'), parameters('queueName'))]",
                             "queries": {
                               "popreceipt": "@items('For_Each_Message')?['PopReceipt']"
                             }
