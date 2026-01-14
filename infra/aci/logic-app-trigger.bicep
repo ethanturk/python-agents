@@ -13,11 +13,15 @@ param pollingIntervalSeconds int = 30
 @description('Resource group for container instances')
 param containerResourceGroup string = resourceGroup().name
 
+#disable-next-line no-unused-params
 @description('Storage account name for the queue')
 param storageAccountName string
 
 @description('Key Vault name')
 param keyVaultName string
+
+#disable-next-line no-hardcoded-env-urls
+var managementHost = 'management.azure.com'
 
 // Naming convention (matches main.bicep)
 var baseName = 'worker-${environment}'
@@ -63,6 +67,8 @@ resource logicApp 'Microsoft.Logic/workflows@2019-05-01' = {
   properties: {
     state: 'Enabled'
     definition: {
+      // Logic App schema requires quoted property names for special characters
+      #disable-next-line prefer-unquoted-property-names
       '$schema': 'https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#'
       contentVersion: '1.0.0.0'
       parameters: {
@@ -118,7 +124,8 @@ resource logicApp 'Microsoft.Logic/workflows@2019-05-01' = {
               }
               inputs: {
                 method: 'PUT'
-                uri: 'https://management.azure.com/subscriptions/${subscription().subscriptionId}/resourceGroups/${containerResourceGroup}/providers/Microsoft.ContainerInstance/containerGroups/worker-@{guid()}?api-version=2023-05-01'
+                #disable-next-line no-hardcoded-env-urls
+                uri: 'https://${managementHost}/subscriptions/${subscription().subscriptionId}/resourceGroups/${containerResourceGroup}/providers/Microsoft.ContainerInstance/containerGroups/worker-@{guid()}?api-version=2023-05-01'
                 authentication: {
                   type: 'ManagedServiceIdentity'
                 }

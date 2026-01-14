@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.39.26.7824",
-      "templateHash": "5381460499406652947"
+      "templateHash": "12717715969918198925"
     }
   },
   "parameters": {
@@ -32,32 +32,35 @@
     },
     "supabaseUrl": {
       "type": "string",
+      "defaultValue": "",
       "metadata": {
-        "description": "Supabase URL"
+        "description": "Supabase URL (optional if already in Key Vault)"
       }
     },
     "supabaseKey": {
       "type": "securestring",
+      "defaultValue": "",
       "metadata": {
-        "description": "Supabase service key"
+        "description": "Supabase service key (optional if already in Key Vault)"
       }
     },
     "openaiApiKey": {
       "type": "securestring",
+      "defaultValue": "",
       "metadata": {
-        "description": "OpenAI API key"
+        "description": "OpenAI API key (optional if already in Key Vault)"
       }
     },
     "internalApiKey": {
       "type": "securestring",
+      "defaultValue": "",
       "metadata": {
-        "description": "Internal API key for webhook authentication"
+        "description": "Internal API key for webhook authentication (optional if already in Key Vault)"
       }
     }
   },
   "variables": {
     "baseName": "[format('worker-{0}', parameters('environment'))]",
-    "acrName": "[replace(format('acr{0}', variables('baseName')), '-', '')]",
     "keyVaultName": "[format('kv-{0}', variables('baseName'))]",
     "queueName": "[format('{0}-tasks', parameters('clientId'))]"
   },
@@ -65,7 +68,7 @@
     {
       "type": "Microsoft.ContainerRegistry/registries",
       "apiVersion": "2023-07-01",
-      "name": "[variables('acrName')]",
+      "name": "[format('acr{0}', replace(variables('baseName'), '-', ''))]",
       "location": "[parameters('location')]",
       "sku": {
         "name": "Basic"
@@ -77,7 +80,7 @@
     {
       "type": "Microsoft.Storage/storageAccounts",
       "apiVersion": "2023-01-01",
-      "name": "[format('sa{0}', variables('baseName'))]",
+      "name": "aidocsrch",
       "location": "[parameters('location')]",
       "sku": {
         "name": "Standard_LRS"
@@ -92,17 +95,17 @@
     {
       "type": "Microsoft.Storage/storageAccounts/queueServices/queues",
       "apiVersion": "2023-01-01",
-      "name": "[format('{0}/{1}', format('sa{0}', variables('baseName')), variables('queueName'))]",
+      "name": "[format('{0}/queues/{1}', 'aidocsrch', variables('queueName'))]",
       "dependsOn": [
-        "[resourceId('Microsoft.Storage/storageAccounts', format('sa{0}', variables('baseName')))]"
+        "[resourceId('Microsoft.Storage/storageAccounts', 'aidocsrch')]"
       ]
     },
     {
       "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
       "apiVersion": "2023-01-01",
-      "name": "[format('{0}/documents', format('sa{0}', variables('baseName')))]",
+      "name": "[format('{0}/containers/documents', 'aidocsrch')]",
       "dependsOn": [
-        "[resourceId('Microsoft.Storage/storageAccounts', format('sa{0}', variables('baseName')))]"
+        "[resourceId('Microsoft.Storage/storageAccounts', 'aidocsrch')]"
       ]
     },
     {
@@ -119,21 +122,18 @@
         "enableRbacAuthorization": true,
         "enabledForDeployment": true,
         "enabledForTemplateDeployment": true
-      },
-      "dependsOn": [
-        "[resourceId('Microsoft.Storage/storageAccounts', format('sa{0}', variables('baseName')))]"
-      ]
+      }
     },
     {
       "type": "Microsoft.KeyVault/vaults/secrets",
       "apiVersion": "2023-07-01",
       "name": "[format('{0}/{1}', variables('keyVaultName'), 'storage-account-name')]",
       "properties": {
-        "value": "[format('sa{0}', variables('baseName'))]"
+        "value": "aidocsrch"
       },
       "dependsOn": [
         "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]",
-        "[resourceId('Microsoft.Storage/storageAccounts', format('sa{0}', variables('baseName')))]"
+        "[resourceId('Microsoft.Storage/storageAccounts', 'aidocsrch')]"
       ]
     },
     {
@@ -141,11 +141,11 @@
       "apiVersion": "2023-07-01",
       "name": "[format('{0}/{1}', variables('keyVaultName'), 'storage-account-key')]",
       "properties": {
-        "value": "[listKeys(resourceId('Microsoft.Storage/storageAccounts', format('sa{0}', variables('baseName'))), '2023-01-01').keys[0].value]"
+        "value": "[listKeys(resourceId('Microsoft.Storage/storageAccounts', 'aidocsrch'), '2023-01-01').keys[0].value]"
       },
       "dependsOn": [
         "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]",
-        "[resourceId('Microsoft.Storage/storageAccounts', format('sa{0}', variables('baseName')))]"
+        "[resourceId('Microsoft.Storage/storageAccounts', 'aidocsrch')]"
       ]
     },
     {
@@ -153,14 +153,15 @@
       "apiVersion": "2023-07-01",
       "name": "[format('{0}/{1}', variables('keyVaultName'), 'azure-storage-connection-string')]",
       "properties": {
-        "value": "[format('DefaultEndpointsProtocol=https;AccountName={0};AccountKey={1};EndpointSuffix=core.windows.net', format('sa{0}', variables('baseName')), listKeys(resourceId('Microsoft.Storage/storageAccounts', format('sa{0}', variables('baseName'))), '2023-01-01').keys[0].value)]"
+        "value": "[format('DefaultEndpointsProtocol=https;AccountName={0};AccountKey={1};EndpointSuffix=core.windows.net', 'aidocsrch', listKeys(resourceId('Microsoft.Storage/storageAccounts', 'aidocsrch'), '2023-01-01').keys[0].value)]"
       },
       "dependsOn": [
         "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]",
-        "[resourceId('Microsoft.Storage/storageAccounts', format('sa{0}', variables('baseName')))]"
+        "[resourceId('Microsoft.Storage/storageAccounts', 'aidocsrch')]"
       ]
     },
     {
+      "condition": "[not(empty(parameters('supabaseUrl')))]",
       "type": "Microsoft.KeyVault/vaults/secrets",
       "apiVersion": "2023-07-01",
       "name": "[format('{0}/{1}', variables('keyVaultName'), 'supabase-url')]",
@@ -172,6 +173,7 @@
       ]
     },
     {
+      "condition": "[not(empty(parameters('supabaseKey')))]",
       "type": "Microsoft.KeyVault/vaults/secrets",
       "apiVersion": "2023-07-01",
       "name": "[format('{0}/{1}', variables('keyVaultName'), 'supabase-key')]",
@@ -183,6 +185,7 @@
       ]
     },
     {
+      "condition": "[not(empty(parameters('openaiApiKey')))]",
       "type": "Microsoft.KeyVault/vaults/secrets",
       "apiVersion": "2023-07-01",
       "name": "[format('{0}/{1}', variables('keyVaultName'), 'openai-api-key')]",
@@ -194,6 +197,7 @@
       ]
     },
     {
+      "condition": "[not(empty(parameters('internalApiKey')))]",
       "type": "Microsoft.KeyVault/vaults/secrets",
       "apiVersion": "2023-07-01",
       "name": "[format('{0}/{1}', variables('keyVaultName'), 'internal-api-key')]",
@@ -209,10 +213,10 @@
       "apiVersion": "2023-07-01",
       "name": "[format('{0}/{1}', variables('keyVaultName'), 'acr-password')]",
       "properties": {
-        "value": "[listCredentials(resourceId('Microsoft.ContainerRegistry/registries', variables('acrName')), '2023-07-01').passwords[0].value]"
+        "value": "[listCredentials(resourceId('Microsoft.ContainerRegistry/registries', format('acr{0}', replace(variables('baseName'), '-', ''))), '2023-07-01').passwords[0].value]"
       },
       "dependsOn": [
-        "[resourceId('Microsoft.ContainerRegistry/registries', variables('acrName'))]",
+        "[resourceId('Microsoft.ContainerRegistry/registries', format('acr{0}', replace(variables('baseName'), '-', '')))]",
         "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]"
       ]
     },
@@ -242,7 +246,7 @@
             "value": "[resourceGroup().name]"
           },
           "storageAccountName": {
-            "value": "[format('sa{0}', variables('baseName'))]"
+            "value": "aidocsrch"
           },
           "keyVaultName": {
             "value": "[variables('keyVaultName')]"
@@ -255,7 +259,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.39.26.7824",
-              "templateHash": "2841032253962235408"
+              "templateHash": "300438718166324112"
             }
           },
           "parameters": {
@@ -308,6 +312,7 @@
             }
           },
           "variables": {
+            "managementHost": "management.azure.com",
             "baseName": "[format('worker-{0}', parameters('environment'))]",
             "acrName": "[replace(format('acr{0}', variables('baseName')), '-', '')]",
             "logicAppName": "[format('la-{0}-{1}', variables('baseName'), split(parameters('queueName'), '-')[0])]",
@@ -412,7 +417,7 @@
                           },
                           "inputs": {
                             "method": "PUT",
-                            "uri": "[format('https://management.azure.com/subscriptions/{0}/resourceGroups/{1}/providers/Microsoft.ContainerInstance/containerGroups/worker-@{{guid()}}?api-version=2023-05-01', subscription().subscriptionId, parameters('containerResourceGroup'))]",
+                            "uri": "[format('https://{0}/subscriptions/{1}/resourceGroups/{2}/providers/Microsoft.ContainerInstance/containerGroups/worker-@{{guid()}}?api-version=2023-05-01', variables('managementHost'), subscription().subscriptionId, parameters('containerResourceGroup'))]",
                             "authentication": {
                               "type": "ManagedServiceIdentity"
                             },
@@ -660,20 +665,19 @@
         }
       },
       "dependsOn": [
-        "[resourceId('Microsoft.ContainerRegistry/registries', variables('acrName'))]",
         "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]",
-        "[resourceId('Microsoft.Storage/storageAccounts', format('sa{0}', variables('baseName')))]"
+        "[resourceId('Microsoft.Storage/storageAccounts', 'aidocsrch')]"
       ]
     }
   ],
   "outputs": {
     "acrLoginServer": {
       "type": "string",
-      "value": "[reference(resourceId('Microsoft.ContainerRegistry/registries', variables('acrName')), '2023-07-01').loginServer]"
+      "value": "[reference(resourceId('Microsoft.ContainerRegistry/registries', format('acr{0}', replace(variables('baseName'), '-', ''))), '2023-07-01').loginServer]"
     },
     "acrName": {
       "type": "string",
-      "value": "[variables('acrName')]"
+      "value": "[format('acr{0}', replace(variables('baseName'), '-', ''))]"
     },
     "keyVaultName": {
       "type": "string",
@@ -685,7 +689,7 @@
     },
     "storageAccountName": {
       "type": "string",
-      "value": "[format('sa{0}', variables('baseName'))]"
+      "value": "aidocsrch"
     },
     "logicAppName": {
       "type": "string",

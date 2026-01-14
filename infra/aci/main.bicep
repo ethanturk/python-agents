@@ -7,30 +7,29 @@ param clientId string = 'default'
 @description('Resource location')
 param location string = resourceGroup().location
 
-@description('Supabase URL')
-param supabaseUrl string
+@description('Supabase URL (optional if already in Key Vault)')
+param supabaseUrl string = ''
 
-@description('Supabase service key')
+@description('Supabase service key (optional if already in Key Vault)')
 @secure()
-param supabaseKey string
+param supabaseKey string = ''
 
-@description('OpenAI API key')
+@description('OpenAI API key (optional if already in Key Vault)')
 @secure()
-param openaiApiKey string
+param openaiApiKey string = ''
 
-@description('Internal API key for webhook authentication')
+@description('Internal API key for webhook authentication (optional if already in Key Vault)')
 @secure()
-param internalApiKey string
+param internalApiKey string = ''
 
 // Naming convention
 var baseName = 'worker-${environment}'
-var acrName = replace('acr${baseName}', '-', '')
 var keyVaultName = 'kv-${baseName}'
 var queueName = '${clientId}-tasks'
 
 // Azure Container Registry
 resource acr 'Microsoft.ContainerRegistry/registries@2023-07-01' = {
-  name: acrName
+  name: 'acr${replace(baseName, '-', '')}'
   location: location
   sku: {
     name: 'Basic'
@@ -42,7 +41,7 @@ resource acr 'Microsoft.ContainerRegistry/registries@2023-07-01' = {
 
 // Azure Storage account for queues and blob storage
 resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
-  name: 'sa${baseName}'
+  name: 'aidocsrch'
   location: location
   sku: {
     name: 'Standard_LRS'
@@ -57,12 +56,12 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2023-01-01' = {
 
 // Storage queue for tasks
 resource queue 'Microsoft.Storage/storageAccounts/queueServices/queues@2023-01-01' = {
-  name: '${storageAccount.name}/${queueName}'
+  name: '${storageAccount.name}/queues/${queueName}'
 }
 
 // Storage blob container for documents
 resource blobContainer 'Microsoft.Storage/storageAccounts/blobServices/containers@2023-01-01' = {
-  name: '${storageAccount.name}/documents'
+  name: '${storageAccount.name}/containers/documents'
 }
 
 // Key Vault for secrets
@@ -79,13 +78,10 @@ resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' = {
     enabledForDeployment: true
     enabledForTemplateDeployment: true
   }
-  dependsOn: [
-    storageAccount
-  ]
 }
 
 // Get storage account key
-var storageAccountKey = listKeys(storageAccount.id, '2023-01-01').keys[0].value
+var storageAccountKey = storageAccount.listKeys('2023-01-01').keys[0].value
 
 // Storage account secrets for Logic App connection
 resource secretStorageAccountName 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
@@ -94,9 +90,6 @@ resource secretStorageAccountName 'Microsoft.KeyVault/vaults/secrets@2023-07-01'
   properties: {
     value: storageAccount.name
   }
-  dependsOn: [
-    storageAccount
-  ]
 }
 
 resource secretStorageAccountKey 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
@@ -105,9 +98,6 @@ resource secretStorageAccountKey 'Microsoft.KeyVault/vaults/secrets@2023-07-01' 
   properties: {
     value: storageAccountKey
   }
-  dependsOn: [
-    storageAccount
-  ]
 }
 
 resource secretStorageConnectionString 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
@@ -116,13 +106,10 @@ resource secretStorageConnectionString 'Microsoft.KeyVault/vaults/secrets@2023-0
   properties: {
     value: 'DefaultEndpointsProtocol=https;AccountName=${storageAccount.name};AccountKey=${storageAccountKey};EndpointSuffix=core.windows.net'
   }
-  dependsOn: [
-    storageAccount
-  ]
 }
 
-// Supabase secrets
-resource secretSupabaseUrl 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
+// Supabase secrets (only create if values provided)
+resource secretSupabaseUrl 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = if (!empty(supabaseUrl)) {
   parent: keyVault
   name: 'supabase-url' // pragma: allowlist secret
   properties: {
@@ -130,7 +117,7 @@ resource secretSupabaseUrl 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
   }
 }
 
-resource secretSupabaseKey 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
+resource secretSupabaseKey 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = if (!empty(supabaseKey)) {
   parent: keyVault
   name: 'supabase-key' // pragma: allowlist secret
   properties: {
@@ -138,8 +125,8 @@ resource secretSupabaseKey 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
   }
 }
 
-// OpenAI and Internal API secrets
-resource secretOpenaiKey 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
+// OpenAI and Internal API secrets (only create if values provided)
+resource secretOpenaiKey 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = if (!empty(openaiApiKey)) {
   parent: keyVault
   name: 'openai-api-key' // pragma: allowlist secret
   properties: {
@@ -147,7 +134,7 @@ resource secretOpenaiKey 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
   }
 }
 
-resource secretInternalApiKey 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
+resource secretInternalApiKey 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = if (!empty(internalApiKey)) {
   parent: keyVault
   name: 'internal-api-key' // pragma: allowlist secret
   properties: {
@@ -175,10 +162,6 @@ module logicApp 'logic-app-trigger.bicep' = {
     storageAccountName: storageAccount.name
     keyVaultName: keyVault.name
   }
-  dependsOn: [
-    acr
-    keyVault
-  ]
 }
 
 // Outputs
