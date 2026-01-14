@@ -94,8 +94,9 @@ export default function Home() {
   useEffect(() => {
     if (user) {
       fetchBackendSummaries();
+      fetchDocuments();
     }
-  }, [user, fetchBackendSummaries]);
+  }, [user, fetchBackendSummaries, fetchDocuments]);
 
   if (!user) {
     return (

@@ -20,8 +20,8 @@ This project is a **Turborepo monorepo** with three main applications:
    - **Features:** Server/client components, real-time polling, file upload, document management, RAG chat interface
    - **Deployment:** Auto-deploy to Vercel on push to `main` via GitHub Actions
 
-3. **`apps/worker`** - Python Celery Worker
-   - **Tech Stack:** Python 3.11+, Celery, LangChain, pydantic-ai, Docling, Supabase
+3. **`apps/worker`** - Python Async Worker
+   - **Tech Stack:** Python 3.11+, LangChain, pydantic-ai, Docling, Supabase
    - **Tasks:** Document ingestion (Docling → chunk → embed → index), async summarization, multi-step agents, file watching
    - **Deployment:** Auto-deploy to Docker Hub on push to `main` via GitHub Actions
 
@@ -39,14 +39,14 @@ This project is a **Turborepo monorepo** with three main applications:
   - Backend: Firebase Admin SDK for token verification
   - Frontend: Firebase Auth context
 
-- **Task Queue:** Redis or RabbitMQ
-  - Celery broker for async task distribution
-  - Long-polling notification queue in backend
+- **Task Queue:** Azure Storage Queues
+   - Async worker polls queues for task distribution
+   - Long-polling notification queue in backend
 
 ### Data Flow
 
 ```
-Frontend (Next.js) → Backend API (Node.js Serverless) → Worker (Python Celery)
+Frontend (Next.js) → Backend API (Node.js Serverless) → Worker (Python Async)
                             ↓                                    ↓
                      Supabase Vector DB                   Azure Blob Storage
                      Firebase Auth                        Supabase Vector DB
@@ -79,9 +79,10 @@ python-agents/
 │   ├── web/              # Next.js frontend
 │   │   ├── app/          # App router pages
 │   │   └── components/   # React components
-│   └── worker/           # Python Celery worker
-│       ├── async_tasks.py    # Task definitions
-│       └── clients.py        # Service clients
+│   └── worker/           # Python async worker
+│       ├── main.py           # Worker entry point
+│       ├── queue_worker.py   # Queue polling and handlers
+│       └── services/         # Service modules
 ├── packages/             # Shared configs (eslint, typescript)
 ├── turbo.json           # Turborepo config
 └── openspec/            # OpenSpec documentation
@@ -104,7 +105,7 @@ When creating proposals, consider these constraints:
 - **Environment Variables** - Use `NEXT_PUBLIC_*` prefix for client-accessible vars
 - **Static Optimization** - Prefer static generation where possible
 
-#### Worker (Python Celery)
+#### Worker (Python Async)
 - **Long-running tasks** - Use worker for operations >5s (document processing, LLM calls)
 - **Docling processing** - Heavy memory usage, manage resource cleanup (`gc.collect()`)
 - **VLM pipeline** - Use singleton pattern to avoid re-initialization overhead
@@ -117,7 +118,7 @@ When creating proposals, consider these constraints:
 - **Azure Blob Storage** - Required for file uploads (no local filesystem in serverless)
 
 #### Cross-Service Communication
-- **Backend → Worker** - Via task queue (Redis/RabbitMQ) or direct invocation
+- **Backend → Worker** - Via Azure Storage Queues
 - **Worker → Backend** - Via webhook notifications
 - **Frontend → Backend** - REST API with Firebase auth
 - **Real-time Updates** - Long-polling `/api/poll` endpoint (not WebSockets)
