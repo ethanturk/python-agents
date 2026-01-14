@@ -125,8 +125,11 @@ This project is a **Turborepo monorepo** with three main applications:
 
 3. **`apps/worker`** - Python Async Worker
    - **Tech Stack:** Python 3.11+, LangChain, pydantic-ai, Docling, Supabase
-   - **Tasks:** Document ingestion (Docling → chunk → embed → index), async summarization, multi-step agents, file watching
-   - **Deployment:** Auto-deploy to Docker Hub on push to `main` via GitHub Actions
+   - **Tasks:** Document ingestion (Docling → chunk → embed → index), async summarization, multi-step agents
+   - **Execution Modes:**
+     - **Single-task (ACI):** Set `TASK_DATA` env var, process one task, exit (for Azure Container Instances)
+     - **Polling (VPS/local):** Continuous queue polling when `TASK_DATA` not set
+   - **Deployment:** Auto-deploy to Azure Container Registry (primary) and Docker Hub (backup) on push to `main`
 
 ### Infrastructure
 
@@ -143,8 +146,14 @@ This project is a **Turborepo monorepo** with three main applications:
   - Frontend: Firebase Auth context
 
 - **Task Queue:** Azure Storage Queues
-   - Async worker polls queues for task distribution
+   - Queue naming: `{CLIENT_ID}-tasks` (e.g., `default-tasks`)
+   - Azure Logic App monitors queue and triggers ACI containers
    - Long-polling notification queue in backend
+
+- **Worker Deployment:** Azure Container Instances (ACI)
+   - Per-task container execution (start on demand, terminate on completion)
+   - Logic App triggers container creation when queue message arrives
+   - Infrastructure templates in `infra/aci/`
 
 ### Data Flow
 
@@ -183,9 +192,14 @@ python-agents/
 │   │   ├── app/          # App router pages
 │   │   └── components/   # React components
 │   └── worker/           # Python async worker
-│       ├── main.py           # Worker entry point
-│       ├── queue_worker.py   # Queue polling and handlers
+│       ├── main.py           # Worker entry point (dual-mode: ACI or polling)
+│       ├── queue_worker.py   # Task handlers and single-task runner
 │       └── services/         # Service modules
+├── infra/
+│   └── aci/              # Azure Container Instances deployment
+│       ├── main.bicep        # Main deployment orchestrator
+│       ├── logic-app-trigger.bicep  # Logic App workflow
+│       └── worker-container.bicep   # ACI container template
 ├── packages/             # Shared configs (eslint, typescript)
 ├── turbo.json           # Turborepo config
 └── openspec/            # OpenSpec documentation
@@ -209,10 +223,12 @@ When creating proposals or implementing features, consider these constraints:
 - **Static Optimization** - Prefer static generation where possible
 
 #### Worker (Python Async)
+- **Dual execution modes** - Single-task (ACI) or polling (VPS/local) based on `TASK_DATA` env var
 - **Long-running tasks** - Use worker for operations >5s (document processing, LLM calls)
 - **Docling processing** - Heavy memory usage, manage resource cleanup (`gc.collect()`)
 - **VLM pipeline** - Use singleton pattern to avoid re-initialization overhead
 - **Task notifications** - Webhook to backend `/api/notifications/internal/notify` on completion
+- **Timeout handling** - `WORKER_TASK_TIMEOUT` env var (default 1800s) for single-task mode
 
 #### Database & Storage
 - **Supabase Vector DB** - Use RPC function `match_documents()` for similarity search
@@ -243,12 +259,16 @@ pnpm dev
 pnpm --filter web dev          # Frontend only
 pnpm --filter backend dev      # Backend only (note: serverless, use Vercel CLI)
 
-# Run async worker locally
+# Run worker in polling mode (local development)
 cd apps/worker
 pip install -r requirements.txt
-python main.py
+python main.py  # Polls queue continuously
 
-# Or use Docker Compose for worker
+# Run worker in single-task mode (simulates ACI)
+cd apps/worker
+TASK_DATA='{"task_type":"ingest","payload":{"filename":"test.pdf","document_set":"default"}}' python main.py
+
+# Or use Docker Compose for worker (polling mode)
 docker-compose -f docker-compose.worker.yml up -d
 ```
 

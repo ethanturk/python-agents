@@ -5,7 +5,7 @@ import os
 import signal
 import sys
 from io import BytesIO
-from typing import Any, Dict
+from typing import Any, Dict, Optional, Tuple
 
 import httpx
 
@@ -15,6 +15,9 @@ from services.queue_service import AzureQueueService
 from summarizer import summarize_document
 
 logger = logging.getLogger(__name__)
+
+# Default timeout for single-task mode (30 minutes)
+DEFAULT_TASK_TIMEOUT = int(os.getenv("WORKER_TASK_TIMEOUT", "1800"))
 
 
 class NotificationService:
@@ -95,6 +98,160 @@ class SummarizationHandler:
             return {"status": "failed", "error": str(e)}
 
 
+# Shared handler registry for both single-task and polling modes
+def get_handlers() -> Dict[str, Any]:
+    """Get the handler registry."""
+    return {
+        "ingest": IngestionHandler(),
+        "summarize": SummarizationHandler(),
+    }
+
+
+def parse_task_data(task_data_raw: str) -> Tuple[str, str, Dict[str, Any], Optional[str]]:
+    """
+    Parse task data from TASK_DATA environment variable or queue message.
+
+    Args:
+        task_data_raw: Raw task data string (may include task_id prefix)
+
+    Returns:
+        Tuple of (task_id, task_type, payload, webhook_url)
+
+    Raises:
+        ValueError: If task data is invalid or missing required fields
+    """
+    # Handle task_id|json format from queue messages
+    if "|" in task_data_raw:
+        task_id, json_content = task_data_raw.split("|", 1)
+    else:
+        task_id = "unknown"
+        json_content = task_data_raw
+
+    try:
+        task_data = json.loads(json_content)
+    except json.JSONDecodeError as e:
+        raise ValueError(f"Invalid JSON in task data: {e}")
+
+    task_type = task_data.get("task_type")
+    if not task_type:
+        raise ValueError("Missing required field: task_type")
+
+    payload = task_data.get("payload", {})
+    webhook_url = task_data.get("webhook_url")
+
+    # Use task_id from JSON if provided (overrides prefix)
+    if "task_id" in task_data:
+        task_id = task_data["task_id"]
+
+    return task_id, task_type, payload, webhook_url
+
+
+class SingleTaskRunner:
+    """
+    Runner for single-task execution mode (Azure Container Instances).
+
+    Processes a single task from environment variable and exits.
+    Designed for per-task container execution with timeout handling.
+    """
+
+    def __init__(self, timeout: int = DEFAULT_TASK_TIMEOUT):
+        self.timeout = timeout
+        self.handlers = get_handlers()
+        self.notification_service = NotificationService()
+
+    def get_handler(self, task_type: str):
+        """Get handler for task type."""
+        return self.handlers.get(task_type)
+
+    async def execute_with_timeout(self, task_type: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """Execute task with timeout protection."""
+        handler = self.get_handler(task_type)
+        if not handler:
+            return {"status": "failed", "error": f"Unknown task type: {task_type}"}
+
+        try:
+            result = await asyncio.wait_for(
+                handler.execute(payload),
+                timeout=self.timeout,
+            )
+            return result
+        except asyncio.TimeoutError:
+            error_msg = f"Task exceeded timeout of {self.timeout} seconds"
+            logger.error(error_msg)
+            return {"status": "failed", "error": error_msg}
+        except Exception as e:
+            logger.error(f"Task execution failed: {e}")
+            return {"status": "failed", "error": str(e)}
+
+    async def run(self, task_data_raw: str) -> int:
+        """
+        Run a single task and return exit code.
+
+        Args:
+            task_data_raw: Raw task data string from TASK_DATA env var
+
+        Returns:
+            Exit code: 0 for success, 1 for failure
+        """
+        logger.info("=" * 60)
+        logger.info("Single-Task Mode (ACI)")
+        logger.info(f"Timeout: {self.timeout}s")
+        logger.info("=" * 60)
+
+        try:
+            task_id, task_type, payload, webhook_url = parse_task_data(task_data_raw)
+        except ValueError as e:
+            logger.error(f"Failed to parse task data: {e}")
+            return 1
+
+        logger.info(f"Processing task {task_id}: {task_type}")
+        logger.info(f"Payload: {json.dumps(payload, default=str)[:500]}...")
+
+        # Execute the task
+        result = await self.execute_with_timeout(task_type, payload)
+
+        # Prepare notification
+        notification_data = {
+            "task_id": task_id,
+            "task_type": task_type,
+            "status": result.get("status"),
+            "result": result.get("result"),
+            "error": result.get("error"),
+        }
+
+        # Send webhook notification
+        if webhook_url:
+            success = await self.notification_service.send_webhook(webhook_url, notification_data)
+            if not success:
+                logger.warning("Failed to send webhook notification")
+
+        # Determine exit code
+        status = result.get("status")
+        if status == "completed":
+            logger.info(f"Task {task_id} completed successfully")
+            return 0
+        else:
+            logger.error(f"Task {task_id} failed: {result.get('error')}")
+            return 1
+
+
+async def process_single_task(task_data_raw: str, timeout: int = DEFAULT_TASK_TIMEOUT) -> int:
+    """
+    Process a single task from raw task data string.
+
+    This is the main entry point for ACI single-task mode.
+
+    Args:
+        task_data_raw: Raw task data string (JSON or task_id|JSON format)
+        timeout: Maximum execution time in seconds
+
+    Returns:
+        Exit code: 0 for success, 1 for failure
+    """
+    runner = SingleTaskRunner(timeout=timeout)
+    return await runner.run(task_data_raw)
+
+
 class AsyncWorker:
     """Main async worker for processing queue tasks."""
 
@@ -158,9 +315,7 @@ class AsyncWorker:
             }
 
             if webhook_url:
-                await self.notification_service.send_webhook(
-                    webhook_url, notification_data
-                )
+                await self.notification_service.send_webhook(webhook_url, notification_data)
 
             logger.info(f"Task {task_id} completed with status: {result.get('status')}")
 
@@ -169,9 +324,7 @@ class AsyncWorker:
         except Exception as e:
             logger.error(f"Error processing message: {e}")
 
-    async def _send_failure_notification(
-        self, webhook_url: str, task_id: str, error: str
-    ) -> None:
+    async def _send_failure_notification(self, webhook_url: str, task_id: str, error: str) -> None:
         """Send failure notification."""
         if webhook_url:
             notification_data = {
