@@ -52,12 +52,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(200).json({ messages } as PollResponse);
     }
 
-    // Notify endpoint
+    // Notify endpoint (internal, requires API key)
     if (
       pathname === "/internal/notify" ||
       pathname === "/notifications/internal/notify" ||
       pathname === "/api/notifications/internal/notify"
     ) {
+      // Validate internal API key
+      const apiKey = req.headers["x-internal-api-key"];
+      const expectedKey = process.env.INTERNAL_API_KEY;
+
+      if (!expectedKey) {
+        logger.warn("INTERNAL_API_KEY not configured - rejecting request");
+        return res.status(500).json({ detail: "Internal API key not configured" } as ErrorResponse);
+      }
+
+      if (apiKey !== expectedKey) {
+        logger.warn("Invalid or missing internal API key");
+        return res.status(401).json({ detail: "Unauthorized" } as ErrorResponse);
+      }
+
       const body = req.body as Record<string, unknown>;
       const notification = {
         type: body.type as "ingestion" | "summarization",
