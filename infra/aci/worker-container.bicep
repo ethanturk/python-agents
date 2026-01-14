@@ -13,8 +13,26 @@ param imageTag string = 'latest'
 @description('Resource location')
 param location string = resourceGroup().location
 
-@description('Key Vault name for secrets')
-param keyVaultName string
+
+
+@description('ACR password')
+@secure()
+param acrPassword string
+
+@description('Azure Storage connection string')
+@secure()
+param azureStorageConnectionString string
+
+@description('Supabase URL')
+param supabaseUrl string
+
+@description('Supabase key')
+@secure()
+param supabaseKey string
+
+@description('OpenAI API key')
+@secure()
+param openaiApiKey string
 
 @description('CPU cores for the container')
 param cpuCores int = 1
@@ -26,14 +44,11 @@ param memoryInGB int = 2
 param taskTimeout int = 1800
 
 // Generate unique container group name based on task data hash
-var containerGroupName = 'worker-${uniqueString(taskData, utcNow())}'
+var containerGroupName = 'worker-${uniqueString(taskData)}'
 var acrServer = '${acrName}.azurecr.io'
 var workerImage = '${acrServer}/worker:${imageTag}'
 
-// Reference existing Key Vault
-resource keyVault 'Microsoft.KeyVault/vaults@2023-07-01' existing = {
-  name: keyVaultName
-}
+
 
 // Container group for single-task execution
 resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2023-05-01' = {
@@ -70,19 +85,19 @@ resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2023-05-01'
             }
             {
               name: 'AZURE_STORAGE_CONNECTION_STRING'
-              secureValue: keyVault.getSecret('azure-storage-connection-string')
+              secureValue: azureStorageConnectionString
             }
             {
               name: 'SUPABASE_URL'
-              value: keyVault.getSecret('supabase-url')
+              value: supabaseUrl
             }
             {
               name: 'SUPABASE_KEY'
-              secureValue: keyVault.getSecret('supabase-key')
+              secureValue: supabaseKey
             }
             {
               name: 'OPENAI_API_KEY'
-              secureValue: keyVault.getSecret('openai-api-key')
+              secureValue: openaiApiKey
             }
             {
               name: 'OPENAI_API_BASE'
@@ -110,14 +125,13 @@ resource containerGroup 'Microsoft.ContainerInstance/containerGroups@2023-05-01'
       {
         server: acrServer
         username: acrName
-        password: keyVault.getSecret('acr-password')
+        password: acrPassword
       }
     ]
   }
   tags: {
     purpose: 'worker-task'
     clientId: clientId
-    createdAt: utcNow()
   }
 }
 

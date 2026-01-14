@@ -225,7 +225,7 @@ resource logicApp 'Microsoft.Logic/workflows@2019-05-01' = {
                   }
                 }
                 method: 'delete'
-                path: '/v2/storageAccounts/${storageAccountName}/queues/${queueName}/messages/@{items(\'For_Each_Message\')?[\'MessageId\'])}'
+                path: '/v2/storageAccounts/${storageAccountName}/queues/${queueName}/messages/@{items(\'For_Each_Message\')?[\'MessageId\']}'
                 queries: {
                   popreceipt: '@items(\'For_Each_Message\')?[\'PopReceipt\']'
                 }

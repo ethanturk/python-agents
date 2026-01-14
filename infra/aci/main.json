@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.39.26.7824",
-      "templateHash": "10991965739001146148"
+      "templateHash": "5055778018445340071"
     }
   },
   "parameters": {
@@ -102,7 +102,7 @@
     {
       "type": "Microsoft.Storage/storageAccounts/queueServices/queues",
       "apiVersion": "2023-01-01",
-      "name": "[format('{0}/queueServices/{1}', parameters('storageAccountName'), variables('queueName'))]",
+      "name": "[format('{0}/default/{1}', parameters('storageAccountName'), variables('queueName'))]",
       "dependsOn": [
         "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
       ]
@@ -110,7 +110,7 @@
     {
       "type": "Microsoft.Storage/storageAccounts/blobServices/containers",
       "apiVersion": "2023-01-01",
-      "name": "[format('{0}/blobServices/documents', parameters('storageAccountName'))]",
+      "name": "[format('{0}/default/documents', parameters('storageAccountName'))]",
       "dependsOn": [
         "[resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName'))]"
       ]
@@ -266,7 +266,7 @@
             "_generator": {
               "name": "bicep",
               "version": "0.39.26.7824",
-              "templateHash": "1462730888771457385"
+              "templateHash": "13956833076328506658"
             }
           },
           "parameters": {
@@ -526,7 +526,7 @@
                               }
                             },
                             "method": "delete",
-                            "path": "[format('/v2/storageAccounts/{0}/queues/{1}/messages/@{{items(''For_Each_Message'')?[''MessageId''])}}', parameters('storageAccountName'), parameters('queueName'))]",
+                            "path": "[format('/v2/storageAccounts/{0}/queues/{1}/messages/@{{items(''For_Each_Message'')?[''MessageId'']}}', parameters('storageAccountName'), parameters('queueName'))]",
                             "queries": {
                               "popreceipt": "@items('For_Each_Message')?['PopReceipt']"
                             }
