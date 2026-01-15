@@ -101,7 +101,7 @@ resource logicApp 'Microsoft.Logic/workflows@2019-05-01' = {
       }
       actions: {
         'Select_Messages': {
-          type: 'Query'
+          type: 'Select'
           inputs: {
             from: '@triggerBody()?[\'QueueMessagesList\']?[\'QueueMessage\']'
             select: '@json(item()?[\'MessageText\'])'
@@ -206,19 +206,20 @@ resource logicApp 'Microsoft.Logic/workflows@2019-05-01' = {
                                   name: 'OPENAI_EMBEDDING_MODEL'
                                   value: 'text-embedding-3-small'
                                 }
-                                                                    {
-                                                                      name: 'OPENAI_EMBEDDING_DIMENSIONS'
-                                                                      value: '1536'
-                                                                    }
-                                                                    {
-                                                                      name: 'OPENAI_API_BASE'
-                                                                      value: 'https://api.openai.com/v1'
-                                                                    }
-                                                                  ]
-                                                                }
-                                                              }
-                                                            ]
-                                                            osType: 'Linux'                        restartPolicy: 'Never'
+                                {
+                                  name: 'OPENAI_EMBEDDING_DIMENSIONS'
+                                  value: '1536'
+                                }
+                                {
+                                  name: 'OPENAI_API_BASE'
+                                  value: 'https://api.openai.com/v1'
+                                }
+                              ]
+                            }
+                          }
+                        ]
+                        osType: 'Linux'
+                        restartPolicy: 'Never'
                         imageRegistryCredentials: [
                           {
                             server: '[concat(parameters(\'acrName\'), \'.azurecr.io\')]'
