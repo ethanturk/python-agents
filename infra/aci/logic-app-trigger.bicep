@@ -24,6 +24,9 @@ param storageAccountKey string
 @description('Key Vault name')
 param keyVaultName string
 
+@description('OpenAI API Base URL')
+param openaiApiBase string = 'https://api.openai.com/v1'
+
 #disable-next-line no-hardcoded-env-urls
 var managementHost = 'management.azure.com'
 
@@ -132,11 +135,11 @@ resource logicApp 'Microsoft.Logic/workflows@2019-05-01' = {
                     acrPassword: { type: 'secureString' }
                     azureStorageConnectionString: { type: 'secureString' }
                     supabaseUrl: { type: 'string' }
-                    supabaseKey: { type: 'secureString' }
-                    openaiApiKey: { type: 'secureString' }
-                    internalApiKey: { type: 'secureString' }
-                    vectorTableName: { type: 'string', defaultValue: 'documents' }
-                  }
+                                            supabaseKey: { type: 'secureString' }
+                                            openaiApiKey: { type: 'secureString' }
+                                            openaiApiBase: { type: 'string' }
+                                            internalApiKey: { type: 'secureString' }
+                                            vectorTableName: { type: 'string', defaultValue: 'documents' }                  }
                   resources: [
                     {
                       type: 'Microsoft.ContainerInstance/containerGroups'
@@ -212,7 +215,7 @@ resource logicApp 'Microsoft.Logic/workflows@2019-05-01' = {
                                 }
                                 {
                                   name: 'OPENAI_API_BASE'
-                                  value: 'https://api.openai.com/v1'
+                                  value: '[parameters(\'openaiApiBase\')]'
                                 }
                               ]
                             }
@@ -264,6 +267,9 @@ resource logicApp 'Microsoft.Logic/workflows@2019-05-01' = {
                       keyVault: { id: keyVaultResourceId }
                       secretName: 'openai-api-key' // pragma: allowlist secret
                     }
+                  }
+                  openaiApiBase: {
+                    value: openaiApiBase
                   }
                   internalApiKey: {
                     reference: {

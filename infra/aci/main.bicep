@@ -18,6 +18,9 @@ param supabaseKey string = ''
 @secure()
 param openaiApiKey string = ''
 
+@description('OpenAI API Base URL')
+param openaiApiBase string = 'https://openrouter.ai/api/v1'
+
 @description('Internal API key for webhook authentication (optional if already in Key Vault)')
 @secure()
 param internalApiKey string = ''
@@ -165,6 +168,7 @@ module logicApp 'logic-app-trigger.bicep' = {
     storageAccountName: storageAccount.name
     storageAccountKey: storageAccountKey
     keyVaultName: keyVault.name
+    openaiApiBase: openaiApiBase
   }
 }
 

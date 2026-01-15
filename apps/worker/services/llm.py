@@ -12,10 +12,23 @@ logger = logging.getLogger(__name__)
 class OpenAIEmbeddings:
     def __init__(self, model_name, api_key=None, api_base=None):
         self.model = model_name
-        self.api_key = api_key
+        self.api_key = api_key.strip() if api_key else None
         self.api_base = api_base
+
+        # Log configuration (masked key)
+        masked_key = f"{self.api_key[:8]}...{self.api_key[-4:]}" if self.api_key and len(self.api_key) > 12 else "None/Short"
+        logger.info(f"Initializing OpenAI Embeddings. Model: {model_name}, Base: {api_base}, Key: {masked_key}")
+
         # Initialize OpenAI client
-        self.client = OpenAI(api_key=api_key, base_url=api_base, timeout=60.0)
+        self.client = OpenAI(
+            api_key=self.api_key,
+            base_url=api_base,
+            timeout=60.0,
+            default_headers={
+                "HTTP-Referer": "https://github.com/ethanturk/python-agents",
+                "X-Title": "Python Agents Worker"
+            }
+        )
 
     def embed_documents(self, texts):
         response = self.client.embeddings.create(
@@ -48,7 +61,6 @@ class LLMService:
     def get_embeddings(cls):
         """Returns the OpenAIEmbeddings model (Singleton)."""
         if cls._embedding_model is None:
-            logger.info("Initializing OpenAI Embeddings Model...")
             cls._embedding_model = OpenAIEmbeddings(
                 model_name=config.OPENAI_EMBEDDING_MODEL,
                 api_key=config.OPENAI_API_KEY,

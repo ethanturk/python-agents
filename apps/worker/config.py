@@ -9,7 +9,12 @@ BASE_URL = os.getenv("BASE_URL") or "192.168.5.204"
 # OpenAI / Local LLM Configuration
 # Pointing to LM Studio
 OPENAI_API_BASE = os.getenv("OPENAI_API_BASE") or "http://192.168.5.203:1234/v1"
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY") or "lm-studio"  # Dummy key for local LLM
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+if OPENAI_API_KEY:
+    OPENAI_API_KEY = OPENAI_API_KEY.strip()
+else:
+    OPENAI_API_KEY = "lm-studio"  # pragma: allowlist secret # Dummy key for local LLM
+
 OPENAI_MODEL = os.getenv("OPENAI_MODEL") or "gpt-oss-20b"
 OPENAI_EMBEDDING_MODEL = (
     os.getenv("OPENAI_EMBEDDING_MODEL") or "text-embedding-nomic-embed-text-v1.5"
