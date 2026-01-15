@@ -15,7 +15,7 @@ class OpenAIEmbeddings:
         self.api_key = api_key
         self.api_base = api_base
         # Initialize OpenAI client
-        self.client = OpenAI(api_key=api_key, base_url=api_base)
+        self.client = OpenAI(api_key=api_key, base_url=api_base, timeout=60.0)
 
     def embed_documents(self, texts):
         response = self.client.embeddings.create(
