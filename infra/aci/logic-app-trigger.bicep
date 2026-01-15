@@ -155,7 +155,7 @@ resource logicApp 'Microsoft.Logic/workflows@2019-05-01' = {
                         {
                           type: 'Microsoft.ContainerInstance/containerGroups'
                           apiVersion: '2023-05-01'
-                          name: '[concat(\'worker-\', uniqueString(parameters(\'taskData\')))]'
+                          name: '[deployment().name]'
                           location: '[resourceGroup().location]'
                           identity: {
                             type: 'UserAssigned'

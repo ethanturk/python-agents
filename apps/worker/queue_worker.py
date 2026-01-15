@@ -75,7 +75,7 @@ class IngestionHandler:
                 document_set=document_set,
             )
 
-            logger.info(f"Ingestion completed: {filename}")
+            logger.info(f"Ingestion completed: {filename}. Result: {result}")
             return {"status": "completed", "result": result}
         except Exception as e:
             logger.error(f"Ingestion failed: {filename}: {e}")
