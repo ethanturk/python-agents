@@ -149,6 +149,7 @@ resource logicApp 'Microsoft.Logic/workflows@2019-05-01' = {
                         supabaseKey: { type: 'secureString' }
                         openaiApiKey: { type: 'secureString' }
                         internalApiKey: { type: 'secureString' }
+                        vectorTableName: { type: 'string', defaultValue: 'documents' }
                       }
                       resources: [
                         {
@@ -206,6 +207,10 @@ resource logicApp 'Microsoft.Logic/workflows@2019-05-01' = {
                                     {
                                       name: 'INTERNAL_API_KEY'
                                       secureValue: '[parameters(\'internalApiKey\')]'
+                                    }
+                                    {
+                                      name: 'VECTOR_TABLE_NAME'
+                                      value: '[parameters(\'vectorTableName\')]'
                                     }
                                     {
                                       name: 'OPENAI_MODEL'
