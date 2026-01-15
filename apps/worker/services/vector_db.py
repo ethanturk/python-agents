@@ -89,6 +89,7 @@ class VectorDBService(
             )
             raise RuntimeError("Supabase client not available")
 
+        try:
             logger.info(f"Preparing to upsert {len(points)} vectors to {self.table_name}")
             records = []
             for point in points:
