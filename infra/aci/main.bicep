@@ -163,6 +163,7 @@ module logicApp 'logic-app-trigger.bicep' = {
     pollingIntervalSeconds: 30
     containerResourceGroup: resourceGroup().name
     storageAccountName: storageAccount.name
+    storageAccountKey: storageAccountKey
     keyVaultName: keyVault.name
   }
 }

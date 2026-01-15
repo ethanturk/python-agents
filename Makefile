@@ -17,9 +17,6 @@ help:
 	@echo "  make pre-commit-update - Update pre-commit hooks"
 	@echo "  make clean          - Clean build artifacts"
 	@echo "  make build          - Build all Docker containers"
-	@echo "  make dev            - Start development environment"
-	@echo "  make dev-stop       - Stop development environment"
-	@echo "  make dev-logs       - Show development logs"
 
 # Test targets
 test-unit:
@@ -80,34 +77,8 @@ clean:
 
 # Docker targets
 build:
-	@echo "Building all Docker containers..."
-	docker-compose -f docker-compose.yml build
-	docker-compose -f docker-compose.worker.yml build
-	docker-compose -f docker-compose.frontend.yml build
+	@echo "Building Docker containers..."
 	docker-compose -f docker-compose.test.yml build
-
-# Development targets
-dev:
-	@echo "Starting development environment..."
-	docker-compose -f docker-compose.yml up -d
-	docker-compose -f docker-compose.worker.yml up -d
-	docker-compose -f docker-compose.frontend.yml up -d
-	@echo "Waiting for services to be ready..."
-	sleep 5
-	@echo "Services:"
-	@echo "  Backend: http://localhost:9999"
-	@echo "  Frontend: http://localhost:3000"
-	@echo "  Flower (Celery): http://localhost:5555"
-
-dev-stop:
-	@echo "Stopping development environment..."
-	docker-compose -f docker-compose.yml down
-	docker-compose -f docker-compose.worker.yml down
-	docker-compose -f docker-compose.frontend.yml down
-
-dev-logs:
-	@echo "Showing development logs (Ctrl+C to exit)..."
-	docker-compose -f docker-compose.yml -f docker-compose.worker.yml -f docker-compose.frontend.yml logs -f
 
 # Quick test for CI
 ci: lint typecheck test-unit

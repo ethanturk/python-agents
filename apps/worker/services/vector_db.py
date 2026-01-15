@@ -89,7 +89,7 @@ class VectorDBService(
             )
             raise RuntimeError("Supabase client not available")
 
-        try:
+            logger.info(f"Preparing to upsert {len(points)} vectors to {self.table_name}")
             records = []
             for point in points:
                 p_id = point.get("id") or str(uuid.uuid4())
@@ -115,7 +115,8 @@ class VectorDBService(
                     }
                 )
 
-            self.supabase.upsert(self.table_name, records)
+            response = self.supabase.upsert(self.table_name, records)
+            logger.info(f"Supabase upsert response: {response}")
         except Exception as e:
             logger.error(f"Upsert failed: {e}")
             raise e

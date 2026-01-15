@@ -17,6 +17,10 @@ param containerResourceGroup string = resourceGroup().name
 @description('Storage account name for the queue')
 param storageAccountName string
 
+@description('Storage account key for the queue connection')
+@secure()
+param storageAccountKey string
+
 @description('Key Vault name')
 param keyVaultName string
 
@@ -51,8 +55,8 @@ resource storageConnection 'Microsoft.Web/connections@2016-06-01' = {
       id: subscriptionResourceId('Microsoft.Web/locations/managedApis', location, 'azurequeues')
     }
     parameterValues: {
-      storageaccount: '@Microsoft.KeyVault(${keyVaultName}, storage-account-name)'
-      sharedkey: '@Microsoft.KeyVault(${keyVaultName}, storage-account-key)'
+      storageaccount: storageAccountName
+      sharedkey: storageAccountKey
     }
   }
 }
@@ -125,90 +129,154 @@ resource logicApp 'Microsoft.Logic/workflows@2019-05-01' = {
               inputs: {
                 method: 'PUT'
                 #disable-next-line no-hardcoded-env-urls
-                uri: 'https://${managementHost}/subscriptions/${subscription().subscriptionId}/resourceGroups/${containerResourceGroup}/providers/Microsoft.ContainerInstance/containerGroups/worker-@{guid()}?api-version=2023-05-01'
+                uri: 'https://${managementHost}/subscriptions/${subscription().subscriptionId}/resourceGroups/${containerResourceGroup}/providers/Microsoft.Resources/deployments/worker-@{guid()}?api-version=2021-04-01'
                 authentication: {
                   type: 'ManagedServiceIdentity'
                 }
                 body: {
-                  location: location
-                  identity: {
-                    type: 'UserAssigned'
-                    userAssignedIdentities: {
-                      '${acrPullIdentity.id}': {}
-                    }
-                  }
                   properties: {
-                    containers: [
-                      {
-                        name: 'worker'
-                        properties: {
-                          image: '${acrName}.azurecr.io/worker:latest'
-                          resources: {
-                            requests: {
-                              cpu: 1
-                              memoryInGB: 2
+                    mode: 'Incremental'
+                    template: {
+                      '$schema': 'https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#'
+                      contentVersion: '1.0.0.0'
+                      parameters: {
+                        taskData: { type: 'string' }
+                        clientId: { type: 'string' }
+                        acrName: { type: 'string' }
+                        acrPassword: { type: 'secureString' }
+                        azureStorageConnectionString: { type: 'secureString' }
+                        supabaseUrl: { type: 'string' }
+                        supabaseKey: { type: 'secureString' }
+                        openaiApiKey: { type: 'secureString' }
+                        internalApiKey: { type: 'secureString' }
+                      }
+                      resources: [
+                        {
+                          type: 'Microsoft.ContainerInstance/containerGroups'
+                          apiVersion: '2023-05-01'
+                          name: '[concat(\'worker-\', uniqueString(parameters(\'taskData\')))]'
+                          location: '[resourceGroup().location]'
+                          identity: {
+                            type: 'UserAssigned'
+                            userAssignedIdentities: {
+                              '${acrPullIdentity.id}': {}
                             }
                           }
-                          environmentVariables: [
-                            {
-                              name: 'TASK_DATA'
-                              value: '@items(\'For_Each_Message\')?[\'MessageText\']'
-                            }
-                            {
-                              name: 'CLIENT_ID'
-                              value: split(queueName, '-')[0]
-                            }
-                            {
-                              name: 'WORKER_TASK_TIMEOUT'
-                              value: '1800'
-                            }
-                            {
-                              name: 'AZURE_STORAGE_CONNECTION_STRING'
-                              secretReference: {
-                                vaultId: keyVaultResourceId
-                                secretName: 'azure-storage-connection-string' // pragma: allowlist secret
+                          properties: {
+                            containers: [
+                              {
+                                name: 'worker'
+                                properties: {
+                                  image: '[concat(parameters(\'acrName\'), \'.azurecr.io/worker:latest\')]'
+                                  resources: {
+                                    requests: {
+                                      cpu: 1
+                                      memoryInGB: 2
+                                    }
+                                  }
+                                  environmentVariables: [
+                                    {
+                                      name: 'TASK_DATA'
+                                      value: '[parameters(\'taskData\')]'
+                                    }
+                                    {
+                                      name: 'CLIENT_ID'
+                                      value: '[parameters(\'clientId\')]'
+                                    }
+                                    {
+                                      name: 'WORKER_TASK_TIMEOUT'
+                                      value: '1800'
+                                    }
+                                    {
+                                      name: 'AZURE_STORAGE_CONNECTION_STRING'
+                                      secureValue: '[parameters(\'azureStorageConnectionString\')]'
+                                    }
+                                    {
+                                      name: 'SUPABASE_URL'
+                                      value: '[parameters(\'supabaseUrl\')]'
+                                    }
+                                    {
+                                      name: 'SUPABASE_KEY'
+                                      secureValue: '[parameters(\'supabaseKey\')]'
+                                    }
+                                    {
+                                      name: 'OPENAI_API_KEY'
+                                      secureValue: '[parameters(\'openaiApiKey\')]'
+                                    }
+                                    {
+                                      name: 'INTERNAL_API_KEY'
+                                      secureValue: '[parameters(\'internalApiKey\')]'
+                                    }
+                                    {
+                                      name: 'OPENAI_MODEL'
+                                      value: 'gpt-4o-mini'
+                                    }
+                                    {
+                                      name: 'OPENAI_EMBEDDING_MODEL'
+                                      value: 'text-embedding-3-small'
+                                    }
+                                    {
+                                      name: 'OPENAI_EMBEDDING_DIMENSIONS'
+                                      value: '1536'
+                                    }
+                                  ]
+                                }
                               }
-                            }
-                            {
-                              name: 'SUPABASE_URL'
-                              secretReference: {
-                                vaultId: keyVaultResourceId
-                                secretName: 'supabase-url' // pragma: allowlist secret
+                            ]
+                            osType: 'Linux'
+                            restartPolicy: 'Never'
+                            imageRegistryCredentials: [
+                              {
+                                server: '[concat(parameters(\'acrName\'), \'.azurecr.io\')]'
+                                username: '[parameters(\'acrName\')]'
+                                password: '[parameters(\'acrPassword\')]'
                               }
-                            }
-                            {
-                              name: 'SUPABASE_KEY'
-                              secretReference: {
-                                vaultId: keyVaultResourceId
-                                secretName: 'supabase-key' // pragma: allowlist secret
-                              }
-                            }
-                            {
-                              name: 'OPENAI_API_KEY'
-                              secretReference: {
-                                vaultId: keyVaultResourceId
-                                secretName: 'openai-api-key' // pragma: allowlist secret
-                              }
-                            }
-                            {
-                              name: 'INTERNAL_API_KEY'
-                              secretReference: {
-                                vaultId: keyVaultResourceId
-                                secretName: 'internal-api-key' // pragma: allowlist secret
-                              }
-                            }
-                          ]
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                    parameters: {
+                      taskData: { value: '@items(\'For_Each_Message\')?[\'MessageText\']' }
+                      clientId: { value: split(queueName, '-')[0] }
+                      acrName: { value: acrName }
+                      acrPassword: {
+                        reference: {
+                          keyVault: { id: keyVaultResourceId }
+                          secretName: 'acr-password' // pragma: allowlist secret
                         }
                       }
-                    ]
-                    osType: 'Linux'
-                    restartPolicy: 'Never'
-                    imageRegistryCredentials: [
-                      {
-                        server: '${acrName}.azurecr.io'
-                        identity: acrPullIdentity.id
+                      azureStorageConnectionString: {
+                        reference: {
+                          keyVault: { id: keyVaultResourceId }
+                          secretName: 'azure-storage-connection-string' // pragma: allowlist secret
+                        }
                       }
-                    ]
+                      supabaseUrl: {
+                        reference: {
+                          keyVault: { id: keyVaultResourceId }
+                          secretName: 'supabase-url' // pragma: allowlist secret
+                        }
+                      }
+                      supabaseKey: {
+                        reference: {
+                          keyVault: { id: keyVaultResourceId }
+                          secretName: 'supabase-key' // pragma: allowlist secret
+                        }
+                      }
+                      openaiApiKey: {
+                        reference: {
+                          keyVault: { id: keyVaultResourceId }
+                          secretName: 'openai-api-key' // pragma: allowlist secret
+                        }
+                      }
+                      internalApiKey: {
+                        reference: {
+                          keyVault: { id: keyVaultResourceId }
+                          secretName: 'internal-api-key' // pragma: allowlist secret
+                        }
+                      }
+                    }
                   }
                 }
               }
