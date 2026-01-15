@@ -129,45 +129,83 @@ def get_handlers() -> Dict[str, Any]:
     }
 
 
+from typing import Any, Dict, List, Optional, Tuple
+
+# ... existing imports ...
+
 def parse_task_data(
     task_data_raw: str,
-) -> Tuple[str, str, Dict[str, Any], Optional[str]]:
+) -> List[Tuple[str, str, Dict[str, Any], Optional[str]]]:
     """
     Parse task data from TASK_DATA environment variable or queue message.
+    Supports both single task (JSON object) and batch tasks (JSON array).
 
     Args:
-        task_data_raw: Raw task data string (may include task_id prefix)
+        task_data_raw: Raw task data string (may include task_id prefix for legacy single tasks)
 
     Returns:
-        Tuple of (task_id, task_type, payload, webhook_url)
+        List of tuples: [(task_id, task_type, payload, webhook_url), ...]
 
     Raises:
-        ValueError: If task data is invalid or missing required fields
+        ValueError: If task data is invalid
     """
-    # Handle task_id|json format from queue messages
-    if "|" in task_data_raw:
-        task_id, json_content = task_data_raw.split("|", 1)
-    else:
-        task_id = "unknown"
-        json_content = task_data_raw
+    tasks = []
 
+    # Handle legacy task_id|json format (single task only)
+    if "|" in task_data_raw and not task_data_raw.strip().startswith("["):
+        task_id_prefix, json_content = task_data_raw.split("|", 1)
+        try:
+            task_data = json.loads(json_content)
+            # Use task_id from JSON if available, else prefix
+            task_id = task_data.get("task_id", task_id_prefix)
+            task_type = task_data.get("task_type")
+            payload = task_data.get("payload", {})
+            webhook_url = task_data.get("webhook_url")
+
+            if not task_type:
+                raise ValueError("Missing required field: task_type")
+
+            tasks.append((task_id, task_type, payload, webhook_url))
+            return tasks
+        except json.JSONDecodeError as e:
+            raise ValueError(f"Invalid JSON in task data: {e}")
+
+    # Standard JSON format (object or array)
     try:
-        task_data = json.loads(json_content)
+        data = json.loads(task_data_raw)
     except json.JSONDecodeError as e:
         raise ValueError(f"Invalid JSON in task data: {e}")
 
-    task_type = task_data.get("task_type")
-    if not task_type:
-        raise ValueError("Missing required field: task_type")
+    if isinstance(data, list):
+        # Batch processing
+        for item in data:
+            if not isinstance(item, dict):
+                continue
 
-    payload = task_data.get("payload", {})
-    webhook_url = task_data.get("webhook_url")
+            task_id = item.get("task_id", "unknown")
+            task_type = item.get("task_type")
+            payload = item.get("payload", {})
+            webhook_url = item.get("webhook_url")
 
-    # Use task_id from JSON if provided (overrides prefix)
-    if "task_id" in task_data:
-        task_id = task_data["task_id"]
+            if task_type:
+                tasks.append((task_id, task_type, payload, webhook_url))
+            else:
+                logger.warning(f"Skipping invalid task item: {item}")
+    elif isinstance(data, dict):
+        # Single task
+        task_id = data.get("task_id", "unknown")
+        task_type = data.get("task_type")
+        payload = data.get("payload", {})
+        webhook_url = data.get("webhook_url")
 
-    return task_id, task_type, payload, webhook_url
+        if not task_type:
+            raise ValueError("Missing required field: task_type")
+
+        tasks.append((task_id, task_type, payload, webhook_url))
+    else:
+        raise ValueError("Task data must be a JSON object or array")
+
+    return tasks
 
 
 class SingleTaskRunner:
@@ -209,13 +247,13 @@ class SingleTaskRunner:
 
     async def run(self, task_data_raw: str) -> int:
         """
-        Run a single task and return exit code.
+        Run tasks and return exit code.
 
         Args:
             task_data_raw: Raw task data string from TASK_DATA env var
 
         Returns:
-            Exit code: 0 for success, 1 for failure
+            Exit code: 0 for success (all tasks processed), 1 for system failure
         """
         logger.info("=" * 60)
         logger.info("Single-Task Mode (ACI)")
@@ -223,40 +261,50 @@ class SingleTaskRunner:
         logger.info("=" * 60)
 
         try:
-            task_id, task_type, payload, webhook_url = parse_task_data(task_data_raw)
+            tasks = parse_task_data(task_data_raw)
         except ValueError as e:
             logger.error(f"Failed to parse task data: {e}")
             return 1
 
-        logger.info(f"Processing task {task_id}: {task_type}")
-        logger.info(f"Payload: {json.dumps(payload, default=str)[:500]}...")
-
-        # Execute the task
-        result = await self.execute_with_timeout(task_type, payload)
-
-        # Prepare notification
-        notification_data = {
-            "task_id": task_id,
-            "task_type": task_type,
-            "status": result.get("status"),
-            "result": result.get("result"),
-            "error": result.get("error"),
-        }
-
-        # Send webhook notification
-        if webhook_url:
-            success = await self.notification_service.send_webhook(webhook_url, notification_data)
-            if not success:
-                logger.warning("Failed to send webhook notification")
-
-        # Determine exit code
-        status = result.get("status")
-        if status == "completed":
-            logger.info(f"Task {task_id} completed successfully")
+        if not tasks:
+            logger.warning("No valid tasks found in data")
             return 0
-        else:
-            logger.error(f"Task {task_id} failed: {result.get('error')}")
-            return 1
+
+        logger.info(f"Found {len(tasks)} tasks to process")
+
+        results = []
+        for i, (task_id, task_type, payload, webhook_url) in enumerate(tasks):
+            logger.info(f"--- Processing Task {i+1}/{len(tasks)}: {task_id} ({task_type}) ---")
+
+            # Execute the task
+            result = await self.execute_with_timeout(task_type, payload)
+            results.append(result)
+
+            # Prepare notification
+            notification_data = {
+                "task_id": task_id,
+                "task_type": task_type,
+                "status": result.get("status"),
+                "result": result.get("result"),
+                "error": result.get("error"),
+            }
+
+            # Send webhook notification
+            if webhook_url:
+                success = await self.notification_service.send_webhook(webhook_url, notification_data)
+                if not success:
+                    logger.warning(f"Failed to send webhook for task {task_id}")
+
+            # Log completion
+            status = result.get("status")
+            if status == "completed":
+                logger.info(f"Task {task_id} completed successfully")
+            else:
+                logger.error(f"Task {task_id} failed: {result.get('error')}")
+
+        logger.info("=" * 60)
+        logger.info(f"Batch processing complete. Processed {len(tasks)} tasks.")
+        return 0
 
 
 async def process_single_task(task_data_raw: str, timeout: int = DEFAULT_TASK_TIMEOUT) -> int:

@@ -100,197 +100,191 @@ resource logicApp 'Microsoft.Logic/workflows@2019-05-01' = {
         }
       }
       actions: {
-        'For_Each_Message': {
-          type: 'Foreach'
-          runAfter: {}
-          foreach: '@triggerBody()?[\'QueueMessagesList\']?[\'QueueMessage\']'
-          actions: {
-            'Parse_Message': {
-              type: 'ParseJson'
-              runAfter: {}
-              inputs: {
-                content: '@items(\'For_Each_Message\')?[\'MessageText\']'
-                schema: {
-                  type: 'object'
-                  properties: {
-                    task_type: { type: 'string' }
-                    task_id: { type: 'string' }
-                    payload: { type: 'object' }
-                    webhook_url: { type: 'string' }
-                  }
-                }
-              }
+        'Select_Messages': {
+          type: 'Query'
+          inputs: {
+            from: '@triggerBody()?[\'QueueMessagesList\']?[\'QueueMessage\']'
+            select: '@json(item()?[\'MessageText\'])'
+          }
+        }
+        'Create_Container_Instance': {
+          type: 'Http'
+          runAfter: {
+            Select_Messages: ['Succeeded']
+          }
+          inputs: {
+            method: 'PUT'
+            #disable-next-line no-hardcoded-env-urls
+            uri: 'https://${managementHost}/subscriptions/${subscription().subscriptionId}/resourceGroups/${containerResourceGroup}/providers/Microsoft.Resources/deployments/worker-@{guid()}?api-version=2021-04-01'
+            authentication: {
+              type: 'ManagedServiceIdentity'
             }
-            'Create_Container_Instance': {
-              type: 'Http'
-              runAfter: {
-                Parse_Message: ['Succeeded']
-              }
-              inputs: {
-                method: 'PUT'
-                #disable-next-line no-hardcoded-env-urls
-                uri: 'https://${managementHost}/subscriptions/${subscription().subscriptionId}/resourceGroups/${containerResourceGroup}/providers/Microsoft.Resources/deployments/worker-@{guid()}?api-version=2021-04-01'
-                authentication: {
-                  type: 'ManagedServiceIdentity'
-                }
-                body: {
-                  properties: {
-                    mode: 'Incremental'
-                    template: {
-                      '$schema': 'https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#'
-                      contentVersion: '1.0.0.0'
-                      parameters: {
-                        taskData: { type: 'string' }
-                        clientId: { type: 'string' }
-                        acrName: { type: 'string' }
-                        acrPassword: { type: 'secureString' }
-                        azureStorageConnectionString: { type: 'secureString' }
-                        supabaseUrl: { type: 'string' }
-                        supabaseKey: { type: 'secureString' }
-                        openaiApiKey: { type: 'secureString' }
-                        internalApiKey: { type: 'secureString' }
-                        vectorTableName: { type: 'string', defaultValue: 'documents' }
+            body: {
+              properties: {
+                mode: 'Incremental'
+                template: {
+                  '$schema': 'https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#'
+                  contentVersion: '1.0.0.0'
+                  parameters: {
+                    taskData: { type: 'string' }
+                    clientId: { type: 'string' }
+                    acrName: { type: 'string' }
+                    acrPassword: { type: 'secureString' }
+                    azureStorageConnectionString: { type: 'secureString' }
+                    supabaseUrl: { type: 'string' }
+                    supabaseKey: { type: 'secureString' }
+                    openaiApiKey: { type: 'secureString' }
+                    internalApiKey: { type: 'secureString' }
+                    vectorTableName: { type: 'string', defaultValue: 'documents' }
+                  }
+                  resources: [
+                    {
+                      type: 'Microsoft.ContainerInstance/containerGroups'
+                      apiVersion: '2023-05-01'
+                      name: '[deployment().name]'
+                      location: '[resourceGroup().location]'
+                      identity: {
+                        type: 'UserAssigned'
+                        userAssignedIdentities: {
+                          '${acrPullIdentity.id}': {}
+                        }
                       }
-                      resources: [
-                        {
-                          type: 'Microsoft.ContainerInstance/containerGroups'
-                          apiVersion: '2023-05-01'
-                          name: '[deployment().name]'
-                          location: '[resourceGroup().location]'
-                          identity: {
-                            type: 'UserAssigned'
-                            userAssignedIdentities: {
-                              '${acrPullIdentity.id}': {}
-                            }
-                          }
-                          properties: {
-                            containers: [
-                              {
-                                name: 'worker'
-                                properties: {
-                                  image: '[concat(parameters(\'acrName\'), \'.azurecr.io/worker:latest\')]'
-                                  resources: {
-                                    requests: {
-                                      cpu: 1
-                                      memoryInGB: 2
-                                    }
-                                  }
-                                  environmentVariables: [
-                                    {
-                                      name: 'TASK_DATA'
-                                      value: '[parameters(\'taskData\')]'
-                                    }
-                                    {
-                                      name: 'CLIENT_ID'
-                                      value: '[parameters(\'clientId\')]'
-                                    }
-                                    {
-                                      name: 'WORKER_TASK_TIMEOUT'
-                                      value: '1800'
-                                    }
-                                    {
-                                      name: 'AZURE_STORAGE_CONNECTION_STRING'
-                                      secureValue: '[parameters(\'azureStorageConnectionString\')]'
-                                    }
-                                    {
-                                      name: 'SUPABASE_URL'
-                                      value: '[parameters(\'supabaseUrl\')]'
-                                    }
-                                    {
-                                      name: 'SUPABASE_KEY'
-                                      secureValue: '[parameters(\'supabaseKey\')]'
-                                    }
-                                    {
-                                      name: 'OPENAI_API_KEY'
-                                      secureValue: '[parameters(\'openaiApiKey\')]'
-                                    }
-                                    {
-                                      name: 'INTERNAL_API_KEY'
-                                      secureValue: '[parameters(\'internalApiKey\')]'
-                                    }
-                                    {
-                                      name: 'VECTOR_TABLE_NAME'
-                                      value: '[parameters(\'vectorTableName\')]'
-                                    }
-                                    {
-                                      name: 'OPENAI_MODEL'
-                                      value: 'gpt-4o-mini'
-                                    }
-                                    {
-                                      name: 'OPENAI_EMBEDDING_MODEL'
-                                      value: 'text-embedding-3-small'
-                                    }
-                                    {
-                                      name: 'OPENAI_EMBEDDING_DIMENSIONS'
-                                      value: '1536'
-                                    }
-                                  ]
+                      properties: {
+                        containers: [
+                          {
+                            name: 'worker'
+                            properties: {
+                              image: '[concat(parameters(\'acrName\'), \'.azurecr.io/worker:latest\')]'
+                              resources: {
+                                requests: {
+                                  cpu: 1
+                                  memoryInGB: 2
                                 }
                               }
-                            ]
-                            osType: 'Linux'
-                            restartPolicy: 'Never'
-                            imageRegistryCredentials: [
-                              {
-                                server: '[concat(parameters(\'acrName\'), \'.azurecr.io\')]'
-                                username: '[parameters(\'acrName\')]'
-                                password: '[parameters(\'acrPassword\')]'
-                              }
-                            ]
+                              environmentVariables: [
+                                {
+                                  name: 'TASK_DATA'
+                                  value: '[parameters(\'taskData\')]'
+                                }
+                                {
+                                  name: 'CLIENT_ID'
+                                  value: '[parameters(\'clientId\')]'
+                                }
+                                {
+                                  name: 'WORKER_TASK_TIMEOUT'
+                                  value: '1800'
+                                }
+                                {
+                                  name: 'AZURE_STORAGE_CONNECTION_STRING'
+                                  secureValue: '[parameters(\'azureStorageConnectionString\')]'
+                                }
+                                {
+                                  name: 'SUPABASE_URL'
+                                  value: '[parameters(\'supabaseUrl\')]'
+                                }
+                                {
+                                  name: 'SUPABASE_KEY'
+                                  secureValue: '[parameters(\'supabaseKey\')]'
+                                }
+                                {
+                                  name: 'OPENAI_API_KEY'
+                                  secureValue: '[parameters(\'openaiApiKey\')]'
+                                }
+                                {
+                                  name: 'INTERNAL_API_KEY'
+                                  secureValue: '[parameters(\'internalApiKey\')]'
+                                }
+                                {
+                                  name: 'VECTOR_TABLE_NAME'
+                                  value: '[parameters(\'vectorTableName\')]'
+                                }
+                                {
+                                  name: 'OPENAI_MODEL'
+                                  value: 'gpt-4o-mini'
+                                }
+                                {
+                                  name: 'OPENAI_EMBEDDING_MODEL'
+                                  value: 'text-embedding-3-small'
+                                }
+                                                                    {
+                                                                      name: 'OPENAI_EMBEDDING_DIMENSIONS'
+                                                                      value: '1536'
+                                                                    }
+                                                                    {
+                                                                      name: 'OPENAI_API_BASE'
+                                                                      value: 'https://api.openai.com/v1'
+                                                                    }
+                                                                  ]
+                                                                }
+                                                              }
+                                                            ]
+                                                            osType: 'Linux'                        restartPolicy: 'Never'
+                        imageRegistryCredentials: [
+                          {
+                            server: '[concat(parameters(\'acrName\'), \'.azurecr.io\')]'
+                            username: '[parameters(\'acrName\')]'
+                            password: '[parameters(\'acrPassword\')]'
                           }
-                        }
-                      ]
+                        ]
+                      }
                     }
-                    parameters: {
-                      taskData: { value: '@items(\'For_Each_Message\')?[\'MessageText\']' }
-                      clientId: { value: split(queueName, '-')[0] }
-                      acrName: { value: acrName }
-                      acrPassword: {
-                        reference: {
-                          keyVault: { id: keyVaultResourceId }
-                          secretName: 'acr-password' // pragma: allowlist secret
-                        }
-                      }
-                      azureStorageConnectionString: {
-                        reference: {
-                          keyVault: { id: keyVaultResourceId }
-                          secretName: 'azure-storage-connection-string' // pragma: allowlist secret
-                        }
-                      }
-                      supabaseUrl: {
-                        reference: {
-                          keyVault: { id: keyVaultResourceId }
-                          secretName: 'supabase-url' // pragma: allowlist secret
-                        }
-                      }
-                      supabaseKey: {
-                        reference: {
-                          keyVault: { id: keyVaultResourceId }
-                          secretName: 'supabase-key' // pragma: allowlist secret
-                        }
-                      }
-                      openaiApiKey: {
-                        reference: {
-                          keyVault: { id: keyVaultResourceId }
-                          secretName: 'openai-api-key' // pragma: allowlist secret
-                        }
-                      }
-                      internalApiKey: {
-                        reference: {
-                          keyVault: { id: keyVaultResourceId }
-                          secretName: 'internal-api-key' // pragma: allowlist secret
-                        }
-                      }
+                  ]
+                }
+                parameters: {
+                  taskData: { value: '@string(body(\'Select_Messages\'))' }
+                  clientId: { value: split(queueName, '-')[0] }
+                  acrName: { value: acrName }
+                  acrPassword: {
+                    reference: {
+                      keyVault: { id: keyVaultResourceId }
+                      secretName: 'acr-password' // pragma: allowlist secret
+                    }
+                  }
+                  azureStorageConnectionString: {
+                    reference: {
+                      keyVault: { id: keyVaultResourceId }
+                      secretName: 'azure-storage-connection-string' // pragma: allowlist secret
+                    }
+                  }
+                  supabaseUrl: {
+                    reference: {
+                      keyVault: { id: keyVaultResourceId }
+                      secretName: 'supabase-url' // pragma: allowlist secret
+                    }
+                  }
+                  supabaseKey: {
+                    reference: {
+                      keyVault: { id: keyVaultResourceId }
+                      secretName: 'supabase-key' // pragma: allowlist secret
+                    }
+                  }
+                  openaiApiKey: {
+                    reference: {
+                      keyVault: { id: keyVaultResourceId }
+                      secretName: 'openai-api-key' // pragma: allowlist secret
+                    }
+                  }
+                  internalApiKey: {
+                    reference: {
+                      keyVault: { id: keyVaultResourceId }
+                      secretName: 'internal-api-key' // pragma: allowlist secret
                     }
                   }
                 }
               }
             }
+          }
+        }
+        'Delete_Messages': {
+          type: 'Foreach'
+          runAfter: {
+            Create_Container_Instance: ['Succeeded']
+          }
+          foreach: '@triggerBody()?[\'QueueMessagesList\']?[\'QueueMessage\']'
+          actions: {
             'Delete_Message': {
               type: 'ApiConnection'
-              runAfter: {
-                Create_Container_Instance: ['Succeeded']
-              }
+              runAfter: {}
               inputs: {
                 host: {
                   connection: {
@@ -298,9 +292,9 @@ resource logicApp 'Microsoft.Logic/workflows@2019-05-01' = {
                   }
                 }
                 method: 'delete'
-                path: '/v2/storageAccounts/${storageAccountName}/queues/${queueName}/messages/@{items(\'For_Each_Message\')?[\'MessageId\']}'
+                path: '/v2/storageAccounts/${storageAccountName}/queues/${queueName}/messages/@{items(\'Delete_Messages\')?[\'MessageId\']}'
                 queries: {
-                  popreceipt: '@items(\'For_Each_Message\')?[\'PopReceipt\']'
+                  popreceipt: '@items(\'Delete_Messages\')?[\'PopReceipt\']'
                 }
               }
             }
